@@ -4,7 +4,7 @@ export type JsonResult =
 
 type Indent = 2 | 4 | '\t';
 
-const TOO_DEEP = 'Nested too deeply to format';
+export const TOO_DEEP = 'Nested too deeply to format';
 
 interface ScanError {
   offset: number;

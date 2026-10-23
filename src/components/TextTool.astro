@@ -46,9 +46,9 @@ const indents = [
       </div>
       <p class="status" role="status" aria-live="polite" data-status></p>
       <div data-results></div>
-      <fieldset class="settings toggle">
+      <div class="settings toggle">
         <label><input type="checkbox" data-urlsafe />URL-safe</label>
-      </fieldset>
+      </div>
     </>
   )}
   {tool.transform === 'jwt' && (
@@ -74,3 +74,9 @@ const indents = [
     </>
   )}
 </div>
+
+<script>
+  import { mount } from '../ui/text';
+  const el = document.querySelector<HTMLElement>('[data-kind="text"]');
+  if (el) mount(el);
+</script>
