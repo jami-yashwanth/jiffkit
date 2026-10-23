@@ -44,7 +44,14 @@ export interface WebpCodec {
   decode(data: BufferSource): RawImage | null;
 }
 
-export type WasmName = 'jpeg' | 'png' | 'webp' | 'oxipng';
+export interface JpegEncCodec {
+  encode(image: RawImage, quality: number): Uint8Array;
+}
+export interface WebpEncCodec {
+  encode(image: RawImage, quality: number): Uint8Array;
+}
+
+export type WasmName = 'jpeg' | 'png' | 'webp' | 'oxipng' | 'jpegEnc' | 'webpEnc';
 type WasmSource = (name: WasmName) => Promise<WebAssembly.Module>;
 
 /**
@@ -111,13 +118,44 @@ export const load = {
     ]);
     return initEmscriptenModule(factory, await wasmFor('webp')) as Promise<WebpCodec>;
   }),
+
+  jpegEnc: lazy<JpegEncCodec>('JPEG encoder', async () => {
+    const [{ default: factory }, { initEmscriptenModule }, { defaultOptions }] = await Promise.all([
+      import('@jsquash/jpeg/codec/enc/mozjpeg_enc.js'),
+      import('@jsquash/jpeg/utils.js'),
+      import('@jsquash/jpeg/meta.js'),
+    ]);
+    const mod = (await initEmscriptenModule(factory, await wasmFor('jpegEnc'))) as {
+      encode(data: ArrayBufferView, width: number, height: number, options: object): Uint8Array;
+    };
+    return { encode: (img, quality) => mod.encode(img.data, img.width, img.height, { ...defaultOptions, quality }) };
+  }),
+
+  webpEnc: lazy<WebpEncCodec>('WebP encoder', async () => {
+    // The non-SIMD build runs everywhere; the SIMD one needs feature detection we skip for now.
+    const [{ default: factory }, { initEmscriptenModule }, { defaultOptions }] = await Promise.all([
+      import('@jsquash/webp/codec/enc/webp_enc.js'),
+      import('@jsquash/webp/utils.js'),
+      import('@jsquash/webp/meta.js'),
+    ]);
+    const mod = (await initEmscriptenModule(factory, await wasmFor('webpEnc'))) as {
+      encode(data: ArrayBufferView, width: number, height: number, options: object): Uint8Array | null;
+    };
+    return {
+      encode: (img, quality) => {
+        const out = mod.encode(img.data, img.width, img.height, { ...defaultOptions, quality });
+        if (!out) throw new Error('WebP encoding failed');
+        return out;
+      },
+    };
+  }),
 };
 
 const PRELOAD: Record<InType, (keyof typeof load)[]> = {
-  heic: ['heif'],
-  jpg: ['jpeg'],
+  heic: ['heif', 'jpegEnc'],
+  jpg: ['jpeg', 'jpegEnc'],
   png: ['png', 'oxipng'],
-  webp: ['webp'],
+  webp: ['webp', 'jpegEnc'],
 };
 
 /** Start fetching codecs for these input types (drop-zone hover/focus). Failures are retried on real use. */

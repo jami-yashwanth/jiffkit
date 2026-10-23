@@ -8,6 +8,8 @@ const WASM_FILES: Record<WasmName, string> = {
   jpeg: '@jsquash/jpeg/codec/dec/mozjpeg_dec.wasm',
   png: '@jsquash/png/codec/pkg/squoosh_png_bg.wasm',
   webp: '@jsquash/webp/codec/dec/webp_dec.wasm',
+  jpegEnc: '@jsquash/jpeg/codec/enc/mozjpeg_enc.wasm',
+  webpEnc: '@jsquash/webp/codec/enc/webp_enc.wasm',
   oxipng: '@jsquash/oxipng/codec/pkg/squoosh_oxipng_bg.wasm',
 };
 
