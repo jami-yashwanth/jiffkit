@@ -88,7 +88,7 @@ export const TOOLS: Tool[] = [
       },
       {
         q: 'Does compressing a PNG lose quality?',
-        a: 'No. PNG files are compressed losslessly, so every pixel stays the same. The quality slider only applies to JPG and WebP images.',
+        a: 'No. PNG files are compressed losslessly at 8 bits per channel, so they look exactly the same. The quality slider only applies to JPG and WebP images.',
       },
       {
         q: 'What quality should I choose?',
@@ -96,7 +96,7 @@ export const TOOLS: Tool[] = [
       },
       {
         q: 'Is image metadata removed?',
-        a: 'Yes. Each image is re-encoded from its pixels, so GPS location and camera details are not kept in the compressed file.',
+        a: "Yes, whenever we re-encode the image. If we can't make a file smaller, we give you back your original file unchanged, including its metadata, and we won't show \"Location data removed\".",
       },
     ],
     related: ['heic-to-jpg', 'webp-to-jpg'],
