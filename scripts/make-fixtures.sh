@@ -4,13 +4,13 @@
 set -euo pipefail
 
 missing=()
-for tool in sips exiftool img2webp cwebp heif-enc magick; do
+for tool in sips exiftool img2webp cwebp heif-enc magick qpdf node; do
   command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
 done
 if [ ${#missing[@]} -gt 0 ]; then
   echo "Missing tools: ${missing[*]}" >&2
   echo "sips ships with macOS. Install the rest with:" >&2
-  echo "  brew install exiftool webp libheif imagemagick" >&2
+  echo "  brew install exiftool webp libheif imagemagick qpdf" >&2
   exit 1
 fi
 
@@ -74,5 +74,12 @@ head -c 2048 "$OUT/iphone-12mp.heic" > "$OUT/truncated.heic"
 : > "$OUT/empty.heic"
 printf 'This is plain text, not an image.\n' > "$OUT/text-as.heic"
 cp "$OUT/iphone-12mp.heic" "$OUT/heic-named.jpg"
+
+# --- PDF ---
+mkdir -p "$OUT/pdf"
+node "$ROOT/scripts/make-pdf-fixtures.mjs" "$OUT/pdf"
+qpdf --encrypt user owner 256 -- "$OUT/pdf/three-pages.pdf" "$OUT/pdf/encrypted.pdf"
+printf 'This is plain text, not a PDF.\n' > "$OUT/pdf/not-a.pdf"
+head -c 400 "$OUT/pdf/three-pages.pdf" > "$OUT/pdf/truncated.pdf"
 
 echo "Fixtures written to $OUT"

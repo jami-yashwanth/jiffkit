@@ -27,7 +27,7 @@ jobs:
       - run: npm ci
 
       - name: Fixture tools
-        run: brew install exiftool webp libheif imagemagick
+        run: brew install exiftool webp libheif imagemagick qpdf
 
       - name: Generate fixtures
         run: npm run fixtures
