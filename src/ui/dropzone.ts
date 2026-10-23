@@ -173,14 +173,15 @@ export function mount(el: HTMLElement): void {
   /** Sniff on the main thread so a wrong file never reaches the worker. Enqueue in drop order. */
   async function sniffAndEnqueue(fresh: Row[]): Promise<void> {
     for (const row of fresh) {
-      let type: InType | 'unknown';
+      let type: InType | 'unknown' = 'unknown';
+      let unreadable = false;
       try {
-        type = row.file.size === 0 ? 'unknown' : (await sniff(row.file)).type;
+        if (row.file.size > 0) type = (await sniff(row.file)).type;
       } catch {
-        type = 'unknown';
+        unreadable = true; // an I/O failure (say, an iCloud placeholder), not evidence of a wrong file type
       }
       if (!rows.has(row.id)) continue; // cleared meanwhile
-      if (row.file.size === 0) {
+      if (row.file.size === 0 || unreadable) {
         onFailed({ id: row.id, reason: 'corrupt' });
       } else if (type === 'unknown' || !types.includes(type)) {
         onFailed({ id: row.id, reason: 'wrong-type', ...(type === 'unknown' ? {} : { detectedType: type }) });

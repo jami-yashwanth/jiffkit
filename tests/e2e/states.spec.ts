@@ -193,6 +193,21 @@ test('codec load failed, then Try again', async ({ page }) => {
   await expect(doneRows(page)).toHaveCount(1);
 });
 
+test('a file that cannot be read shows the corrupt copy, not wrong-type', async ({ page }) => {
+  // An I/O failure while sniffing (an iCloud placeholder, a revoked file handle) rejects the read.
+  await page.addInitScript(() => {
+    const slice = Blob.prototype.slice;
+    Blob.prototype.slice = function (...args) {
+      const part = slice.apply(this, args as never);
+      if ((this as File).name === 'rotated-6.heic') part.arrayBuffer = () => Promise.reject(new DOMException('gone', 'NotReadableError'));
+      return part;
+    };
+  });
+  await page.goto('/heic-to-jpg/');
+  await choose(page, 'rotated-6.heic');
+  await expect(page.getByText("We couldn't read this file. It may be damaged or incomplete.")).toBeVisible();
+});
+
 test('out of memory, then Retry', async ({ page }) => {
   // A worker that dies after starting work is how an out-of-memory crash reaches the page.
   await page.context().route(/\/worker-[^/]*\.js$/, (route) =>
