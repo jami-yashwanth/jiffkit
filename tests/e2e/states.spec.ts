@@ -101,7 +101,10 @@ test('processing', async ({ page }) => {
   await expect(page.locator('[data-status]')).toHaveText('Converting 1 of 2');
   await expect(rows(page)).toHaveCount(2);
   await expect(rows(page).first().locator('.name')).toHaveText('rotated-6.heic');
-  await expect(rows(page).locator('.spinner')).toHaveCount(2);
+  // Only the row being converted spins; the rest wait.
+  await expect(rows(page).first().locator('.spinner')).toHaveCount(1);
+  await expect(rows(page).nth(1).locator('.waiting')).toHaveText('Waiting');
+  await expect(rows(page).locator('.spinner')).toHaveCount(1);
   release();
   await expect(doneRows(page)).toHaveCount(2);
   await expect(page.locator('[data-status]')).toBeHidden();

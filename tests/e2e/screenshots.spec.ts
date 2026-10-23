@@ -55,7 +55,9 @@ for (const vp of VIEWPORTS) {
       await shot(page, 'heic-to-jpg-empty', true);
       await shot(page, 'heic-to-jpg-empty-fold');
       await page.locator('label.btn').hover();
-      await page.screenshot({ path: `review/screenshots/heic-to-jpg-hover-${vp.width}.png` }); // keep the pointer on it
+      // Wait out the colour transition, then capture with the pointer still on the button.
+      await expect(page.locator('label.btn')).toHaveCSS('background-color', 'rgb(8, 69, 54)');
+      await page.screenshot({ path: `review/screenshots/heic-to-jpg-hover-${vp.width}.png` });
       await page.mouse.move(0, 0);
       await page.keyboard.press('Tab'); // nav link
       await page.keyboard.press('Tab'); // file input inside the Choose photos label
@@ -68,7 +70,11 @@ for (const vp of VIEWPORTS) {
         document.dispatchEvent(new DragEvent('dragenter', { bubbles: true, dataTransfer: dt }));
       });
       await expect(page.locator('.drop')).toHaveClass(/is-over/);
-      await shot(page, 'heic-to-jpg-drag-over');
+      // At 390 the drop zone is a plain button with no drag-over look, so only desktop gets this shot.
+      if (vp.width > 600) {
+        await expect(page.locator('.drop')).toHaveCSS('background-color', 'rgb(216, 234, 225)');
+        await shot(page, 'heic-to-jpg-drag-over');
+      }
       await page.reload();
       await page.locator('details.settings summary').click();
       await shot(page, 'heic-to-jpg-options-open');

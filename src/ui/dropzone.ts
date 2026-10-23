@@ -82,6 +82,7 @@ export function mount(el: HTMLElement): void {
   const rows = new Map<string, Row>();
   let nextId = 0;
   let zipUrl: string | undefined;
+  let activeId: string | undefined; // the row the worker is on: the only one with a spinner
   let doneSinceDrain = 0; // Done rows not yet reported; reported (once, as one event) when the queue drains
 
   function getEngine(): Promise<EngineClient> {
@@ -133,6 +134,10 @@ export function mount(el: HTMLElement): void {
   }
   function onProgress(p: Progress): void {
     setLoading(p.stage === 'loading-codec');
+    if (p.id === activeId) return;
+    activeId = p.id;
+    const row = rows.get(p.id);
+    if (row?.state.kind === 'queued') render(row);
   }
 
   function onDone(d: Done): void {
@@ -291,7 +296,9 @@ export function mount(el: HTMLElement): void {
       body = [
         h('span', { class: 'thumb' }),
         h('div', { class: 'info' }, name(row.file.name)),
-        h('span', { class: 'spinner', role: 'img', 'aria-label': 'Converting' }),
+        row.id === activeId
+          ? h('span', { class: 'spinner', role: 'img', 'aria-label': 'Converting' })
+          : h('span', { class: 'waiting' }, 'Waiting'),
       ];
     } else if (s.kind === 'done') {
       const d = s.done;
