@@ -153,6 +153,8 @@ describe('convert: failure mapping', () => {
     it.each([
       ['Aborted(OOM)', 'oom'],
       ['Cannot enlarge memory arrays', 'oom'],
+      ['WebAssembly.Memory.grow(): Maximum memory size exceeded', 'oom'],
+      ['OutOfMemory', 'oom'],
       ['memory access out of bounds', 'corrupt'],
     ])('maps a wrapped WebAssembly error "%s" to %s', async (message, reason) => {
       const cause = new WebAssembly.RuntimeError(message);

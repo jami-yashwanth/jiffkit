@@ -24,7 +24,7 @@ export function outputName(inputName: string, format: OutFormat): string {
   return `${inputName.replace(/\.[^./\\]+$/, '')}.${format}`;
 }
 
-const OOM_MESSAGE = /alloc|\boom\b|enlarge memory|out of memory/i;
+const OOM_MESSAGE = /alloc|\boom\b|enlarge memory|out ?of ?memory|maximum memory size exceeded/i;
 
 /** Memory exhaustion surfaces as a RangeError or a wasm RuntimeError, possibly as the `cause` of a DecodeError. */
 function isOutOfMemory(err: unknown): boolean {
