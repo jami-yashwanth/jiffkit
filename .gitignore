@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.astro/
+.superpowers/
+test-results/
+playwright-report/
+.DS_Store
+tests/fixtures/iphone-48mp.heic
+tests/fixtures/huge-63mp.jpg
+review/

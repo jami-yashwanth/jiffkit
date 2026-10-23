@@ -1,0 +1,127 @@
+---
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import Base from '../layouts/Base.astro';
+
+const root = process.cwd();
+const pkgVersion = (name: string): string =>
+  JSON.parse(readFileSync(join(root, 'node_modules', name, 'package.json'), 'utf8')).version;
+
+/** Read a licence file from node_modules; fall back to the vendored copy in src/licenses/ when a package ships none. */
+function licenceText(npmPath: string | null, vendored?: string): string {
+  if (npmPath) {
+    const p = join(root, 'node_modules', npmPath);
+    if (existsSync(p)) return readFileSync(p, 'utf8');
+  }
+  if (vendored) return readFileSync(join(root, 'src/licenses', vendored), 'utf8');
+  throw new Error(`No licence text for ${npmPath ?? vendored}`);
+}
+
+const jsquashTag = (pkg: string, version: string) =>
+  `https://github.com/jamsinclair/jSquash/releases/tag/${encodeURIComponent(`@jsquash/${pkg}@${version}`)}`;
+
+const heifJs = pkgVersion('libheif-js');
+// libheif-js ships libheif (same version as the wasm build string) and libde265. Their versions are baked into libheif.wasm.
+const libheifVersion = '1.23.5';
+const libde265Version = '1.0.15';
+
+const libs = [
+  {
+    name: 'libheif-js',
+    version: heifJs,
+    licence: 'LGPL-3.0',
+    note: 'Decodes HEIC photos. Bundles libheif and libde265.',
+    source: `https://github.com/catdad-experiments/libheif-js/tree/v${heifJs}`,
+    texts: [{ label: 'LICENSE', text: licenceText('libheif-js/LICENSE') }],
+  },
+  {
+    name: 'libheif',
+    version: libheifVersion,
+    licence: 'LGPL-3.0',
+    note: 'HEIF decoder bundled inside libheif-js.',
+    source: `https://github.com/strukturag/libheif/tree/v${libheifVersion}`,
+    texts: [{ label: 'Copyright notice', text: licenceText(null, 'libheif.txt') }],
+  },
+  {
+    name: 'libde265',
+    version: libde265Version,
+    licence: 'LGPL-3.0',
+    note: 'HEVC decoder bundled inside libheif-js.',
+    source: `https://github.com/strukturag/libde265/tree/v${libde265Version}`,
+    texts: [{ label: 'Copyright notice', text: licenceText(null, 'libde265.txt') }],
+  },
+  ...(['jpeg', 'png', 'oxipng', 'webp'] as const).map((pkg) => {
+    const v = pkgVersion(`@jsquash/${pkg}`);
+    const codec: Record<string, string> = {
+      jpeg: 'JPG codec (MozJPEG, based on libjpeg-turbo and the IJG libjpeg).',
+      png: 'PNG codec.',
+      oxipng: 'PNG optimiser (oxipng).',
+      webp: 'WebP codec (libwebp).',
+    };
+    return {
+      name: `@jsquash/${pkg}`,
+      version: v,
+      licence: 'Apache-2.0',
+      note: codec[pkg],
+      source: jsquashTag(pkg, v),
+      texts: [
+        { label: 'LICENSE', text: licenceText(`@jsquash/${pkg}/LICENSE`) },
+        { label: 'Bundled codec licences', text: licenceText(`@jsquash/${pkg}/codec/LICENSE.codec.md`) },
+      ],
+    };
+  }),
+  {
+    name: 'fflate',
+    version: pkgVersion('fflate'),
+    licence: 'MIT',
+    note: 'Builds ZIP downloads.',
+    source: `https://github.com/101arrowz/fflate/tree/v${pkgVersion('fflate')}`,
+    texts: [{ label: 'LICENSE', text: licenceText('fflate/LICENSE') }],
+  },
+  {
+    name: 'Astro',
+    version: pkgVersion('astro'),
+    licence: 'MIT',
+    note: 'Static site framework.',
+    source: `https://github.com/withastro/astro/tree/astro@${pkgVersion('astro')}`,
+    texts: [{ label: 'LICENSE', text: licenceText('astro/LICENSE') }],
+  },
+];
+---
+<Base title="Open-source licences" description="Open-source software used by these image tools, with licences and source links." path="/licenses/">
+  <h1>Open-source licences</h1>
+  <p class="subhead">These tools are built on open-source software. Source code for the exact versions we ship is linked below.</p>
+  <p>This software is based in part on the work of the Independent JPEG Group.</p>
+  <ul>
+    {libs.map((l) => (
+      <li>
+        <strong>{l.name}</strong> {l.version} ({l.licence}). {l.note}
+        {' '}<a href={l.source}>Source for {l.version}</a>
+        {l.texts.map((t) => (
+          <details>
+            <summary>{t.label}</summary>
+            <pre>{t.text}</pre>
+          </details>
+        ))}
+      </li>
+    ))}
+  </ul>
+  <h2>LGPL-3.0 and GPL-3.0 texts</h2>
+  <p>libheif-js, libheif and libde265 are licensed under the GNU Lesser General Public License, version 3, which incorporates the GNU General Public License, version 3. Both texts follow.</p>
+  <details>
+    <summary>GNU LGPL-3.0 and GPL-3.0 full text</summary>
+    <pre>{licenceText('libheif-js/libheif-wasm/LICENSE')}</pre>
+  </details>
+</Base>
+<style>
+  pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 0.75rem;
+    max-height: 24rem;
+    overflow: auto;
+  }
+  li {
+    margin-block: 1rem;
+  }
+</style>

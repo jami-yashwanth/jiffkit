@@ -1,0 +1,10 @@
+libde265 - open h.265 video codec implementation
+
+Copyright (c) struktur AG and Dirk Farin
+
+The library libde265 is distributed under the terms of the GNU Lesser General
+Public License, version 3 (LGPL-3.0). The full text of the LGPL-3.0, and of the
+GPL-3.0 it incorporates, is reproduced on this page under "LGPL-3.0 and GPL-3.0
+texts".
+
+Source: https://github.com/strukturag/libde265
