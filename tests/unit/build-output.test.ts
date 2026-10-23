@@ -108,6 +108,12 @@ describe('site', () => {
     expect(h).toContain('Permission is hereby granted'); // MIT: fflate, Astro
   });
 
+  it('ships _headers caching hashed assets as immutable', () => {
+    expect(readFileSync('dist/_headers', 'utf8')).toMatch(
+      /^\/_astro\/\*\n\s+Cache-Control: public, max-age=31536000, immutable$/m,
+    );
+  });
+
   it('has sitemap index and robots.txt', () => {
     expect(existsSync('dist/sitemap-index.xml')).toBe(true);
     expect(readFileSync('dist/robots.txt', 'utf8')).toContain(`Sitemap: ${SITE}/sitemap-index.xml`);
