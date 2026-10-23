@@ -1,6 +1,6 @@
 import { getTool, type InType, type OutFormat } from '../tools';
 import { CodecLoadError, load } from './codecs';
-import { decode, type Decoded, type Pixels } from './decode';
+import { DecodeError, decode, type Decoded, type Pixels } from './decode';
 import { applyOrientation, downscaleTo, flattenOnWhite } from './pixels';
 import { sniff } from './sniff';
 import {
@@ -24,7 +24,7 @@ export function outputName(inputName: string, format: OutFormat): string {
   return `${inputName.replace(/\.[^./\\]+$/, '')}.${format}`;
 }
 
-const OOM_MESSAGE = /memory|alloc|\boom\b/i;
+const OOM_MESSAGE = /alloc|\boom\b|enlarge memory|out of memory/i;
 
 /** Memory exhaustion surfaces as a RangeError or a wasm RuntimeError, possibly as the `cause` of a DecodeError. */
 function isOutOfMemory(err: unknown): boolean {
@@ -38,7 +38,8 @@ function isOutOfMemory(err: unknown): boolean {
 function failReason(err: unknown): FailReason {
   if (err instanceof CodecLoadError) return 'codec-load';
   if (isOutOfMemory(err)) return 'oom';
-  return 'corrupt'; // DecodeError, or an encoder/reader failure: either way this file did not convert
+  if (!(err instanceof DecodeError)) console.error('convert: unexpected error', err); // our bug, not a bad file
+  return 'corrupt';
 }
 
 const megapixelsOf = (w: number, h: number): number => Math.floor((w * h) / 1e6);
@@ -92,8 +93,9 @@ export async function convert(
       : requested && tool.outputs.includes(requested)
         ? requested
         : (tool.defaults.format ?? tool.outputs[0]!);
-  const quality = Math.min(100, Math.max(1, Math.round(options.quality ?? tool.defaults.quality)));
-  const target = options.downscaleTo;
+  const positive = (n: number | undefined): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0;
+  const quality = Math.min(100, Math.max(1, Math.round(positive(options.quality) ? options.quality : tool.defaults.quality)));
+  const target = positive(options.downscaleTo) ? options.downscaleTo : undefined;
 
   const tooLarge = (w: number, h: number): boolean => w * h > limits.maxMegapixels * 1e6;
   if (target === undefined && sniffed.width && sniffed.height && tooLarge(sniffed.width, sniffed.height)) {

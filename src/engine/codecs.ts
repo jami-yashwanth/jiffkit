@@ -155,7 +155,7 @@ const PRELOAD: Record<InType, (keyof typeof load)[]> = {
   heic: ['heif', 'jpegEnc'],
   jpg: ['jpeg', 'jpegEnc'],
   png: ['png', 'oxipng'],
-  webp: ['webp', 'jpegEnc'],
+  webp: ['webp', 'jpegEnc', 'webpEnc'],
 };
 
 /** Start fetching codecs for these input types (drop-zone hover/focus). Failures are retried on real use. */

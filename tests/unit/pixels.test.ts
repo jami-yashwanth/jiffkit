@@ -42,13 +42,14 @@ describe('applyOrientation', () => {
   });
 
   it.each([
-    [2, [3, 0]],
-    [4, [0, 2]],
-    [5, [0, 0]],
-    [7, [2, 3]],
-  ] as const)('orientation %i puts the source top-left at %j', (o, [x, y]) => {
+    [2, [3, 0], [0, 0]],
+    [4, [0, 2], [3, 2]],
+    [5, [0, 0], [0, 3]],
+    [7, [2, 3], [2, 0]],
+  ] as const)('orientation %i puts source (0,0) at %j and source (3,0) at %j', (o, [x, y], [x2, y2]) => {
     const out = applyOrientation(grid(4, 3, o));
     expect(at(out, x, y)).toEqual([0, 0]);
+    expect(at(out, x2, y2)).toEqual([3, 0]);
   });
 });
 
@@ -98,5 +99,17 @@ describe('downscaleTo', () => {
     const out = downscaleTo(p, 1 / 1e6); // 1 pixel
     expect([out.width, out.height]).toEqual([1, 1]);
     expect([...out.data]).toEqual([100, 100, 100, 255]);
+  });
+
+  it('does not bleed colour from a transparent pixel', () => {
+    const p: Pixels = {
+      data: new Uint8ClampedArray([255, 0, 0, 0, 0, 0, 255, 255, 255, 0, 0, 0, 0, 0, 255, 255]),
+      width: 2,
+      height: 2,
+      orientation: 1,
+      hasAlpha: true,
+    };
+    const out = downscaleTo(p, 1 / 1e6);
+    expect([...out.data]).toEqual([0, 0, 255, 128]);
   });
 });

@@ -150,19 +150,36 @@ describe('convert: failure mapping', () => {
       expect((await failed(job('photo.jpg', 'compress-image'))).reason).toBe('oom');
     });
 
-    it('maps a WebAssembly memory error wrapped as a cause to oom', async () => {
-      const cause = new WebAssembly.RuntimeError('memory access out of bounds');
+    it.each([
+      ['Aborted(OOM)', 'oom'],
+      ['Cannot enlarge memory arrays', 'oom'],
+      ['memory access out of bounds', 'corrupt'],
+    ])('maps a wrapped WebAssembly error "%s" to %s', async (message, reason) => {
+      const cause = new WebAssembly.RuntimeError(message);
       vi.spyOn(load, 'jpegEnc').mockResolvedValue({
         encode: () => {
           throw new Error('wrapped', { cause });
         },
       });
-      expect((await failed(job('photo.jpg', 'compress-image'))).reason).toBe('oom');
+      const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+      expect((await failed(job('photo.jpg', 'compress-image'))).reason).toBe(reason);
+      expect(err).toHaveBeenCalledTimes(reason === 'corrupt' ? 1 : 0);
     });
 
     it('maps a codec that cannot load to codec-load', async () => {
       vi.spyOn(load, 'jpeg').mockRejectedValue(new CodecLoadError('offline'));
       expect((await failed(job('photo.jpg', 'compress-image'))).reason).toBe('codec-load');
     });
+  });
+
+  it('ignores invalid quality and downscaleTo', async () => {
+    for (const bad of [NaN, 0, -5, Infinity]) {
+      const d = await done(job('photo.jpg', 'compress-image', { quality: bad, downscaleTo: bad }));
+      expect([d.width, d.height]).toEqual([1600, 1200]);
+      expect(d.outBytes).toBeGreaterThan(1000);
+    }
+    const q = await done(job('photo.jpg', 'compress-image', { quality: NaN }));
+    const dflt = await done(job('photo.jpg', 'compress-image'));
+    expect(q.outBytes).toBe(dflt.outBytes);
   });
 });
