@@ -7,3 +7,4 @@ playwright-report/
 .DS_Store
 tests/fixtures/iphone-48mp.heic
 tests/fixtures/huge-63mp.jpg
+review/
