@@ -2,17 +2,17 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Locator, type Page, type Route } from '@playwright/test';
 import { unzipSync } from 'fflate';
 import { PDFDocument } from 'pdf-lib';
+import { stubPlausible, type PlausibleEvent } from './plausible';
 
 // Spec §4 Merge PDF and Split PDF states, with the exact copy. Runs against `astro build` + `astro preview`.
 
+// Analytics are counted as stubbed Plausible requests: the one reporting path the real site uses.
+let events: PlausibleEvent[];
+
 test.beforeEach(async ({ context, page }) => {
-  await context.route('https://plausible.io/**', (r) => r.fulfill({ status: 202, body: '' }));
+  events = await stubPlausible(context);
   await page.addInitScript(() => {
-    const w = window as unknown as { __hooks: [string, unknown][]; __hold: boolean; __held: (() => void)[]; __release: () => void };
-    // Every onSuccess/onError call, as the island reports it.
-    w.__hooks = [];
-    document.addEventListener('pdf:success', (e) => w.__hooks.push(['success', (e as CustomEvent).detail.count]));
-    document.addEventListener('pdf:error', (e) => w.__hooks.push(['error', (e as CustomEvent).detail.reason]));
+    const w = window as unknown as { __hold: boolean; __held: (() => void)[]; __release: () => void };
     // While __hold is set, merge/split results from the worker wait for __release(); page counts pass straight through.
     w.__hold = false;
     w.__held = [];
@@ -35,7 +35,17 @@ test.beforeEach(async ({ context, page }) => {
   });
 });
 
-const hooks = (page: Page) => page.evaluate(() => (window as unknown as { __hooks: [string, unknown][] }).__hooks);
+/** The analytics the page has sent, as ['success', count] / ['error', reason]; polled so the beacon has landed. */
+async function expectHooks(expected: [string, unknown][]) {
+  const seen = () =>
+    events.map((e) => {
+      expect(Object.keys(e.p).sort()).toEqual(e.n === 'convert_success' ? ['count', 'tool'] : ['reason', 'tool']);
+      return e.n === 'convert_success' ? ['success', e.p.count] : ['error', e.p.reason];
+    });
+  await expect.poll(seen).toEqual(expected);
+  await new Promise((r) => setTimeout(r, 150)); // room for a stray extra event
+  expect(seen()).toEqual(expected);
+}
 const holdResults = (page: Page) => page.evaluate(() => ((window as unknown as { __hold: boolean }).__hold = true));
 const releaseResults = (page: Page) => page.evaluate(() => (window as unknown as { __release: () => void }).__release());
 
@@ -135,7 +145,7 @@ test.describe('Merge PDF', () => {
     await expect(page.getByText(/^5 pages · \d+ KB$/)).toBeVisible();
     // Screen readers hear the result; the status region says it without showing it twice.
     await expect(page.locator('[data-status]')).toHaveText(/^merged\.pdf ready, 5 pages · \d+ KB$/);
-    expect(await hooks(page)).toEqual([['success', 1]]);
+    await expectHooks([['success', 1]]);
 
     const { name, bytes } = await downloadFrom(page, page.getByRole('link', { name: 'Download' }));
     expect(name).toBe('merged.pdf');
@@ -164,7 +174,7 @@ test.describe('Merge PDF', () => {
     await expect(rows(page).last()).toContainText('2 pages');
     await expect(button(page, 'Merge PDFs')).toBeDisabled();
     await expect(page.locator('[data-status]')).toHaveText(`encrypted.pdf: ${ENCRYPTED}`); // announced
-    expect(await hooks(page)).toEqual([['error', 'encrypted']]);
+    await expectHooks([['error', 'encrypted']]);
     await rows(page).nth(1).getByRole('button', { name: 'Remove' }).click();
     await expect(button(page, 'Merge PDFs')).toBeEnabled();
   });
@@ -174,7 +184,7 @@ test.describe('Merge PDF', () => {
     await expect(rows(page).first()).toContainText(DAMAGED);
     await expect(rows(page).last()).toContainText(DAMAGED);
     await expect(button(page, 'Merge PDFs')).toBeDisabled();
-    expect(await hooks(page)).toEqual([['error', 'corrupt'], ['error', 'corrupt']]); // one per damaged file
+    await expectHooks([['error', 'corrupt'], ['error', 'corrupt']]); // one per damaged file
   });
 
   test('codec load failed, then Try again', async ({ page }) => {
@@ -183,7 +193,7 @@ test.describe('Merge PDF', () => {
     await expect(page.getByRole('alert')).toContainText(CODEC_FAILED);
     await expect(button(page, 'Merge PDFs')).toBeDisabled();
     await expect(page.getByText('Reading…')).toHaveCount(0); // both counts have failed
-    expect(await hooks(page)).toEqual([['error', 'codec-load']]); // one outage, reported once
+    await expectHooks([['error', 'codec-load']]); // one outage, reported once
     await page.context().unroute(PDF_LIB);
     await button(page, 'Try again').click();
     await expect(rows(page).first()).toContainText('3 pages');
@@ -191,7 +201,7 @@ test.describe('Merge PDF', () => {
     await expect(page.getByText(CODEC_FAILED)).toBeHidden();
     await button(page, 'Merge PDFs').click();
     await expect(page.getByText(/^5 pages · \d+ KB$/)).toBeVisible();
-    expect(await hooks(page)).toEqual([['error', 'codec-load'], ['success', 1]]);
+    await expectHooks([['error', 'codec-load'], ['success', 1]]);
   });
 });
 
@@ -230,7 +240,7 @@ test.describe('Split PDF', () => {
     await releaseResults(page);
     await expect(page.getByText('3 files', { exact: true })).toBeVisible();
     await expect(page.locator('[data-status]')).toHaveText('three-pages-pages.zip ready, 3 files');
-    expect(await hooks(page)).toEqual([['success', 3]]);
+    await expectHooks([['success', 3]]);
     const { name, bytes } = await downloadFrom(page, page.getByRole('link', { name: 'Download all (ZIP)' }));
     expect(name).toBe('three-pages-pages.zip');
     const entries = unzipSync(bytes);
@@ -262,7 +272,7 @@ test.describe('Split PDF', () => {
     await button(page, 'Split PDF').click();
     await expect(page.getByRole('alert').filter({ hasText: 'Pages must be between 1 and 3, like 1-3, 5.' })).toBeVisible();
     await expect(rangeInput(page)).toHaveAccessibleDescription('Pages must be between 1 and 3, like 1-3, 5.');
-    expect(await hooks(page)).toEqual([['error', 'range']]);
+    await expectHooks([['error', 'range']]);
     await rangeInput(page).fill('2-');
     await button(page, 'Split PDF').click();
     await expect(page.getByText('three-pages-pages-2-3.pdf', { exact: true })).toBeVisible();
@@ -284,7 +294,7 @@ test.describe('Split PDF', () => {
     await choose(page, 'not-a.pdf');
     await expect(page.getByText(DAMAGED)).toBeVisible();
     await expect(page.getByText(ENCRYPTED)).toBeHidden();
-    expect(await hooks(page)).toEqual([['error', 'encrypted'], ['error', 'corrupt']]);
+    await expectHooks([['error', 'encrypted'], ['error', 'corrupt']]);
   });
 
   test('codec load failed, then Try again', async ({ page }) => {

@@ -2,6 +2,7 @@ import type { PdfEngine } from '../pdf/client';
 import { parseRanges } from '../pdf/ranges';
 import type { PdfFail, PdfOut } from '../pdf/types';
 import { formatBytes, middleTruncate } from './format';
+import { track } from './track';
 
 // Enhances the static markup from PdfTool.astro. The engine (worker + pdf-lib) is imported on drop-zone hover,
 // focus or the first file, which keeps the page inside the 15 KB budget. File names only ever go in as text.
@@ -46,6 +47,10 @@ function h<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, 
 export function mount(el: HTMLElement): void {
   const q = <T extends HTMLElement = HTMLElement>(sel: string) => el.querySelector<T>(sel)!;
   const isMerge = el.dataset.op === 'merge';
+  const tool = el.dataset.tool!;
+  // Registered before any interaction. Props are only {tool, count} or {tool, reason}.
+  onSuccess((count) => track('convert_success', { tool, count }));
+  onError((reason) => track('convert_error', { tool, reason }));
   const drop = q('.drop');
   const input = q<HTMLInputElement>('input[type=file]');
   const loading = q('[data-loading]');

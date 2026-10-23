@@ -2,6 +2,7 @@ import { copyText } from './clipboard';
 import { formatJson, minifyJson, TOO_DEEP } from '../text/json';
 import { decodeBase64, encodeBase64 } from '../text/base64';
 import { decodeJwt } from '../text/jwt';
+import { track } from './track';
 
 // Enhances the static markup from TextTool.astro. User text only ever goes in via textContent/value.
 
@@ -179,6 +180,7 @@ function base64(root: HTMLElement) {
     else encode();
   });
   copies.forEach((btn) => wireCopy(btn, boxFor(btn)));
+  syncCopies(); // a restored form value must enable Copy
 }
 
 const DATE_PARTS = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -232,6 +234,8 @@ function jwt(root: HTMLElement) {
 }
 
 export function mount(el: HTMLElement): void {
+  const tool = el.dataset.tool!;
+  onUsed(() => track('tool_used', { tool })); // registered before any Copy, so the one-time event can't be missed
   const t = el.dataset.transform;
   if (t === 'json') json(el);
   else if (t === 'base64') base64(el);

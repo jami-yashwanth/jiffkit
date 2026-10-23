@@ -75,12 +75,9 @@ const ENGINE_SIZE = '0.2 MB';
 </div>
 
 <script>
-  import { mount, onError, onSuccess } from '../ui/pdf';
+  import { mount } from '../ui/pdf';
   const el = document.querySelector<HTMLElement>('[data-kind="pdf"]');
   if (el) {
-    // The analytics hooks, also surfaced as DOM events so tests can count them. Details carry only a count or a reason.
-    onSuccess((count) => el.dispatchEvent(new CustomEvent('pdf:success', { bubbles: true, detail: { count } })));
-    onError((reason) => el.dispatchEvent(new CustomEvent('pdf:error', { bubbles: true, detail: { reason } })));
     mount(el);
   }
 </script>

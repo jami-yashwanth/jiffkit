@@ -3,6 +3,7 @@ import { sniff } from '../engine/sniff';
 import { DOWNSCALE_MEGAPIXELS, type Done, type Failed, type Job, type Progress } from '../engine/types';
 import type { ImageSlug, InType, OutFormat } from '../tools';
 import { formatBytes, middleTruncate, uniqueNames } from './format';
+import { track } from './track';
 
 // The engine (and with it the worker and codecs) is imported only on hover, focus or drop, which keeps the
 // page's up-front JavaScript inside the 15 KB budget.
@@ -35,11 +36,6 @@ function h<K extends keyof HTMLElementTagNameMap>(
   for (const [k, v] of Object.entries(props)) if (v !== undefined) el.setAttribute(k, v);
   for (const kid of kids) if (kid) el.append(kid);
   return el;
-}
-
-/** Plausible events. Props are only ever {tool, count} or {tool, reason}: never a file name, size or type. */
-function track(name: 'convert_success' | 'convert_error', props: Record<string, string | number>): void {
-  (window as { plausible?: (n: string, o: { props: typeof props }) => void }).plausible?.(name, { props });
 }
 
 export function mount(el: HTMLElement): void {

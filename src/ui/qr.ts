@@ -1,3 +1,4 @@
+import { track } from './track';
 import { makeQr, maxBytes, toSvg, QUIET, type Level, type QrResult } from '../qr/qr';
 
 // Enhances the static markup from QrTool.astro. The preview holds only SVG we generate from the matrix; user text never reaches innerHTML.
@@ -44,6 +45,8 @@ function save(blob: Blob, name: string) {
 }
 
 export function mount(root: HTMLElement): void {
+  const tool = root.dataset.tool!;
+  onUsed(() => track('tool_used', { tool })); // registered before any Download, so the one-time event can't be missed
   const input = $<HTMLInputElement>(root, '[data-input]');
   const status = $(root, '[data-status]');
   const preview = $(root, '[data-results]');
