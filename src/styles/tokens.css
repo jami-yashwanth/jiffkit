@@ -204,6 +204,7 @@ textarea.text-input { resize: vertical; font-family: ui-monospace, SFMono-Regula
 .text-input::placeholder { color: var(--ink-muted); opacity: 1; }
 .text-input:focus-visible { outline-offset: 0; border-color: var(--accent); border-radius: var(--radius); }
 [data-kind] .actions { margin-bottom: var(--s3); }
+.field > .actions { margin: var(--s2) 0 0; }
 [data-kind] button.btn:disabled { cursor: not-allowed; }
 [data-kind] .status:empty { display: none; }
 .pane {

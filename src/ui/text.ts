@@ -32,16 +32,18 @@ function debouncer() {
   };
 }
 
-/** Copy `pane`'s text; "Copied" shows beside the button for 1.5 s. If copying is refused, select the text instead. */
-function wireCopy(btn: HTMLButtonElement, pane: HTMLElement) {
+/** Copy `source`'s text; "Copied" shows beside the button for 1.5 s. If copying is refused, select the text instead. */
+function wireCopy(btn: HTMLButtonElement, source: HTMLElement) {
   const note = document.createElement('span');
   note.className = 'copied';
   note.setAttribute('aria-live', 'polite');
   btn.after(note);
   let timer: number | undefined;
   btn.addEventListener('click', async () => {
-    if (!(await copyText(pane.textContent ?? ''))) {
-      getSelection()?.selectAllChildren(pane);
+    const isBox = source instanceof HTMLTextAreaElement;
+    if (!(await copyText(isBox ? source.value : (source.textContent ?? '')))) {
+      if (isBox) source.select();
+      else getSelection()?.selectAllChildren(source);
       return;
     }
     note.textContent = 'Copied';
@@ -108,8 +110,10 @@ function json(root: HTMLElement) {
   input.addEventListener('input', () => {
     const empty = !/\S/.test(input.value);
     format.disabled = minify.disabled = empty;
-    if (empty) out.textContent = '';
-    copy.disabled = out.textContent === '';
+    // Any edit makes the old result stale: clear it so Copy can never copy it.
+    out.textContent = '';
+    copy.disabled = true;
+    last = null;
     input.removeAttribute('aria-invalid');
     excerpt.hidden = true;
     status.textContent = largeNote();
@@ -131,11 +135,18 @@ function base64(root: HTMLElement) {
   const status = $(root, '[data-status]');
   const timer = debouncer();
   const opts = () => ({ urlSafe: urlSafe.checked });
+  const copies = [...root.querySelectorAll<HTMLButtonElement>('[data-copy]')];
+  const boxFor = (btn: HTMLButtonElement) => (btn.dataset.copy === 'text' ? text : b64);
+  const syncCopies = () => {
+    for (const c of copies) c.disabled = boxFor(c).value === '';
+  };
+  let lastEdited: 'text' | 'base64' = 'text';
 
   const encode = () => {
     b64.value = encodeBase64(text.value, opts());
     b64.removeAttribute('aria-invalid');
     status.textContent = '';
+    syncCopies();
   };
   const decode = () => {
     const r = decodeBase64(b64.value, opts());
@@ -143,6 +154,7 @@ function base64(root: HTMLElement) {
       text.value = r.text;
       b64.removeAttribute('aria-invalid');
       status.textContent = '';
+      syncCopies();
       return;
     }
     // The Text box keeps its last good value.
@@ -150,12 +162,23 @@ function base64(root: HTMLElement) {
     status.textContent = r.reason === 'invalid' ? "This isn't valid Base64." : "This is valid Base64, but it isn't text.";
   };
 
-  text.addEventListener('input', () => timer.later(encode));
-  b64.addEventListener('input', () => timer.later(decode));
+  text.addEventListener('input', () => {
+    lastEdited = 'text';
+    syncCopies();
+    timer.later(encode);
+  });
+  b64.addEventListener('input', () => {
+    lastEdited = 'base64';
+    syncCopies();
+    timer.later(decode);
+  });
+  // Re-read whichever box the user edited last under the new alphabet; never overwrite what they typed.
   urlSafe.addEventListener('change', () => {
     timer.cancel();
-    encode();
+    if (lastEdited === 'base64') decode();
+    else encode();
   });
+  copies.forEach((btn) => wireCopy(btn, boxFor(btn)));
 }
 
 const DATE_PARTS = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });

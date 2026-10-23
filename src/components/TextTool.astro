@@ -39,10 +39,16 @@ const indents = [
       <div class="field">
         <label for="b64-text">Text</label>
         <textarea id="b64-text" class="text-input" rows="6" spellcheck="false" data-text></textarea>
+        <div class="actions">
+          <button type="button" class="btn btn-quiet" data-copy="text" disabled>Copy</button>
+        </div>
       </div>
       <div class="field">
         <label for="b64-base64">Base64</label>
         <textarea id="b64-base64" class="text-input" rows="6" spellcheck="false" data-base64></textarea>
+        <div class="actions">
+          <button type="button" class="btn btn-quiet" data-copy="base64" disabled>Copy</button>
+        </div>
       </div>
       <p class="status" role="status" aria-live="polite" data-status></p>
       <div data-results></div>
