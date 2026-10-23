@@ -297,7 +297,9 @@ pre[data-results]:empty { display: none; }
 }
 .icon-btn:hover:not(:disabled) { background: var(--tint); color: var(--accent); border-color: var(--edge); }
 .icon-btn:focus-visible { border-radius: var(--radius); }
-.icon-btn:disabled { color: var(--line); cursor: default; }
+.icon-btn:disabled { color: var(--ink-muted); cursor: default; }
+/* Disabled reads as faded but still visible: only the icon fades, the button edge stays. */
+.icon-btn:disabled::before { opacity: 0.4; }
 /* Drawn icons, not the ↑ ↓ ✕ glyphs (which render differently, or as emoji, per platform). The aria-label names each. */
 .icon-btn[data-up], .icon-btn[data-down], .icon-btn[data-remove] { display: inline-flex; align-items: center; justify-content: center; font-size: 0; }
 .icon-btn[data-up]::before, .icon-btn[data-down]::before, .icon-btn[data-remove]::before {

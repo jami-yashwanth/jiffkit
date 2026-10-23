@@ -227,6 +227,23 @@ for (const vp of VIEWPORTS) {
       await shot(page, 'split-pdf-done-every');
     });
 
+    test('split-pdf: empty, damaged', async ({ page }) => {
+      await page.goto('/split-pdf/');
+      await shot(page, 'split-pdf-empty', true);
+      await pdf(page, 'not-a.pdf');
+      await expect(page.getByText("We couldn't read this file. It may be damaged or not a PDF.")).toBeVisible();
+      await shot(page, 'split-pdf-damaged');
+    });
+
+    test('merge-pdf: codec load failed', async ({ page }) => {
+      await page.context().route(/\/_astro\/pdf-lib-[^/]*\.js$/, (route) => route.abort());
+      await page.goto('/merge-pdf/');
+      await pdf(page, 'three-pages.pdf', 'two-pages.pdf');
+      await expect(page.getByText("Couldn't load the PDF tools. Check your connection.")).toBeVisible();
+      await expect(page.getByText('Reading…')).toHaveCount(0);
+      await shot(page, 'merge-pdf-codec-failed');
+    });
+
     test('json-formatter: empty, formatted, invalid', async ({ page }) => {
       await page.goto('/json-formatter/');
       await shot(page, 'json-formatter-empty', true);
