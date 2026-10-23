@@ -1,4 +1,4 @@
-import type { OutFormat, ToolSlug } from '../tools';
+import type { InType, OutFormat, ToolSlug } from '../tools';
 
 export type Note = 'gps-removed' | 'first-frame-only' | 'already-optimized' | 'transparency-filled';
 export type FailReason = 'wrong-type' | 'corrupt' | 'too-large' | 'oom' | 'codec-load';
@@ -37,3 +37,12 @@ export interface Progress {
 
 export const MAX_MEGAPIXELS = 50;
 export const DOWNSCALE_MEGAPIXELS = 24;
+
+/** Page -> worker messages. */
+export type WorkerRequest = { kind: 'job'; job: Job } | { kind: 'preload'; types: InType[] };
+
+/** Worker -> page messages. The Done blob travels by structured clone, which shares the bytes rather than copying them. */
+export type WorkerResponse =
+  | ({ kind: 'progress' } & Progress)
+  | ({ kind: 'done' } & Done)
+  | ({ kind: 'failed' } & Failed);
