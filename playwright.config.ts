@@ -16,6 +16,8 @@ export default defineConfig({
   webServer: {
     command: `npm run build && npx astro preview --port ${PORT} --ignore-lock`,
     url: `http://localhost:${PORT}`,
+    // The build carries the Plausible tag so the privacy test can watch it. Every test stubs plausible.io.
+    env: { PUBLIC_PLAUSIBLE_DOMAIN: 'tools.test' },
     reuseExistingServer: false,
     timeout: 180_000,
   },

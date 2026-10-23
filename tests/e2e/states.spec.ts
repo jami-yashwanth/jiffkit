@@ -5,6 +5,9 @@ import { sniff } from '../../src/engine/sniff';
 
 // One test per spec §5 state, asserting the exact copy. Runs against `astro build` + `astro preview`.
 
+// The build carries the Plausible tag; keep these tests off the real network.
+test.beforeEach(({ context }) => context.route('https://plausible.io/**', (r) => r.fulfill({ status: 202, body: '' })));
+
 const fixture = (name: string) => `tests/fixtures/${name}`;
 
 /** Pick files through the real <input type=file>. Works for every engine, including a hidden input. */

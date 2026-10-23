@@ -37,6 +37,11 @@ function h<K extends keyof HTMLElementTagNameMap>(
   return el;
 }
 
+/** Plausible events. Props are only ever {tool, count} or {tool, reason}: never a file name, size or type. */
+function track(name: 'convert_success' | 'convert_error', props: Record<string, string | number>): void {
+  (window as { plausible?: (n: string, o: { props: typeof props }) => void }).plausible?.(name, { props });
+}
+
 export function mount(el: HTMLElement): void {
   const q = <T extends Element>(sel: string): T => el.querySelector<T>(sel)!;
   const tool = el.dataset.tool as ToolSlug;
@@ -77,6 +82,7 @@ export function mount(el: HTMLElement): void {
   const rows = new Map<string, Row>();
   let nextId = 0;
   let zipUrl: string | undefined;
+  let doneSinceDrain = 0; // Done rows not yet reported; reported (once, as one event) when the queue drains
 
   function getEngine(): Promise<EngineClient> {
     engine ??= import('../engine/client').then(({ createEngine }) => {
@@ -132,12 +138,14 @@ export function mount(el: HTMLElement): void {
   function onDone(d: Done): void {
     const row = rows.get(d.id);
     if (!row) return; // cleared by "Convert more" while it ran
+    doneSinceDrain++;
     row.state = { kind: 'done', done: d, url: URL.createObjectURL(d.blob), thumbUrl: URL.createObjectURL(d.thumb) };
     render(row);
   }
   function onFailed(f: Failed): void {
     const row = rows.get(f.id);
     if (!row) return;
+    track('convert_error', { tool, reason: f.reason });
     row.state = { kind: 'failed', failed: f };
     render(row);
   }
@@ -253,6 +261,10 @@ export function mount(el: HTMLElement): void {
     const done = all.filter((r) => r.state.kind === 'done');
     const finished = all.filter((r) => r.state.kind !== 'queued').length;
     const running = finished < all.length;
+    if (!running && doneSinceDrain > 0) {
+      track('convert_success', { tool, count: doneSinceDrain });
+      doneSinceDrain = 0;
+    }
 
     results.hidden = all.length === 0;
     drop.hidden = all.length > 0;

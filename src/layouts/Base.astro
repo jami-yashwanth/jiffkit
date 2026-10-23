@@ -9,6 +9,7 @@ interface Props {
   jsonLd?: object;
 }
 const { title, description, path, jsonLd } = Astro.props;
+const plausibleDomain = import.meta.env.PUBLIC_PLAUSIBLE_DOMAIN;
 const canonical = new URL(path, Astro.site).href;
 ---
 <!doctype html>
@@ -24,6 +25,16 @@ const canonical = new URL(path, Astro.site).href;
     <meta property="og:url" content={canonical} />
     <meta property="og:type" content="website" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {
+      plausibleDomain && (
+        <>
+          <script defer data-domain={plausibleDomain} src="https://plausible.io/js/script.tagged-events.js" />
+          <script is:inline>
+            window.plausible = window.plausible || function () {(window.plausible.q = window.plausible.q || []).push(arguments)}
+          </script>
+        </>
+      )
+    }
     {jsonLd && <script type="application/ld+json" set:html={jsonLdString(jsonLd)} />}
   </head>
   <body>
