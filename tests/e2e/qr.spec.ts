@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { PNG } from 'pngjs';
+import jsQR from 'jsqr';
 
 // Spec §4 states for the QR code generator, with the exact copy.
 
@@ -93,4 +95,29 @@ test('level option changes the code', async ({ page }) => {
   await expect(page.getByLabel('M', { exact: true })).toBeChecked();
   await page.getByLabel('H', { exact: true }).check();
   await expect.poll(() => preview(page).innerHTML()).not.toBe(m);
+});
+
+function decodePng(bytes: Buffer) {
+  const img = PNG.sync.read(bytes);
+  return { width: img.width, height: img.height, text: jsQR(new Uint8ClampedArray(img.data), img.width, img.height)?.data };
+}
+
+for (const size of [256, 512, 1024]) {
+  test(`PNG at ${size} px decodes back to the text`, async ({ page }) => {
+    const text = 'https://example.com/path?q=naïve 👋';
+    await input(page).fill(text);
+    await page.getByText('Options').click();
+    await page.getByLabel(`${size} px`).check();
+    const { bytes } = await download(page, 'Download PNG');
+    expect(decodePng(bytes)).toEqual({ width: size, height: size, text });
+  });
+}
+
+test('clicking Download right after typing saves the new text', async ({ page }) => {
+  await input(page).fill('first');
+  await expect(button(page, 'Download PNG')).toBeEnabled();
+  await input(page).pressSequentially('second');
+  // No wait: the 100 ms debounce is still pending when the click lands.
+  const { bytes } = await download(page, 'Download PNG');
+  expect(decodePng(bytes).text).toBe('firstsecond');
 });

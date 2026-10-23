@@ -39,8 +39,8 @@ function save(blob: Blob, name: string) {
   document.body.append(a);
   a.click();
   a.remove();
-  // Give the browser a tick to start the download before the URL goes away.
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  // Give the browser time to start the download before the URL goes away.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function mount(root: HTMLElement): void {
@@ -98,7 +98,14 @@ export function mount(root: HTMLElement): void {
     for (const cb of usedListeners) cb();
   };
 
+  // A click inside the debounce window must save the text on screen, not the previous code.
+  const flush = () => {
+    clearTimeout(timer);
+    render();
+  };
+
   png.addEventListener('click', async () => {
+    flush();
     if (!current) return;
     const blob = await toPngBlob(current, size());
     if (!blob) return;
@@ -106,6 +113,7 @@ export function mount(root: HTMLElement): void {
     markUsed();
   });
   svg.addEventListener('click', () => {
+    flush();
     if (!current) return;
     save(new Blob([toSvg(current, size())], { type: 'image/svg+xml' }), 'qr-code.svg');
     markUsed();

@@ -407,7 +407,7 @@ const OTHER_TOOLS: (PdfTool | TextTool | QrTool)[] = [
       },
       {
         q: 'How much text can a QR code hold?',
-        a: 'Up to a few thousand characters, less at higher error correction. If your text is too long, we tell you the limit for the level you picked.',
+        a: 'About 2,300 characters at the default error-correction level (up to 2,953 at level L). Shorter text makes a simpler code that scans more easily. If your text is too long, we tell you the limit for the level you picked.',
       },
     ],
     related: ['json-formatter', 'base64-encode-decode', 'heic-to-jpg'],
