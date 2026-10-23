@@ -88,6 +88,24 @@ describe('site', () => {
     for (const n of ['libheif-js', 'LGPL-3.0', '@jsquash', 'Apache-2.0', 'fflate', 'Astro']) expect(h).toContain(n);
   });
 
+  it('licences page carries the LGPL text, the IJG sentence and version-tagged source links', () => {
+    const h = html('licenses/');
+    const version = (n: string) => JSON.parse(readFileSync(`node_modules/${n}/package.json`, 'utf8')).version;
+    expect(h).toContain('GNU LESSER GENERAL PUBLIC LICENSE');
+    expect(h).toContain('GNU GENERAL PUBLIC LICENSE');
+    expect(h).toContain('based in part on the work of the Independent JPEG Group');
+    expect(h).toContain(`catdad-experiments/libheif-js/tree/v${version('libheif-js')}`);
+    expect(h).toContain('strukturag/libheif/tree/v');
+    expect(h).toContain('strukturag/libde265/tree/v');
+    for (const p of ['jpeg', 'png', 'oxipng', 'webp']) {
+      expect(h).toContain(encodeURIComponent(`@jsquash/${p}@${version(`@jsquash/${p}`)}`));
+    }
+    expect(h).toContain(`101arrowz/fflate/tree/v${version('fflate')}`);
+    expect(h).toContain(`withastro/astro/tree/astro@${version('astro')}`);
+    expect(h).toContain('Apache License'); // jSquash
+    expect(h).toContain('Permission is hereby granted'); // MIT: fflate, Astro
+  });
+
   it('has sitemap index and robots.txt', () => {
     expect(existsSync('dist/sitemap-index.xml')).toBe(true);
     expect(readFileSync('dist/robots.txt', 'utf8')).toContain('Sitemap: https://web-tools.pages.dev/sitemap-index.xml');
