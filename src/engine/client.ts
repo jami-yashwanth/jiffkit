@@ -86,6 +86,11 @@ export function createEngine(workerFactory: () => Worker = defaultWorkerFactory)
       emit(listeners.done, d);
     } else {
       const { kind: _, ...f } = m;
+      if (f.reason === 'oom') {
+        // The wasm heaps never shrink: give the next job a fresh worker.
+        worker?.terminate();
+        worker = null;
+      }
       emit(listeners.failed, f);
     }
     next();

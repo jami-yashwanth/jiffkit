@@ -97,6 +97,24 @@ describe('engine client', () => {
     expect(workers[0].terminated).toBe(true);
   });
 
+  it('terminates the worker after an oom failure so the next job gets a fresh one', () => {
+    const { engine, workers, events } = setup();
+    engine.enqueue(job('a'));
+    engine.enqueue(job('b'));
+    workers[0].reply({ kind: 'failed', id: 'a', reason: 'oom' });
+    expect(events).toEqual(['failed:a:oom']);
+    expect(workers[0].terminated).toBe(true);
+    expect(workers).toHaveLength(2);
+    expect(workers[1].jobIds).toEqual(['b']);
+  });
+
+  it('keeps the worker after a non-oom failure', () => {
+    const { engine, workers } = setup();
+    engine.enqueue(job('a'));
+    workers[0].reply(failedMsg('a'));
+    expect(workers[0].terminated).toBe(false);
+  });
+
   it('fails the in-flight job as oom when the worker crashes after its first message, then uses a fresh worker', () => {
     const { engine, workers, events } = setup();
     engine.enqueue(job('a'));
