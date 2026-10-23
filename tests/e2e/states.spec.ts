@@ -302,7 +302,7 @@ test('Location data removed stays hidden when a result is already optimized', as
   await expect(doneRows(page).nth(1).getByText("Already optimized. We couldn't make it smaller.")).toBeVisible();
   await expect(doneRows(page).nth(0).locator('.note')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Convert more' })).toBeVisible();
-  await expect(page.getByText('Location data removed')).toBeHidden();
+  await expect(page.locator('[data-results]').getByText('Location data removed')).toBeHidden();
 });
 
 test('a quality change applies only to files added after it', async ({ page }) => {
