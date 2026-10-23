@@ -1,7 +1,7 @@
 import type { EngineClient } from '../engine/client';
 import { sniff } from '../engine/sniff';
 import { DOWNSCALE_MEGAPIXELS, type Done, type Failed, type Job, type Progress } from '../engine/types';
-import type { InType, OutFormat, ToolSlug } from '../tools';
+import type { ImageSlug, InType, OutFormat } from '../tools';
 import { formatBytes, middleTruncate, uniqueNames } from './format';
 
 // The engine (and with it the worker and codecs) is imported only on hover, focus or drop, which keeps the
@@ -44,7 +44,7 @@ function track(name: 'convert_success' | 'convert_error', props: Record<string, 
 
 export function mount(el: HTMLElement): void {
   const q = <T extends Element>(sel: string): T => el.querySelector<T>(sel)!;
-  const tool = el.dataset.tool as ToolSlug;
+  const tool = el.dataset.tool as ImageSlug;
   const types = (el.dataset.types ?? '').split(' ') as InType[];
   const inputName = el.dataset.inputName ?? '';
   const noun = el.dataset.noun ?? 'image';

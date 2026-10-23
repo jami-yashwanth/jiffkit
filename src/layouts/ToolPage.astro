@@ -1,9 +1,11 @@
 ---
 import Base from './Base.astro';
-import { getTool, toolForType, type InType, type Tool } from '../tools';
+import { getTool, toolForType, type ImageSlug, type InType, type Tool } from '../tools';
 
 interface Props { tool: Tool }
 const { tool } = Astro.props;
+// Task 2 adds the pdf, text and qr views; until then only image tools render here.
+if (tool.kind !== 'image') throw new Error(`ToolPage cannot render ${tool.slug} yet`);
 const isHeic = tool.slug === 'heic-to-jpg';
 const noun = isHeic ? 'photos' : 'images';
 const chooseLabel = isHeic ? 'Choose photos' : 'Choose images';
@@ -23,7 +25,7 @@ const elsewhere = Object.fromEntries(
     }),
 );
 // Gzipped size of the codecs this tool downloads on first use (measured from the build; shown while they load).
-const CODEC_SIZE: Record<Tool['slug'], string> = { 'heic-to-jpg': '0.8 MB', 'compress-image': '0.5 MB', 'webp-to-jpg': '0.3 MB' };
+const CODEC_SIZE: Record<ImageSlug, string> = { 'heic-to-jpg': '0.8 MB', 'compress-image': '0.5 MB', 'webp-to-jpg': '0.3 MB' };
 
 const jsonLd = {
   '@context': 'https://schema.org',

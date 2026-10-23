@@ -14,7 +14,7 @@ import { TOOLS } from '../tools';
   <input id="filter" class="filter" type="search" placeholder="Try HEIC, WebP or compress" autocomplete="off" />
 
   <ul class="tool-list" id="tools">
-    {TOOLS.map((t) => (
+    {TOOLS.filter((t) => t.kind === 'image').map((t) => (
       <li data-name={`${t.h1} ${t.subhead}`.toLowerCase()}>
         <a href={`/${t.slug}/`}><strong>{t.h1}</strong>{t.subhead}</a>
       </li>

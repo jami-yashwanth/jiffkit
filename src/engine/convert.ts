@@ -1,4 +1,4 @@
-import { getTool, type InType, type OutFormat } from '../tools';
+import { getImageTool, type InType, type OutFormat } from '../tools';
 import { CodecLoadError, load } from './codecs';
 import { DecodeError, decode, type Decoded, type Pixels } from './decode';
 import { applyOrientation, downscaleTo, flattenOnWhite } from './pixels';
@@ -85,7 +85,7 @@ export async function convert(
   const { id, file, options } = job;
   const fail = (reason: FailReason, extra: Partial<Failed> = {}): Failed => ({ id, reason, ...extra });
   const progress = (stage: Progress['stage']) => onProgress?.({ id, stage });
-  const tool = getTool(job.tool);
+  const tool = getImageTool(job.tool);
 
   if (file.size === 0) return fail('corrupt');
 

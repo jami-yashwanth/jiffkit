@@ -3,7 +3,8 @@ import ToolPage from '../layouts/ToolPage.astro';
 import { TOOLS } from '../tools';
 
 export function getStaticPaths() {
-  return TOOLS.map((tool) => ({ params: { tool: tool.slug }, props: { tool } }));
+  // Task 2 removes this filter once ToolPage renders pdf, text and qr tools.
+  return TOOLS.filter((t) => t.kind === 'image').map((tool) => ({ params: { tool: tool.slug }, props: { tool } }));
 }
 const { tool } = Astro.props;
 ---
