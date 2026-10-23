@@ -48,7 +48,7 @@ describe('pdf ops', () => {
     expect(await Promise.all(out.map((o) => widths(o.bytes)))).toEqual([[201], [202], [203]]);
   });
 
-  it('extracts ranges into one file, in document order', async () => {
+  it('extracts ranges into one file, in the order given', async () => {
     const one = await split(fx('three-pages.pdf'), 'report', { kind: 'ranges', ranges: [[1, 2]] });
     expect(one).toHaveLength(1);
     expect(one[0].name).toBe('report-pages-1-2.pdf');
@@ -59,6 +59,15 @@ describe('pdf ops', () => {
     expect(several).toHaveLength(1);
     expect(several[0].name).toBe('report-pages-1-3.pdf');
     expect(await widths(several[0].bytes)).toEqual([201, 203]);
+  });
+
+  it('refuses to merge nothing', async () => {
+    expect(await reasonOf(merge([]))).toBe('corrupt');
+  });
+
+  it('keeps a damaged, unencrypted file corrupt even if its content mentions /Encrypt', async () => {
+    const filler = new TextEncoder().encode(`%PDF-1.7\n${'x'.repeat(200_000)} /Encrypt ${'y'.repeat(200_000)}\n`);
+    expect(await reasonOf(pageCount(filler.buffer as ArrayBuffer))).toBe('corrupt');
   });
 
   it('reports an encrypted file as encrypted', async () => {

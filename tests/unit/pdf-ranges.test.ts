@@ -24,6 +24,25 @@ describe('parseRanges (24 pages)', () => {
   });
 });
 
+describe('parseRanges hardening', () => {
+  it.each([
+    ['a huge number', '1-99999999999'],
+    ['a double dash', '1--3'],
+    ['fullwidth digits', '\uff11'],
+    ['a long garbage input', 'x'.repeat(10_000)],
+  ])('rejects %s quickly', (_, input) => {
+    const t = performance.now();
+    expect(parseRanges(input, 24)).toBeInstanceOf(RangeError);
+    expect(performance.now() - t).toBeLessThan(200);
+  });
+
+  it('handles a 10,000-character valid list quickly', () => {
+    const t = performance.now();
+    expect(parseRanges('1,'.repeat(4999) + '1', 24)).toEqual([[1, 1]]);
+    expect(performance.now() - t).toBeLessThan(200);
+  });
+});
+
 describe('rangesLabel', () => {
   it('joins range ends with dashes', () => {
     expect(rangesLabel([[1, 3], [5, 5]])).toBe('1-3-5');
