@@ -60,6 +60,7 @@ export function createEngine(workerFactory: () => Worker = defaultWorkerFactory)
       } catch (err) {
         // The worker could not even be created (blocked script, CSP, no Worker support): fail this job and move on.
         console.error('engine: could not start the worker', err);
+        worker?.terminate();
         worker = null;
         inFlight = null;
         emit(listeners.failed, { id: job.id, reason: 'codec-load' });

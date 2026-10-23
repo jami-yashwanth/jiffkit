@@ -5,6 +5,7 @@ import { applyOrientation, downscaleTo, flattenOnWhite } from './pixels';
 import { sniff } from './sniff';
 import {
   MAX_MEGAPIXELS,
+  THUMB_EDGE,
   type Done,
   type FailReason,
   type Failed,
@@ -61,6 +62,19 @@ async function encode(p: Pixels, format: OutFormat, quality: number): Promise<Ui
     case 'png':
       return (await load.oxipng()).optimise_raw(p.data, p.width, p.height, OXIPNG_LEVEL, false, false);
   }
+}
+
+const MIME: Record<OutFormat, string> = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+const THUMB_QUALITY = 70;
+
+/**
+ * A preview no bigger than THUMB_EDGE on the long edge, encoded with the output format's codec (already loaded;
+ * JPG output was flattened, PNG/WebP keep their alpha).
+ */
+async function thumbnail(p: Pixels, format: OutFormat): Promise<Blob> {
+  const long = Math.max(p.width, p.height);
+  const small = long <= THUMB_EDGE ? p : downscaleTo(p, (THUMB_EDGE * THUMB_EDGE * Math.min(p.width, p.height)) / long / 1e6);
+  return new Blob([(await encode(small, format, THUMB_QUALITY)) as BlobPart], { type: MIME[format] });
 }
 
 export async function convert(
@@ -132,6 +146,7 @@ export async function convert(
 
     progress('encoding');
     const out = await encode(pixels, format, quality);
+    const thumb = await thumbnail(pixels, format);
 
     const unscaled = pixels.width === decoded.width && pixels.height === decoded.height;
     if (tool.slug === 'compress-image' && out.byteLength >= file.size && unscaled) {
@@ -140,6 +155,7 @@ export async function convert(
       return {
         id,
         blob: file,
+        thumb,
         name: file.name,
         width: pixels.width,
         height: pixels.height,
@@ -149,10 +165,11 @@ export async function convert(
       };
     }
 
-    const blob = new Blob([out as BlobPart], { type: { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[format] });
+    const blob = new Blob([out as BlobPart], { type: MIME[format] });
     return {
       id,
       blob,
+      thumb,
       name: outputName(file.name, format),
       width: pixels.width,
       height: pixels.height,

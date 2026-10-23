@@ -9,7 +9,7 @@ import { formatBytes, middleTruncate, uniqueNames } from './format';
 
 type State =
   | { kind: 'queued' }
-  | { kind: 'done'; done: Done; url: string }
+  | { kind: 'done'; done: Done; url: string; thumbUrl: string }
   | { kind: 'failed'; failed: Failed };
 
 interface Row {
@@ -81,9 +81,16 @@ export function mount(el: HTMLElement): void {
   function getEngine(): Promise<EngineClient> {
     engine ??= import('../engine/client').then(({ createEngine }) => {
       const e = createEngine();
+      // Only engine events touch the loading banner: a file failed on the main thread says nothing about codecs.
       e.on('progress', onProgress);
-      e.on('done', onDone);
-      e.on('failed', onFailed);
+      e.on('done', (d) => {
+        setLoading(false);
+        onDone(d);
+      });
+      e.on('failed', (f) => {
+        setLoading(false);
+        onFailed(f);
+      });
       return e;
     });
     engine.catch(() => (engine = undefined)); // offline: let the next attempt re-import
@@ -124,21 +131,21 @@ export function mount(el: HTMLElement): void {
 
   function onDone(d: Done): void {
     const row = rows.get(d.id);
-    setLoading(false);
     if (!row) return; // cleared by "Convert more" while it ran
-    row.state = { kind: 'done', done: d, url: URL.createObjectURL(d.blob) };
+    row.state = { kind: 'done', done: d, url: URL.createObjectURL(d.blob), thumbUrl: URL.createObjectURL(d.thumb) };
     render(row);
   }
   function onFailed(f: Failed): void {
     const row = rows.get(f.id);
-    setLoading(false);
     if (!row) return;
     row.state = { kind: 'failed', failed: f };
     render(row);
   }
 
   // --- adding files ---
-  async function add(files: File[]): Promise<void> {
+  // Rows appear at once; sniffing and enqueueing run on one chain, so overlapping drops keep row order.
+  let sniffing: Promise<void> = Promise.resolve();
+  function add(files: File[]): void {
     if (!files.length) return;
     const fresh = files.map((file) => {
       const row: Row = { id: `f${nextId++}`, file, options: options(), state: { kind: 'queued' }, li: h('li', { class: 'row' }) };
@@ -147,7 +154,11 @@ export function mount(el: HTMLElement): void {
       render(row);
       return row;
     });
-    // Sniff on the main thread so a wrong file never reaches the worker. Enqueue in drop order.
+    sniffing = sniffing.then(() => sniffAndEnqueue(fresh)).catch((err) => console.error('dropzone: add failed', err));
+  }
+
+  /** Sniff on the main thread so a wrong file never reaches the worker. Enqueue in drop order. */
+  async function sniffAndEnqueue(fresh: Row[]): Promise<void> {
     for (const row of fresh) {
       let type: InType | 'unknown';
       try {
@@ -171,7 +182,7 @@ export function mount(el: HTMLElement): void {
   input.addEventListener('change', () => {
     const files = [...(input.files ?? [])];
     input.value = ''; // choosing the same file again must fire `change` again
-    void add(files);
+    add(files);
   });
 
   // Drops are accepted anywhere on the page, so more files can join a running batch after the drop zone hides.
@@ -199,12 +210,18 @@ export function mount(el: HTMLElement): void {
     e.preventDefault();
     depth = 0;
     drop.classList.remove('is-over');
-    void add([...(e.dataTransfer?.files ?? [])]);
+    add([...(e.dataTransfer?.files ?? [])]);
   });
 
   // --- header actions ---
+  let batch = 0; // bumped by "Convert more", so work started for an earlier batch can tell it is stale
   moreBtn.addEventListener('click', () => {
-    for (const row of rows.values()) if (row.state.kind === 'done') URL.revokeObjectURL(row.state.url);
+    batch++;
+    for (const row of rows.values()) {
+      if (row.state.kind !== 'done') continue;
+      URL.revokeObjectURL(row.state.url);
+      URL.revokeObjectURL(row.state.thumbUrl);
+    }
     if (zipUrl) URL.revokeObjectURL(zipUrl);
     zipUrl = undefined;
     rows.clear();
@@ -215,11 +232,13 @@ export function mount(el: HTMLElement): void {
 
   zipBtn.addEventListener('click', async () => {
     const done = [...rows.values()].flatMap((r) => (r.state.kind === 'done' ? [r.state.done] : []));
+    const started = batch;
     zipBtn.disabled = true;
     try {
       const { zipFiles } = await import('./zip');
       const names = uniqueNames(done.map((d) => d.name));
       const zip = await zipFiles(done.map((d, i) => ({ name: names[i]!, blob: d.blob })));
+      if (started !== batch) return; // "Convert more" was clicked meanwhile: drop it, no URL was made
       if (zipUrl) URL.revokeObjectURL(zipUrl);
       zipUrl = URL.createObjectURL(zip);
       h('a', { href: zipUrl, download: `${noun}s.zip` }).click();
@@ -239,7 +258,6 @@ export function mount(el: HTMLElement): void {
     drop.hidden = all.length > 0;
     status.textContent = running ? `Converting ${finished + 1} of ${all.length}` : '';
     status.hidden = !running;
-    if (!running) setLoading(false);
     actions.hidden = running || all.length === 0;
     zipBtn.hidden = done.length < 2;
     gps.hidden = !done.length || !done.every((r) => r.state.kind === 'done' && r.state.done.notes.includes('gps-removed'));
@@ -271,7 +289,7 @@ export function mount(el: HTMLElement): void {
           ? 'Animated WebP: converted the first frame.'
           : '';
       body = [
-        h('img', { class: 'thumb', src: s.url, alt: '', width: '48', height: '48', decoding: 'async', loading: 'lazy' }),
+        h('img', { class: 'thumb', src: s.thumbUrl, alt: '', width: '48', height: '48', decoding: 'async', loading: 'lazy' }),
         h(
           'div',
           { class: 'info' },
@@ -308,7 +326,9 @@ export function mount(el: HTMLElement): void {
         return ["We couldn't read this file. It may be damaged or incomplete.", null];
       case 'too-large':
         return [
-          `This ${noun} is too large for your device to convert (${f.megapixels ?? '?'} MP).`,
+          f.megapixels
+            ? `This ${noun} is too large for your device to convert (${f.megapixels} MP).`
+            : `This ${noun} is too large for your device to convert.`,
           button(`Resize to ${DOWNSCALE_MEGAPIXELS} MP and convert`, () => {
             row.options = { ...row.options, downscaleTo: DOWNSCALE_MEGAPIXELS };
             enqueue(row);

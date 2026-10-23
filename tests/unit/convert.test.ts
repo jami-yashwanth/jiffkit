@@ -185,3 +185,34 @@ describe('convert: failure mapping', () => {
     expect(q.outBytes).toBe(dflt.outBytes);
   });
 });
+
+describe('convert: thumbnail', () => {
+  const dims = async (b: Blob) => {
+    const s = await sniff(b);
+    return { type: s.type, w: s.width!, h: s.height! };
+  };
+
+  it('returns a small JPEG thumbnail of the oriented output for HEIC to JPG', async () => {
+    const d = await done(job('rotated-6.heic', 'heic-to-jpg'));
+    const t = await dims(d.thumb);
+    expect(t.type).toBe('jpg');
+    expect(Math.max(t.w, t.h)).toBeLessThanOrEqual(96);
+    expect(Math.max(t.w, t.h)).toBeGreaterThanOrEqual(90);
+    expect(t.h).toBeGreaterThan(t.w); // portrait, like the 300x400 output
+    expect(d.thumb.size).toBeLessThan(20_000);
+  });
+
+  it('keeps transparency in a PNG thumbnail for PNG output', async () => {
+    const d = await done(job('alpha.webp', 'webp-to-jpg', { format: 'png' }));
+    expect((await dims(d.thumb)).type).toBe('png');
+  });
+
+  it('has a thumbnail for an already-optimized result too', async () => {
+    const once = await done(job('lossless.webp', 'webp-to-jpg', { format: 'png' }));
+    const again: Job = { id: 'again', file: new File([once.blob], 'x.png'), tool: 'compress-image', options: {} };
+    const d = await done(again);
+    expect(d.notes).toContain('already-optimized');
+    const t = await dims(d.thumb);
+    expect(Math.max(t.w, t.h)).toBeLessThanOrEqual(96);
+  });
+});

@@ -13,6 +13,8 @@ export interface Job {
 export interface Done {
   id: string;
   blob: Blob;
+  /** Small preview (≤ 96 px long edge) in the output format, so the page never decodes the full image for a row. */
+  thumb: Blob;
   name: string;
   width: number;
   height: number;
@@ -37,6 +39,7 @@ export interface Progress {
 
 export const MAX_MEGAPIXELS = 50;
 export const DOWNSCALE_MEGAPIXELS = 24;
+export const THUMB_EDGE = 96;
 
 /** Page -> worker messages. */
 export type WorkerRequest = { kind: 'job'; job: Job } | { kind: 'preload'; types: InType[] };

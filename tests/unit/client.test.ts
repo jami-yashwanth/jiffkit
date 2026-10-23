@@ -26,7 +26,7 @@ class FakeWorker {
 
 const job = (id: string): Job => ({ id, file: new File([], `${id}.heic`), tool: 'heic-to-jpg', options: {} });
 const done = (id: string): WorkerResponse => ({
-  kind: 'done', id, blob: new Blob(), name: `${id}.jpg`, width: 1, height: 1, inBytes: 1, outBytes: 1, notes: [],
+  kind: 'done', id, blob: new Blob(), thumb: new Blob(), name: `${id}.jpg`, width: 1, height: 1, inBytes: 1, outBytes: 1, notes: [],
 });
 const failedMsg = (id: string): WorkerResponse => ({ kind: 'failed', id, reason: 'corrupt' });
 
@@ -177,6 +177,33 @@ describe('engine client', () => {
     expect(engine.pending()).toBe(0);
     engine.enqueue(job('b'));
     expect(workers[0].jobIds).toEqual(['b']);
+  });
+
+  it('terminates a worker whose postMessage throws, and continues with a fresh one', () => {
+    const workers: FakeWorker[] = [];
+    const engine = createEngine(() => {
+      const w = new FakeWorker();
+      if (workers.length === 0) {
+        w.postMessage = () => {
+          throw new DOMException('could not clone', 'DataCloneError');
+        };
+      }
+      workers.push(w);
+      return w as unknown as Worker;
+    });
+    const events: string[] = [];
+    engine.on('failed', (f: Failed) => events.push(`failed:${f.id}:${f.reason}`));
+    const original = console.error;
+    console.error = () => {};
+    try {
+      engine.enqueue(job('a'));
+    } finally {
+      console.error = original;
+    }
+    expect(events).toEqual(['failed:a:codec-load']);
+    expect(workers[0].terminated).toBe(true);
+    engine.enqueue(job('b'));
+    expect(workers[1].jobIds).toEqual(['b']);
   });
 
   it('does not throw from preload when the worker cannot be created', () => {

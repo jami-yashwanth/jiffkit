@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test, type Locator, type Page, type Route } from '@playwright/test';
 import { unzipSync } from 'fflate';
+import { sniff } from '../../src/engine/sniff';
 
 // One test per spec §5 state, asserting the exact copy. Runs against `astro build` + `astro preview`.
 
@@ -40,6 +41,15 @@ async function holdHeicCodec(page: Page) {
   });
   return release;
 }
+
+/** Click something that downloads, and return the downloaded bytes. */
+async function downloadFrom(page: Page, trigger: Locator): Promise<Uint8Array> {
+  const [download] = await Promise.all([page.waitForEvent('download'), trigger.click()]);
+  return new Uint8Array(readFileSync((await download.path())!));
+}
+const JPEG = [0xff, 0xd8, 0xff];
+const PNG = [0x89, 0x50, 0x4e, 0x47];
+const head = (b: Uint8Array, n: number) => [...b.subarray(0, n)];
 
 const rows = (page: Page) => page.locator('[data-rows] > li');
 const doneRows = (page: Page) => page.locator('[data-rows] > li.row-done');
@@ -103,6 +113,11 @@ test('done', async ({ page }) => {
   await expect(first.locator('.size')).toHaveText(/^\d+(\.\d)? (KB|MB) → \d+(\.\d)? (KB|MB)$/);
   await expect(first.getByRole('link', { name: 'Download' })).toHaveAttribute('download', 'iphone-12mp.jpg');
   await expect(first.locator('img.thumb')).toHaveAttribute('src', /^blob:/);
+  // The row shows a small thumbnail, not the full output.
+  const href = await first.getByRole('link', { name: 'Download' }).getAttribute('href');
+  expect(await first.locator('img.thumb').getAttribute('src')).not.toBe(href);
+  expect(await first.locator('img.thumb').evaluate((i: HTMLImageElement) => Math.max(i.naturalWidth, i.naturalHeight))).toBeLessThanOrEqual(96);
+  expect(head(await downloadFrom(page, first.getByRole('link', { name: 'Download' })), 3)).toEqual(JPEG);
   await expect(page.getByRole('button', { name: 'Download all (ZIP)' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Convert more' })).toBeVisible();
   await expect(page.getByText('Location data removed')).toBeVisible();
@@ -155,6 +170,11 @@ test('too large', async ({ page }) => {
   await page.getByRole('button', { name: 'Resize to 24 MP and convert' }).click();
   await expect(doneRows(page)).toHaveCount(1, { timeout: 120_000 });
   await expect(doneRows(page).locator('.name')).toHaveText('huge-63mp.jpg');
+  const out = await downloadFrom(page, doneRows(page).getByRole('link', { name: 'Download' }));
+  const s = await sniff(new Blob([out as BlobPart]));
+  expect(s.type).toBe('jpg');
+  expect(s.width! * s.height!).toBeLessThanOrEqual(24_000_000);
+  expect(s.width! * s.height!).toBeGreaterThan(20_000_000);
 });
 
 test('codec load failed, then Try again', async ({ page }) => {
@@ -222,6 +242,7 @@ test('settings: WebP to PNG, and the PNG note on Compress', async ({ page }) => 
   await page.getByLabel('PNG').check();
   await choose(page, 'alpha.webp');
   await expect(doneRows(page).locator('.name')).toHaveText('alpha.png');
+  expect(head(await downloadFrom(page, doneRows(page).getByRole('link', { name: 'Download' })), 4)).toEqual(PNG);
 
   await page.goto('/compress-image/');
   await expect(page.locator('[data-quality-input]')).toHaveValue('75');
@@ -242,4 +263,63 @@ test('at 390 px the drop zone is one full-width Choose photos button', async ({ 
   expect(Math.abs(b!.width - d!.width)).toBeLessThanOrEqual(1);
   // No dashed drop target on mobile: the button is the drop zone.
   await expect(page.locator('.drop')).toHaveCSS('border-top-style', 'none');
+});
+
+test('Location data removed stays hidden when a result is already optimized', async ({ page }) => {
+  // Our own OxiPNG output cannot get smaller, so Compress hands back the original bytes (GPS not rewritten).
+  await page.goto('/webp-to-jpg/');
+  await page.getByLabel('PNG').check();
+  await choose(page, 'lossless.webp');
+  const optimized = await downloadFrom(page, doneRows(page).getByRole('link', { name: 'Download' }));
+
+  await page.goto('/compress-image/');
+  await page.locator('[data-tool] input[type=file]').setInputFiles([
+    { name: 'photo.jpg', mimeType: 'image/jpeg', buffer: readFileSync(fixture('photo.jpg')) },
+    { name: 'optimized.png', mimeType: 'image/png', buffer: Buffer.from(optimized) },
+  ]);
+  await expect(doneRows(page)).toHaveCount(2);
+  await expect(doneRows(page).nth(1).getByText("Already optimized. We couldn't make it smaller.")).toBeVisible();
+  await expect(doneRows(page).nth(0).locator('.note')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Convert more' })).toBeVisible();
+  await expect(page.getByText('Location data removed')).toBeHidden();
+});
+
+test('a quality change applies only to files added after it', async ({ page }) => {
+  // Hold the JPEG decoder so both files are still queued when the slider moves.
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  await page.context().route(/mozjpeg_dec-[^/]*\.js$/, async (route) => {
+    await gate;
+    await route.continue();
+  });
+  await page.goto('/compress-image/');
+  const quality = page.locator('[data-quality-input]');
+  await quality.fill('10');
+  await choose(page, 'photo.jpg');
+  await expect(rows(page)).toHaveCount(1);
+  await quality.fill('90');
+  await expect(page.locator('.quality output')).toHaveText('90');
+  await choose(page, 'photo.jpg');
+  await expect(rows(page)).toHaveCount(2);
+  release();
+  await expect(doneRows(page)).toHaveCount(2);
+  const size = async (i: number) =>
+    (await downloadFrom(page, doneRows(page).nth(i).getByRole('link', { name: 'Download' }))).length;
+  const low = await size(0);
+  const high = await size(1);
+  expect(low).toBeLessThan(high * 0.7);
+});
+
+test('a wrong file does not hide the loading banner while the codec loads', async ({ page }) => {
+  const release = await holdHeicCodec(page);
+  await page.goto('/heic-to-jpg/');
+  await choose(page, 'rotated-6.heic');
+  const banner = page.getByText('Getting the converter ready… 0.8 MB, one time only');
+  await expect(banner).toBeVisible();
+  await choose(page, 'alpha.png');
+  await expect(page.getByText('This is a PNG, not a HEIC photo.')).toBeVisible();
+  await expect(banner).toBeVisible();
+  release();
+  await expect(doneRows(page)).toHaveCount(1);
+  await expect(banner).toBeHidden();
 });
