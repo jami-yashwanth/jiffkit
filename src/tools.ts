@@ -111,7 +111,7 @@ export const TOOLS: Tool[] = [
     accepts: ['webp'],
     acceptAttr: '.webp,image/webp',
     outputs: ['jpg', 'png'],
-    defaults: { format: 'jpg', quality: 90 },
+    defaults: { format: 'jpg', quality: 85 },
     emptyCopy: 'Drop WebP images here',
     howTo: [
       'Drop your WebP images onto the page, or choose them from your device.',
