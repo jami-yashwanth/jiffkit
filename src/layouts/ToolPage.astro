@@ -1,31 +1,14 @@
 ---
 import Base from './Base.astro';
-import { getTool, toolForType, type ImageSlug, type InType, type Tool } from '../tools';
+import ImageTool from '../components/ImageTool.astro';
+import PdfTool from '../components/PdfTool.astro';
+import TextTool from '../components/TextTool.astro';
+import QrTool from '../components/QrTool.astro';
+import { getTool, type Tool } from '../tools';
 
 interface Props { tool: Tool }
 const { tool } = Astro.props;
-// Task 2 adds the pdf, text and qr views; until then only image tools render here.
-if (tool.kind !== 'image') throw new Error(`ToolPage cannot render ${tool.slug} yet`);
-const isHeic = tool.slug === 'heic-to-jpg';
-const noun = isHeic ? 'photos' : 'images';
-const chooseLabel = isHeic ? 'Choose photos' : 'Choose images';
 const related = tool.related.map(getTool);
-
-const TYPE_NAMES: Record<InType, string> = { heic: 'HEIC', jpg: 'JPG', png: 'PNG', webp: 'WebP' };
-const listOr = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} or ${xs.at(-1)}` : xs[0]);
-// "HEIC photo", "WebP image", "JPG, PNG or WebP image" -> "This is a PNG, not a HEIC photo."
-const inputName = `${listOr(tool.accepts.map((t) => TYPE_NAMES[t]))} ${isHeic ? 'photo' : 'image'}`;
-// Where to send a file this tool cannot take: { png: { href: '/compress-image/', h1: 'Compress image' }, ... }
-const elsewhere = Object.fromEntries(
-  (Object.keys(TYPE_NAMES) as InType[])
-    .filter((t) => !tool.accepts.includes(t))
-    .map((t) => {
-      const target = getTool(toolForType(t));
-      return [t, { href: `/${target.slug}/`, h1: target.h1 }];
-    }),
-);
-// Gzipped size of the codecs this tool downloads on first use (measured from the build; shown while they load).
-const CODEC_SIZE: Record<ImageSlug, string> = { 'heic-to-jpg': '0.8 MB', 'compress-image': '0.5 MB', 'webp-to-jpg': '0.3 MB' };
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -41,75 +24,10 @@ const jsonLd = {
   <h1>{tool.h1}</h1>
   <p class="subhead">{tool.subhead}</p>
 
-  <div
-    data-tool={tool.slug}
-    data-accept={tool.acceptAttr}
-    data-quality={tool.defaults.quality}
-    data-format={tool.defaults.format ?? 'same'}
-    data-types={tool.accepts.join(' ')}
-    data-input-name={inputName}
-    data-noun={isHeic ? 'photo' : 'image'}
-    data-elsewhere={JSON.stringify(elsewhere)}
-    data-codec-size={CODEC_SIZE[tool.slug]}
-  >
-    <div class="drop">
-      <p class="drop-title">{tool.emptyCopy}</p>
-      <label class="btn">
-        {chooseLabel}
-        <input type="file" multiple accept={tool.acceptAttr} />
-      </label>
-      <p class="privacy">Converted on your device. Your {noun} are never uploaded.</p>
-    </div>
-
-    {tool.slug === 'compress-image' && (
-      <div class="settings" data-settings>
-        <label class="quality" data-quality-field>
-          Quality <output>{tool.defaults.quality}</output>
-          <input type="range" min="1" max="100" value={tool.defaults.quality} data-quality-input />
-        </label>
-        <p class="note" data-png-note hidden>PNG is compressed without quality loss</p>
-      </div>
-    )}
-    {tool.slug === 'webp-to-jpg' && (
-      <fieldset class="settings toggle" data-settings>
-        <legend>Convert to</legend>
-        {(tool.outputs as string[]).map((f) => (
-          <label><input type="radio" name="format" value={f} checked={f === tool.defaults.format} data-format-input />{f.toUpperCase()}</label>
-        ))}
-      </fieldset>
-    )}
-    {isHeic && (
-      <details class="settings" data-settings>
-        <summary>Options</summary>
-        <label class="quality">
-          Quality <output>{tool.defaults.quality}</output>
-          <input type="range" min="1" max="100" value={tool.defaults.quality} data-quality-input />
-        </label>
-      </details>
-    )}
-
-    <div class="results" data-results hidden>
-      <div class="results-head">
-        <p class="status" role="status" data-status></p>
-        <div class="loading" data-loading hidden>
-          <p>Getting the converter ready… {CODEC_SIZE[tool.slug]}, one time only</p>
-          <progress aria-label="Getting the converter ready"></progress>
-        </div>
-        <div class="actions" data-actions hidden>
-          <button type="button" class="btn" data-zip hidden>Download all (ZIP)</button>
-          <button type="button" class="btn btn-quiet" data-more>Convert more</button>
-          <p class="gps" data-gps hidden>Location data removed</p>
-        </div>
-      </div>
-      <ul class="rows" data-rows></ul>
-    </div>
-  </div>
-
-  <script>
-    import { mount } from '../ui/dropzone';
-    const el = document.querySelector<HTMLElement>('[data-tool]');
-    if (el) mount(el);
-  </script>
+  {tool.kind === 'image' && <ImageTool tool={tool} />}
+  {tool.kind === 'pdf' && <PdfTool tool={tool} />}
+  {tool.kind === 'text' && <TextTool tool={tool} />}
+  {tool.kind === 'qr' && <QrTool tool={tool} />}
 
   <section>
     <h2>How it works</h2>

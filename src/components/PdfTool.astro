@@ -1,0 +1,25 @@
+---
+import type { PdfTool } from '../tools';
+
+interface Props { tool: PdfTool }
+const { tool } = Astro.props;
+const merge = tool.op === 'merge';
+// Spec §4 empty states. The island (Task 4/5) replaces them as files arrive.
+const title = merge ? 'Drop PDF files here' : 'Drop a PDF here';
+const choose = merge ? 'Choose PDFs' : 'Choose PDF';
+const privacy = merge
+  ? 'Merged on your device. Your files are never uploaded.'
+  : 'Split on your device. Your files are never uploaded.';
+---
+<div data-kind="pdf" data-tool={tool.slug} data-op={tool.op}>
+  <div class="drop">
+    <p class="drop-title">{title}</p>
+    <label class="btn">
+      {choose}
+      <input type="file" accept="application/pdf,.pdf" {...(merge ? { multiple: true } : {})} />
+    </label>
+    <p class="privacy">{privacy}</p>
+  </div>
+  <p class="status" role="status" aria-live="polite" data-status></p>
+  <div data-results></div>
+</div>

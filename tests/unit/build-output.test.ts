@@ -2,10 +2,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import config from '../../astro.config.mjs';
-import { TOOLS as ALL_TOOLS } from '../../src/tools';
-
-// Task 2 renders every kind; until then only image tools have pages.
-const TOOLS = ALL_TOOLS.filter((t) => t.kind === 'image');
+import { CATEGORY_LABEL, TOOLS, type Category } from '../../src/tools';
 
 // The same value the build used: SITE_URL or the default in astro.config.mjs.
 const SITE = config.site as string;
@@ -17,6 +14,28 @@ beforeAll(() => {
   delete env.PUBLIC_PLAUSIBLE_DOMAIN;
   execSync('npx astro build', { stdio: 'pipe', env });
 }, 180_000);
+
+// Spec §4: exact empty-state copy for each new page.
+const COPY = {
+  'merge-pdf': ['Drop PDF files here', 'Choose PDFs', 'Merged on your device. Your files are never uploaded.'],
+  'split-pdf': ['Drop a PDF here', 'Choose PDF', 'Split on your device. Your files are never uploaded.'],
+  'json-formatter': ['placeholder="Paste JSON here"', '>Format<', '>Minify<', '>Copy<', 'Options', '2 spaces', '4 spaces', 'Tab'],
+  'base64-encode-decode': ['>Text<', '>Base64<', 'URL-safe'],
+  'jwt-decoder': [
+    'placeholder="Paste a JWT (eyJ…)"',
+    '>Header<',
+    '>Payload<',
+    'Signature not verified. This tool only decodes the token. Your token never leaves this page.',
+  ],
+  'qr-code-generator': [
+    'Text or URL',
+    'Your QR code appears here.',
+    'Download PNG',
+    'Download SVG',
+    'Options',
+    'Static code: works forever, no tracking, no sign-up.',
+  ],
+};
 
 describe.each(TOOLS)('tool page $slug', (tool) => {
   const page = () => html(`${tool.slug}/`);
@@ -41,20 +60,33 @@ describe.each(TOOLS)('tool page $slug', (tool) => {
     const h = page();
     for (const slug of tool.related) {
       expect(h).toContain(`href="/${slug}/"`);
-      // Task 2 builds every page; until then cross-category targets have no page yet.
-      if (TOOLS.some((t) => t.slug === slug)) expect(existsSync(`dist/${slug}/index.html`)).toBe(true);
+      expect(existsSync(`dist/${slug}/index.html`)).toBe(true);
     }
   });
 
-  it('has the mount point with static empty state', () => {
+  it('has its kind mount with the static empty state', () => {
     const h = page();
-    expect(h).toContain(`data-tool="${tool.slug}"`);
-    expect(h).toContain(`data-accept="${tool.acceptAttr}"`);
-    expect(h).toContain('data-quality=');
-    expect(h).toContain('data-format=');
-    expect(h).toContain(tool.emptyCopy);
-    expect(h).toMatch(/<input[^>]*type="file"[^>]*multiple/);
-    expect(h).toContain('never uploaded.');
+    if (tool.kind === 'image') {
+      expect(h).toContain(`data-tool="${tool.slug}"`);
+      expect(h).toContain(`data-accept="${tool.acceptAttr}"`);
+      expect(h).toContain('data-quality=');
+      expect(h).toContain('data-format=');
+      expect(h).toContain(tool.emptyCopy);
+      expect(h).toMatch(/<input[^>]*type="file"[^>]*multiple/);
+      expect(h).toContain('never uploaded.');
+      expect(h).not.toContain('data-kind=');
+      return;
+    }
+    expect(h).toMatch(new RegExp(`<div[^>]*data-kind="${tool.kind}"[^>]*data-tool="${tool.slug}"`));
+    for (const copy of COPY[tool.slug as keyof typeof COPY]) expect(h, copy).toContain(copy);
+    if (tool.kind === 'pdf') {
+      expect(h).toContain(`data-op="${tool.op}"`);
+      expect(h).toMatch(/<input[^>]*type="file"[^>]*accept="application\/pdf,\.pdf"/);
+      expect(/<input[^>]*type="file"[^>]*multiple/.test(h)).toBe(tool.op === 'merge');
+      expect(h).toContain('data-results');
+      expect(h).toContain('data-status');
+    }
+    if (tool.kind === 'text') expect(h).toContain(`data-transform="${tool.transform}"`);
   });
 
   it('links the licences page from the footer', () => {
@@ -83,6 +115,24 @@ describe('site', () => {
     const h = html('');
     for (const t of TOOLS) expect(h).toContain(`href="/${t.slug}/"`);
     expect(h).toContain('type="search"');
+  });
+
+  it('homepage groups tools under 4 category headings in order', () => {
+    const h = html('');
+    const order: Category[] = ['image', 'pdf', 'developer', 'qr'];
+    const heads = [...h.matchAll(/<h2[^>]*>([^<]*)<\/h2>/g)].map((m) => m[1]);
+    expect(heads).toEqual(order.map((c) => CATEGORY_LABEL[c]));
+    const pos = (needle: string) => h.indexOf(needle);
+    order.forEach((c, i) => {
+      const start = pos(`>${CATEGORY_LABEL[c]}</h2>`);
+      const end = i + 1 < order.length ? pos(`>${CATEGORY_LABEL[order[i + 1]]}</h2>`) : h.length;
+      for (const t of TOOLS.filter((t) => t.category === c)) {
+        const at = pos(`href="/${t.slug}/"`);
+        expect(at > start && at < end, `${t.slug} under ${c}`).toBe(true);
+      }
+    });
+    expect(h).toContain('<h1>Tools that never upload your files</h1>');
+    expect(h).toContain('<title>Private Online Tools - Image, PDF and Developer Tools</title>');
   });
 
   it('homepage has no licences entry in the tool list', () => {
@@ -116,6 +166,12 @@ describe('site', () => {
     expect(readFileSync('dist/_headers', 'utf8')).toMatch(
       /^\/_astro\/\*\n\s+Cache-Control: public, max-age=31536000, immutable$/m,
     );
+  });
+
+  it('sitemap lists all 9 tool pages', () => {
+    const xml = readFileSync('dist/sitemap-0.xml', 'utf8');
+    for (const t of TOOLS) expect(xml).toContain(`<loc>${SITE}/${t.slug}/</loc>`);
+    expect(TOOLS).toHaveLength(9);
   });
 
   it('has sitemap index and robots.txt', () => {
