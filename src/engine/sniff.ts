@@ -85,13 +85,13 @@ function webpInfo(b: Uint8Array, v: DataView): { width?: number; height?: number
   return fourcc === 'VP8X' ? {} : { animated: false };
 }
 
-interface Box {
+export interface Box {
   type: string;
   start: number; // payload start
   end: number; // payload end, clamped to the buffer
 }
 
-function boxes(v: DataView, b: Uint8Array, from: number, to: number): Box[] {
+export function boxes(v: DataView, b: Uint8Array, from: number, to: number): Box[] {
   const out: Box[] = [];
   let i = from;
   while (i + 8 <= to) {
