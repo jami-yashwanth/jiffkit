@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Locator, type Page, type Route } from '@playwright/test';
 import { unzipSync } from 'fflate';
 import { PDFDocument } from 'pdf-lib';
+import { holdResults, installResultHold, releaseResults } from './pdf-hold';
 import { stubPlausible, type PlausibleEvent } from './plausible';
 
 // Spec §4 Merge PDF and Split PDF states, with the exact copy. Runs against `astro build` + `astro preview`.
@@ -11,28 +12,7 @@ let events: PlausibleEvent[];
 
 test.beforeEach(async ({ context, page }) => {
   events = await stubPlausible(context);
-  await page.addInitScript(() => {
-    const w = window as unknown as { __hold: boolean; __held: (() => void)[]; __release: () => void };
-    // While __hold is set, merge/split results from the worker wait for __release(); page counts pass straight through.
-    w.__hold = false;
-    w.__held = [];
-    w.__release = () => {
-      w.__hold = false;
-      w.__held.splice(0).forEach((f) => f());
-    };
-    const Base = window.Worker;
-    window.Worker = class extends Base {
-      set onmessage(fn: ((e: MessageEvent) => void) | null) {
-        super.onmessage = (e: MessageEvent) => {
-          if (w.__hold && e.data?.kind === 'done' && typeof e.data.result === 'object') w.__held.push(() => fn?.call(this, e));
-          else fn?.call(this, e);
-        };
-      }
-      get onmessage() {
-        return super.onmessage;
-      }
-    };
-  });
+  await installResultHold(page);
 });
 
 /** The analytics the page has sent, as ['success', count] / ['error', reason]; polled so the beacon has landed. */
@@ -46,8 +26,6 @@ async function expectHooks(expected: [string, unknown][]) {
   await new Promise((r) => setTimeout(r, 150)); // room for a stray extra event
   expect(seen()).toEqual(expected);
 }
-const holdResults = (page: Page) => page.evaluate(() => ((window as unknown as { __hold: boolean }).__hold = true));
-const releaseResults = (page: Page) => page.evaluate(() => (window as unknown as { __release: () => void }).__release());
 
 /** The pdf-lib chunk the PDF worker imports on first use. */
 const PDF_LIB = /\/_astro\/pdf-lib-[^/]*\.js$/;

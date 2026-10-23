@@ -35,6 +35,9 @@
   /* Authored 16px icons, drawn as masks or backgrounds so no markup is added. */
   --icon-lock: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 7V5a4 4 0 1 1 8 0v2h.5A1.5 1.5 0 0 1 14 8.5v5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5v-5A1.5 1.5 0 0 1 3.5 7H4Zm2 0h4V5a2 2 0 1 0-4 0v2Z'/%3E%3C/svg%3E");
   --icon-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 8.5 3.2 3.2L13 4.8'/%3E%3C/svg%3E");
+  --icon-up: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 13V3M3.5 7.5 8 3l4.5 4.5'/%3E%3C/svg%3E");
+  --icon-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 3v10M3.5 8.5 8 13l4.5-4.5'/%3E%3C/svg%3E");
+  --icon-x: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='m4 4 8 8M12 4l-8 8'/%3E%3C/svg%3E");
   --icon-alert: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2354605b' stroke-width='1.6' stroke-linecap='round'%3E%3Ccircle cx='8' cy='8' r='6.5'/%3E%3Cpath d='M8 4.8v3.6M8 11.2v.01'/%3E%3C/svg%3E");
 }
 
@@ -125,8 +128,8 @@ section ol > li::marker { color: var(--accent); font-weight: 700; font-variant-n
 .tool-list a:focus-visible { outline-offset: 4px; }
 
 /* Homepage categories: a heading over each ruled list. */
-.category h2 { margin-top: var(--s5); margin-bottom: 0; font-size: 1.125rem; }
-.category:first-child h2 { margin-top: var(--s4); }
+.category h2 { margin-top: var(--s6); margin-bottom: 0; }
+.category:first-child h2 { margin-top: var(--s5); }
 .category .tool-list { margin-top: var(--s2); }
 
 label[for='filter'] { display: block; margin: var(--s6) 0 var(--s2); color: var(--ink); font-size: 1rem; font-weight: 600; }
@@ -135,6 +138,11 @@ label[for='filter'] { display: block; margin: var(--s6) 0 var(--s2); color: var(
   background: var(--paper); border: 1px solid var(--edge); border-radius: var(--radius); min-height: 48px;
 }
 .filter::placeholder { color: var(--ink-muted); opacity: 1; }
+.filter::-webkit-search-cancel-button {
+  -webkit-appearance: none; appearance: none; width: 16px; height: 16px; cursor: pointer; background: var(--ink-muted);
+  -webkit-mask: var(--icon-x) center / contain no-repeat; mask: var(--icon-x) center / contain no-repeat;
+}
+.filter::-webkit-search-cancel-button:hover { background: var(--accent); }
 .filter:focus-visible { outline-offset: 0; border-color: var(--accent); border-radius: var(--radius); }
 #no-match { margin-top: var(--s4); color: var(--ink-muted); }
 
@@ -205,7 +213,26 @@ textarea.text-input { resize: vertical; font-family: ui-monospace, SFMono-Regula
 .text-input:focus-visible { outline-offset: 0; border-color: var(--accent); border-radius: var(--radius); }
 [data-kind] .actions { margin-bottom: var(--s3); }
 .field > .actions { margin: var(--s2) 0 0; }
-[data-kind] button.btn:disabled { cursor: not-allowed; }
+[data-kind] button.btn:disabled { cursor: not-allowed; border-color: transparent; }
+/* Tool-level messages (invalid input, too much text, a large-file warning) read like v1's row errors: ink with an alert mark. */
+[data-kind='text'] .status, [data-kind='qr'] .status { font-size: 1rem; font-weight: 500; letter-spacing: 0; }
+[data-kind='qr'] .status { margin-bottom: var(--s3); }
+[data-kind='text'] .status::before, [data-kind='qr'] .status::before, [data-kind='pdf'] .error::before {
+  content: ''; display: inline-block; width: 1em; height: 1em; margin-right: 0.4em; vertical-align: -0.15em;
+  background: var(--icon-alert) center / contain no-repeat;
+}
+/* JSON: the error line sits with the message, right under the box it points into, before the buttons. */
+[data-transform='json'] { display: flex; flex-direction: column; }
+[data-transform='json'] > .field { display: contents; }
+[data-transform='json'] .field label { order: 0; }
+[data-transform='json'] .text-input { order: 1; }
+[data-transform='json'] > .status { order: 2; margin-top: var(--s3); }
+[data-transform='json'] .error-excerpt { order: 3; }
+[data-transform='json'] > .actions { order: 4; margin-top: var(--s3); }
+[data-transform='json'] > .pane { order: 5; }
+[data-transform='json'] > .settings { order: 6; }
+/* A JWT is one long line: the box grows to show it (up to 12 lines) instead of hiding its start. */
+#jwt-in { field-sizing: content; min-height: 7.5em; max-height: calc(18em + 2 * var(--s2)); }
 [data-kind] .status:empty { display: none; }
 .pane {
   margin: 0 0 var(--s3); padding: var(--s3); background: var(--tint); border-radius: var(--radius);
@@ -218,21 +245,22 @@ pre[data-results]:empty { display: none; }
 .copied { color: var(--accent); font-size: 0.9375rem; font-weight: 600; }
 .copied:empty { display: none; }
 .error-excerpt {
-  margin: var(--s2) 0 0; padding: var(--s2) var(--s3); border-left: 2px solid var(--edge); border-radius: 0 var(--radius) var(--radius) 0;
+  margin: var(--s2) 0 0; padding: var(--s2) 0; border: 1px solid var(--line); border-radius: var(--radius);
   font: 0.875rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink-muted); white-space: pre; overflow-x: auto;
 }
-.error-excerpt span { display: block; }
+.error-excerpt span { display: block; padding-inline: var(--s3); }
 .error-line { color: var(--ink); background: var(--tint-strong); }
 .claims { list-style: none; margin: 0 0 var(--s3); padding: 0; font-variant-numeric: tabular-nums; }
 .claims li { margin-bottom: var(--s1); }
 .claim-expired { color: var(--error); font-weight: 600; }
 .qr-preview {
-  display: grid; place-items: center; width: min(100%, 16rem); aspect-ratio: 1; margin: 0 0 var(--s3);
+  display: grid; place-items: center; width: min(100%, 20rem); aspect-ratio: 1; margin: 0 0 var(--s3);
   border: 2px dashed var(--edge); border-radius: var(--radius-lg); background: var(--tint); padding: var(--s3); text-align: center;
 }
 .qr-preview p { margin: 0; color: var(--ink-muted); }
 /* #fff is intentional, not a theme token: QR codes must stay black on white to scan. */
-.qr-preview.has-code { border: 1px solid var(--line); background: #fff; padding: 0; }
+.qr-preview.has-code { border: 1px solid var(--line); background: #fff; padding: 0; overflow: hidden; }
+[data-kind='qr'] .qr-preview + .note { margin-bottom: var(--s3); }
 .qr-preview img, .qr-preview svg, .qr-preview canvas { width: 100%; height: auto; display: block; }
 
 /* Read by screen readers, not shown. */
@@ -245,6 +273,14 @@ pre[data-results]:empty { display: none; }
 /* With files in, Merge/Split is the one primary action: adding more steps back. */
 .drop-compact label.btn { background: var(--paper); color: var(--accent); border-color: var(--edge); }
 .drop-compact label.btn:hover { background: var(--tint); color: var(--accent-strong); }
+/* ...unless adding a file is the next step: one PDF in Merge, or an unreadable one in Split. */
+[data-kind='pdf']:has([data-hint]:not([hidden]), [data-file-error]:not([hidden])) .drop-compact label.btn { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+[data-kind='pdf']:has([data-hint]:not([hidden]), [data-file-error]:not([hidden])) .drop-compact label.btn:hover { background: var(--accent-strong); }
+/* Merging… / Splitting…: the same spinner as a v1 row at work. The status is only visible while a job runs. */
+[data-kind='pdf'] .status:not(:empty):not(.visually-hidden)::before {
+  content: ''; display: inline-block; width: 0.9em; height: 0.9em; margin-right: 0.5em; vertical-align: -0.1em; box-sizing: border-box;
+  border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;
+}
 [data-kind='pdf'] .loading, .pdf-alert { margin-top: var(--s4); }
 [data-kind='pdf'] .status { margin-top: var(--s4); }
 .pdf-alert { display: grid; justify-items: start; gap: var(--s3); background: var(--tint); border-radius: var(--radius); padding: var(--s3); }
@@ -262,19 +298,29 @@ pre[data-results]:empty { display: none; }
 .icon-btn:hover:not(:disabled) { background: var(--tint); color: var(--accent); border-color: var(--edge); }
 .icon-btn:focus-visible { border-radius: var(--radius); }
 .icon-btn:disabled { color: var(--line); cursor: default; }
+/* Drawn icons, not the ↑ ↓ ✕ glyphs (which render differently, or as emoji, per platform). The aria-label names each. */
+.icon-btn[data-up], .icon-btn[data-down], .icon-btn[data-remove] { display: inline-flex; align-items: center; justify-content: center; font-size: 0; }
+.icon-btn[data-up]::before, .icon-btn[data-down]::before, .icon-btn[data-remove]::before {
+  content: ''; width: 16px; height: 16px; background: currentColor;
+  -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat;
+}
+.icon-btn[data-up] { --m: var(--icon-up); }
+.icon-btn[data-down] { --m: var(--icon-down); }
+.icon-btn[data-remove] { --m: var(--icon-x); }
 .pdf-hint { margin-bottom: var(--s3); font-size: 0.9375rem; }
 .pdf-file { display: grid; gap: 2px; padding: var(--s3) 0; border-block: 1px solid var(--line); margin-bottom: var(--s3); min-width: 0; }
 .pdf-file + .error { margin: 0 0 var(--s3); }
+.pdf-file .name:empty { display: none; }
 .pdf-mode { display: grid; gap: 0; margin: 0 0 var(--s3); }
 .pdf-mode label { display: inline-flex; align-items: center; gap: var(--s2); min-height: 44px; cursor: pointer; font-weight: 500; }
 .pdf-mode input[type='radio'] { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
 .pdf-extract { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); }
 .pdf-extract .text-input { flex: 1 1 10rem; max-width: 16rem; }
-.text-input:disabled { background: var(--disabled); color: var(--ink-muted); border-color: var(--line); cursor: not-allowed; }
+.text-input:disabled { background: var(--paper); color: var(--ink-muted); border-color: var(--line); cursor: not-allowed; }
 .pdf-mode .error { margin: var(--s2) 0 0; }
 
 @media (prefers-reduced-motion: reduce) {
-  .spinner { animation-duration: 2.4s; }
+  .spinner, [data-kind='pdf'] .status::before { animation-duration: 2.4s; }
   *, *::before, *::after { transition: none !important; }
 }
 
