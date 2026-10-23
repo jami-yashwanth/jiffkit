@@ -67,6 +67,12 @@ test('a 3-file HEIC batch and ZIP send nothing but pages, our assets and two Pla
     if (!r.body) continue;
     for (const needle of needles) expect(r.body.includes(needle), `${r.url} body`).toBe(false);
   }
+  // ...and no URL does either (query strings and paths are a leak channel too).
+  for (const r of requests) {
+    if (r.url.startsWith('blob:') || r.url.startsWith('data:')) continue;
+    const url = Buffer.from(r.url);
+    for (const needle of needles) expect(url.includes(needle), `${r.url} url`).toBe(false);
+  }
   expect(events.length).toBeGreaterThan(0);
 
   // Plausible sees only the tool, a count, or a reason.

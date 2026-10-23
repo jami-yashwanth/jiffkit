@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { TOOLS } from '../../src/tools';
 
@@ -7,7 +7,10 @@ const SITE = 'https://web-tools.pages.dev';
 const html = (p: string) => readFileSync(`dist/${p}index.html`, 'utf8');
 
 beforeAll(() => {
-  execSync('npx astro build', { stdio: 'pipe' });
+  // Hermetic: the default build has no analytics, whatever the shell exports.
+  const env = { ...process.env };
+  delete env.PUBLIC_PLAUSIBLE_DOMAIN;
+  execSync('npx astro build', { stdio: 'pipe', env });
 }, 180_000);
 
 describe.each(TOOLS)('tool page $slug', (tool) => {
@@ -54,6 +57,22 @@ describe.each(TOOLS)('tool page $slug', (tool) => {
 });
 
 describe('site', () => {
+  it('a build without PUBLIC_PLAUSIBLE_DOMAIN ships no plausible markup', () => {
+    // Pages: no tag, no queue stub, no mention at all. Scripts: the optional-call `window.plausible?.()` in the
+    // dropzone is inert without the tag, so JS may name it, but must never carry the plausible.io host.
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((d) =>
+        d.isDirectory() ? walk(`${dir}/${d.name}`) : [`${dir}/${d.name}`],
+      );
+    const files = walk('dist');
+    const pages = files.filter((f) => f.endsWith('.html'));
+    expect(pages.length).toBeGreaterThan(3); // the scan is not vacuous
+    for (const f of pages) expect(/plausible/i.test(readFileSync(f, 'utf8')), f).toBe(false);
+    for (const f of files.filter((f) => /\.(js|mjs|css|xml|txt)$/.test(f))) {
+      expect(/plausible\.io/i.test(readFileSync(f, 'utf8')), f).toBe(false);
+    }
+  });
+
   it('homepage links to all tools and the filter', () => {
     const h = html('');
     for (const t of TOOLS) expect(h).toContain(`href="/${t.slug}/"`);

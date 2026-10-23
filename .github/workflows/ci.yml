@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # macOS because scripts/make-fixtures.sh needs `sips` to encode the HEIC fixtures (48 MP included).
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Fixture tools
+        run: brew install exiftool webp libheif imagemagick
+
+      - name: Generate fixtures
+        run: npm run fixtures
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build and JS budget
+        run: |
+          npm run build
+          npm run check:budget
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: End-to-end tests (chromium, webkit, firefox)
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
