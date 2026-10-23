@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { CodecLoadError, load, resetCodecs, setWasmSource } from '../../src/engine/codecs';
 import { DecodeError, decode } from '../../src/engine/decode';
 import { useNodeWasm } from '../helpers/node-codecs';
@@ -77,8 +77,8 @@ describe('decode: HEIC', () => {
 describe('decode: JPEG', () => {
   it('decodes photo.jpg without an orientation tag', async () => {
     const px = await decode(ab(fixture('photo.jpg')), 'jpg');
-    expect(px.data.length).toBe(px.width * px.height * 4);
-    expect(px.width).toBeGreaterThan(0);
+    expect([px.width, px.height]).toEqual([1600, 1200]);
+    expect(px.data.length).toBe(1600 * 1200 * 4);
     expect(px.orientation).toBe(1);
     expect(px.hasAlpha).toBe(false);
   });
@@ -127,7 +127,8 @@ describe('decode: PNG', () => {
 describe('decode: WebP', () => {
   it('decodes lossless.webp', async () => {
     const px = await decode(ab(fixture('lossless.webp')), 'webp');
-    expect(px.data.length).toBe(px.width * px.height * 4);
+    expect([px.width, px.height]).toEqual([800, 600]);
+    expect(px.data.length).toBe(800 * 600 * 4);
     expect(px.firstFrameOnly).toBeUndefined();
   });
 
@@ -142,6 +143,19 @@ describe('decode: WebP', () => {
 
   it('animated.webp is rejected by the wasm decoder, so Node (no createImageBitmap) gets a DecodeError', async () => {
     await expect(decode(ab(fixture('animated.webp')), 'webp')).rejects.toBeInstanceOf(DecodeError);
+  });
+
+  it('never takes the browser fallback for a corrupt non-animated WebP', async () => {
+    const bits = vi.fn(async () => ({ width: 1, height: 1, close() {} }));
+    vi.stubGlobal('createImageBitmap', bits);
+    vi.stubGlobal('OffscreenCanvas', class {});
+    try {
+      const corrupt = fixture('lossless.webp').subarray(0, 40); // header intact, data cut off
+      await expect(decode(ab(corrupt), 'webp')).rejects.toBeInstanceOf(DecodeError);
+      expect(bits).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('rejects garbage with DecodeError when no browser fallback exists', async () => {

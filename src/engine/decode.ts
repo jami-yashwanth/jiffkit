@@ -1,5 +1,6 @@
 import type { InType } from '../tools';
 import { CodecLoadError, load, type HeifImageHandle, type RawImage } from './codecs';
+import { sniff } from './sniff';
 import { heicOrientation, jpegOrientation } from './orientation';
 
 export { CodecLoadError };
@@ -92,8 +93,10 @@ async function decodeWebp(bytes: ArrayBuffer): Promise<Decoded> {
     return toPixels(img, 1, usesAlpha(img.data));
   } catch (err) {
     if (err instanceof CodecLoadError) throw err;
-    // The wasm decoder rejects animated WebP. The browser can still give us the first frame.
-    if (typeof createImageBitmap === 'function' && typeof OffscreenCanvas === 'function') {
+    // The wasm decoder rejects animated WebP. The browser can still give us the first frame,
+    // but only for genuinely animated files: a corrupt still image must stay an error.
+    const animated = (await sniff(new Blob([bytes]))).animated === true;
+    if (animated && typeof createImageBitmap === 'function' && typeof OffscreenCanvas === 'function') {
       const first = await firstFrameViaBrowser(bytes).catch(() => null);
       if (first) return { ...first, firstFrameOnly: true };
     }
@@ -133,8 +136,9 @@ async function decodeHeic(bytes: ArrayBuffer): Promise<Decoded> {
   return guard('HEIC', () =>
     quietly(async () => {
       const decoder = new heif.HeifDecoder();
-      const handles = decoder.decode(view);
+      let handles: HeifImageHandle[] = [];
       try {
+        handles = decoder.decode(view);
         const primary: HeifImageHandle | undefined = handles.find((h) => h.is_primary()) ?? handles[0];
         if (!primary) throw new DecodeError('Could not read this HEIC file');
         const width = primary.get_width();
