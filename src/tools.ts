@@ -178,7 +178,6 @@ const IMAGE_TOOLS: ImageTool[] = [
   },
 ];
 
-
 const OTHER_TOOLS: (PdfTool | TextTool | QrTool)[] = [
   {
     kind: 'pdf',
@@ -214,7 +213,7 @@ const OTHER_TOOLS: (PdfTool | TextTool | QrTool)[] = [
       },
       {
         q: 'Will merging change how my pages look?',
-        a: 'No. Pages are copied as they are, without being re-rendered or compressed, so text, images and links look the same as in the originals.',
+        a: 'No. Pages are copied as they are, without being re-rendered or compressed, so text and images look the same. Bookmarks and form fields may not carry over.',
       },
     ],
     related: ['split-pdf', 'compress-image'],
@@ -253,7 +252,7 @@ const OTHER_TOOLS: (PdfTool | TextTool | QrTool)[] = [
       },
       {
         q: 'Will the pages look the same?',
-        a: 'Yes. Pages are copied as they are, without being re-rendered or compressed, so text, images and links look the same as in the original.',
+        a: 'Mostly. Pages are copied as they are, without being re-rendered or compressed, so text and images look the same. Bookmarks and form fields may not carry over.',
       },
     ],
     related: ['merge-pdf', 'compress-image'],
@@ -288,7 +287,7 @@ const OTHER_TOOLS: (PdfTool | TextTool | QrTool)[] = [
       },
       {
         q: 'Does it change my data?',
-        a: 'No. Only whitespace changes. Keys keep their order and values are kept as they are, apart from the usual limits of JSON numbers in JavaScript.',
+        a: 'Formatting only changes whitespace. Note: like most browser tools, very large numbers lose precision, duplicate keys keep only the last value, and numeric keys such as "1" move to the front.',
       },
       {
         q: 'How large a file can I format?',
