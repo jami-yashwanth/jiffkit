@@ -287,7 +287,7 @@ const OTHER_TOOLS: (PdfTool | TextTool | QrTool)[] = [
       },
       {
         q: 'Does it change my data?',
-        a: 'Formatting only changes whitespace. Note: like most browser tools, very large numbers lose precision, duplicate keys keep only the last value, and numeric keys such as "1" move to the front.',
+        a: 'Formatting only changes whitespace, with three exceptions: very large numbers lose precision, duplicate keys keep only the last value, and numeric keys such as "1" move to the front.',
       },
       {
         q: 'How large a file can I format?',
