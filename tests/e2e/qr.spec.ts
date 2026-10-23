@@ -113,11 +113,37 @@ for (const size of [256, 512, 1024]) {
   });
 }
 
-test('clicking Download right after typing saves the new text', async ({ page }) => {
+/** Type and click in one synchronous task, so the 100 ms debounce cannot have fired when the click lands. */
+async function typeThenClick(page: Page, value: string, kind: 'png' | 'svg') {
+  const [dl] = await Promise.all([
+    page.waitForEvent('download'),
+    page.evaluate(
+      ({ value, kind }) => {
+        const el = document.querySelector<HTMLInputElement>('[data-input]')!;
+        el.value = value;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        document.querySelector<HTMLButtonElement>(`[data-download="${kind}"]`)!.click();
+      },
+      { value, kind },
+    ),
+  ]);
+  return readFile((await dl.path())!);
+}
+
+test('Download PNG straight after typing saves the new text, not the previous code', async ({ page }) => {
   await input(page).fill('first');
   await expect(button(page, 'Download PNG')).toBeEnabled();
-  await input(page).pressSequentially('second');
-  // No wait: the 100 ms debounce is still pending when the click lands.
-  const { bytes } = await download(page, 'Download PNG');
+  const bytes = await typeThenClick(page, 'firstsecond', 'png');
   expect(decodePng(bytes).text).toBe('firstsecond');
+});
+
+test('Download SVG straight after typing saves the new text, not the previous code', async ({ page }) => {
+  await input(page).fill('first');
+  await expect(button(page, 'Download SVG')).toBeEnabled();
+  const pathOf = (svg: string) => /<path d="([^"]+)"/.exec(svg)![1];
+  const before = pathOf(await preview(page).innerHTML());
+  const bytes = await typeThenClick(page, 'firstsecond', 'svg');
+  // Wait until the preview has caught up to 'firstsecond', then the file must match it.
+  await expect.poll(async () => pathOf(await preview(page).innerHTML())).not.toBe(before);
+  expect(pathOf(bytes.toString('utf8'))).toBe(pathOf(await preview(page).innerHTML()));
 });
