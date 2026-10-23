@@ -31,6 +31,11 @@ const LOADING_DELAY_MS = 300; // a cached engine answers well inside this: don't
 const pages = (n: number) => `${n} ${n === 1 ? 'page' : 'pages'}`;
 const reasonOf = (err: unknown): PdfFail => (err as { reason?: PdfFail } | null)?.reason ?? 'codec-load';
 
+/** A job that "succeeded" with nothing usable in it (no pages). Shown as a file we couldn't read. */
+class Unusable extends Error {
+  readonly reason = 'corrupt' as const;
+}
+
 function h<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, string> = {}, ...kids: (Node | string)[]) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(props)) el.setAttribute(k, v);
@@ -108,16 +113,31 @@ export function mount(el: HTMLElement): void {
   drop.addEventListener('pointerenter', preload);
   drop.addEventListener('focusin', preload);
 
+  /** Put text in the status region. `visible: false` is for screen readers only, when the screen already shows it. */
+  function say(text: string, visible: boolean): void {
+    status.textContent = text;
+    status.classList.toggle('visually-hidden', !visible);
+  }
+
   // --- shared alert (codec-load with Try again, or a whole-job failure) ---
   let retry: (() => void) | null = null;
-  function showAlert(reason: PdfFail, onRetry: (() => void) | null): void {
+  let alertReason: PdfFail | null = null;
+  /**
+   * Show a failure in the alert and report it once. One outage fails every pending job as codec-load: while its
+   * alert is up, later codec-load failures only refresh what Try again does.
+   */
+  function report(reason: PdfFail, onRetry: () => void): void {
+    const repeat = reason === 'codec-load' && alertReason === 'codec-load';
+    if (!repeat) failed(reason);
     alertText.textContent = COPY[reason];
+    alertReason = reason;
     retry = reason === 'codec-load' ? onRetry : null;
     retryBtn.hidden = !retry;
     alert.hidden = false;
   }
   function hideAlert(): void {
     alert.hidden = true;
+    alertReason = null;
     retry = null;
   }
   retryBtn.addEventListener('click', () => {
@@ -129,7 +149,7 @@ export function mount(el: HTMLElement): void {
   // --- done state ---
   let generation = 0; // bumped by Start over and by replacing the file: late results from before are dropped
   let doneUrl: string | undefined;
-  function showDone(blob: Blob, fileName: string, label: string, name: string, meta: string): void {
+  function showDone(blob: Blob, fileName: string, label: string, name: string, meta: string, announce: string): void {
     if (doneUrl) URL.revokeObjectURL(doneUrl);
     doneUrl = URL.createObjectURL(blob);
     download.href = doneUrl;
@@ -139,7 +159,7 @@ export function mount(el: HTMLElement): void {
     doneName.hidden = !name;
     doneMeta.textContent = meta;
     doneMeta.hidden = !meta;
-    status.textContent = '';
+    say(announce, false);
     list.hidden = true;
     drop.hidden = true;
     done.hidden = false;
@@ -151,7 +171,7 @@ export function mount(el: HTMLElement): void {
     doneUrl = undefined;
     download.removeAttribute('href');
     done.hidden = true;
-    status.textContent = '';
+    say('', true);
     hideAlert();
     clear();
     drop.hidden = false;
@@ -164,6 +184,27 @@ export function mount(el: HTMLElement): void {
   /** The job produced nothing usable (no pages): treat it as a file we couldn't read. */
   const empty = (outs: PdfOut[]) => !outs.length || outs.some((o) => o.pages === 0);
   const pdfBlob = (o: PdfOut) => new Blob([o.bytes as BlobPart], { type: 'application/pdf' });
+
+  /** Run a merge or split: show `running`, hide the inputs, and on failure bring them back with the alert. */
+  async function runJob(running: string, work: (gen: number) => Promise<void>, again: () => void): Promise<void> {
+    const gen = generation;
+    hideAlert();
+    busyRunning = true;
+    list.hidden = true;
+    drop.hidden = true;
+    say(running, true);
+    try {
+      await work(gen);
+    } catch (err) {
+      if (gen !== generation) return;
+      say('', true);
+      list.hidden = false;
+      drop.hidden = false;
+      report(reasonOf(err), again);
+    } finally {
+      busyRunning = false;
+    }
+  }
 
   // --- adding files: the picker, or a drop anywhere on the page ---
   let busyRunning = false; // a merge or split is running: drops are ignored until it is done
@@ -228,8 +269,11 @@ export function mount(el: HTMLElement): void {
       if (gen !== generation || !rows.includes(row)) return; // removed, or Start over, meanwhile
       row.state = state;
       if (state.kind === 'failed') {
-        failed(state.reason);
-        if (state.reason === 'codec-load') showAlert('codec-load', retryCounts);
+        if (state.reason === 'codec-load') report('codec-load', retryCounts);
+        else {
+          failed(state.reason); // a fact about this one file: reported per file
+          say(`${row.file.name}: ${COPY[state.reason]}`, false);
+        }
       }
       render();
     }
@@ -306,31 +350,20 @@ export function mount(el: HTMLElement): void {
       runBtn.disabled = rows.length < 2 || !rows.every((r) => r.state.kind === 'counted');
     }
 
-    async function run(): Promise<void> {
+    function run(): Promise<void> {
       const files = rows.map((r) => r.file);
-      const gen = generation;
-      hideAlert();
-      busyRunning = true;
-      list.hidden = true;
-      drop.hidden = true;
-      status.textContent = `Merging ${files.length} files…`;
-      try {
-        const out = await job((e) => e.merge(files));
-        if (gen !== generation) return;
-        if (empty([out])) throw { reason: 'corrupt' };
-        showDone(pdfBlob(out), out.name, 'Download', out.name, `${pages(out.pages)} · ${formatBytes(out.bytes.byteLength)}`);
-        succeeded(1);
-      } catch (err) {
-        if (gen !== generation) return;
-        const reason = reasonOf(err);
-        failed(reason);
-        status.textContent = '';
-        list.hidden = false;
-        drop.hidden = false;
-        showAlert(reason, () => void run());
-      } finally {
-        busyRunning = false;
-      }
+      return runJob(
+        `Merging ${files.length} files…`,
+        async (gen) => {
+          const out = await job((e) => e.merge(files));
+          if (gen !== generation) return;
+          if (empty([out])) throw new Unusable();
+          const meta = `${pages(out.pages)} · ${formatBytes(out.bytes.byteLength)}`;
+          showDone(pdfBlob(out), out.name, 'Download', out.name, meta, `${out.name} ready, ${meta}`);
+          succeeded(1);
+        },
+        () => void run(),
+      );
     }
     runBtn.addEventListener('click', () => void run());
 
@@ -381,12 +414,12 @@ export function mount(el: HTMLElement): void {
       runBtn.disabled = false;
     }
     function fail(reason: PdfFail): void {
-      failed(reason);
       metaEl.textContent = '';
       if (reason === 'codec-load') {
-        showAlert('codec-load', count);
+        report('codec-load', count);
         return;
       }
+      failed(reason);
       fileError.textContent = COPY[reason];
       fileError.hidden = false;
       options.forEach((o) => (o.hidden = true));
@@ -430,38 +463,27 @@ export function mount(el: HTMLElement): void {
         }
         mode = { kind: 'ranges', ranges };
       }
-      const gen = generation;
-      hideAlert();
-      busyRunning = true;
-      list.hidden = true;
-      drop.hidden = true;
-      status.textContent = 'Splitting…';
-      try {
-        const outs = await job((e) => e.split(target.file, mode));
-        if (gen !== generation) return;
-        if (empty(outs)) throw { reason: 'corrupt' };
-        if (outs.length > 1) {
-          const { zipFiles } = await import('./zip');
-          const zip = await zipFiles(outs.map((o) => ({ name: o.name, blob: pdfBlob(o) })));
+      await runJob(
+        'Splitting…',
+        async (gen) => {
+          const outs = await job((e) => e.split(target.file, mode));
           if (gen !== generation) return;
-          const base = target.file.name.replace(/\.pdf$/i, '') || 'document';
-          showDone(zip, `${base}-pages.zip`, 'Download all (ZIP)', '', `${outs.length} files`);
-        } else {
-          const o = outs[0]!;
-          showDone(pdfBlob(o), o.name, 'Download', o.name, '');
-        }
-        succeeded(outs.length);
-      } catch (err) {
-        if (gen !== generation) return;
-        const reason = reasonOf(err);
-        failed(reason);
-        status.textContent = '';
-        list.hidden = false;
-        drop.hidden = false;
-        showAlert(reason, () => void run());
-      } finally {
-        busyRunning = false;
-      }
+          if (empty(outs)) throw new Unusable();
+          if (outs.length > 1) {
+            const { zipFiles } = await import('./zip');
+            const zip = await zipFiles(outs.map((o) => ({ name: o.name, blob: pdfBlob(o) })));
+            if (gen !== generation) return;
+            const base = target.file.name.replace(/\.pdf$/i, '') || 'document';
+            const zipName = `${base}-pages.zip`;
+            showDone(zip, zipName, 'Download all (ZIP)', '', `${outs.length} files`, `${zipName} ready, ${outs.length} files`);
+          } else {
+            const o = outs[0]!;
+            showDone(pdfBlob(o), o.name, 'Download', o.name, '', `${o.name} ready, ${pages(o.pages)}`);
+          }
+          succeeded(outs.length);
+        },
+        () => void run(),
+      );
     }
     runBtn.addEventListener('click', () => void run());
 

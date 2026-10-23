@@ -181,10 +181,11 @@ describe('site', () => {
   });
   it('PDF pages show the measured gzip size of the PDF worker and pdf-lib', () => {
     const astro = readdirSync('dist/_astro');
-    const lib = astro.find((f) => /^pdf-lib-[^/]*\.js$/.test(f))!;
-    const worker = astro.find((f) => /^worker-.*\.js$/.test(f) && readFileSync(`dist/_astro/${f}`, 'utf8').includes(lib))!;
-    expect(lib && worker).toBeTruthy();
-    const bytes = [lib, worker].reduce((n, f) => n + gzipSync(readFileSync(`dist/_astro/${f}`)).length, 0);
+    const lib = astro.find((f) => /^pdf-lib-[^/]*\.js$/.test(f));
+    expect(lib, 'pdf-lib chunk in dist/_astro').toBeDefined();
+    const worker = astro.find((f) => /^worker-.*\.js$/.test(f) && readFileSync(`dist/_astro/${f}`, 'utf8').includes(lib!));
+    expect(worker, 'PDF worker chunk importing pdf-lib').toBeDefined();
+    const bytes = [lib!, worker!].reduce((n, f) => n + gzipSync(readFileSync(`dist/_astro/${f}`)).length, 0);
     const shown = `${(bytes / 1e6).toFixed(1)} MB`;
     for (const slug of ['merge-pdf', 'split-pdf']) expect(html(`${slug}/`)).toContain(`data-codec-size="${shown}"`);
   });

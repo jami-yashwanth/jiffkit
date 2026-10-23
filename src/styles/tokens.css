@@ -235,6 +235,9 @@ pre[data-results]:empty { display: none; }
 .qr-preview.has-code { border: 1px solid var(--line); background: #fff; padding: 0; }
 .qr-preview img, .qr-preview svg, .qr-preview canvas { width: 100%; height: auto; display: block; }
 
+/* Read by screen readers, not shown. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
 /* --- PDF tools --- */
 .drop-compact { padding: var(--s4) var(--s3); }
 .drop-compact .drop-title { font-size: 1.125rem; margin-bottom: var(--s3); }
