@@ -1,9 +1,11 @@
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
+import config from '../../astro.config.mjs';
 import { TOOLS } from '../../src/tools';
 
-const SITE = 'https://web-tools.pages.dev';
+// The same value the build used: SITE_URL or the default in astro.config.mjs.
+const SITE = config.site as string;
 const html = (p: string) => readFileSync(`dist/${p}index.html`, 'utf8');
 
 beforeAll(() => {
@@ -108,6 +110,6 @@ describe('site', () => {
 
   it('has sitemap index and robots.txt', () => {
     expect(existsSync('dist/sitemap-index.xml')).toBe(true);
-    expect(readFileSync('dist/robots.txt', 'utf8')).toContain('Sitemap: https://web-tools.pages.dev/sitemap-index.xml');
+    expect(readFileSync('dist/robots.txt', 'utf8')).toContain(`Sitemap: ${SITE}/sitemap-index.xml`);
   });
 });

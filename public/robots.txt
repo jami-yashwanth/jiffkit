@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://web-tools.pages.dev/sitemap-index.xml

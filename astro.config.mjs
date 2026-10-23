@@ -2,9 +2,15 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
+// The canonical origin: used for canonical links, the sitemap and robots.txt. Production builds on Cloudflare Pages
+// must say which domain they serve, or every canonical would point at the placeholder.
+if (process.env.CF_PAGES && !process.env.SITE_URL) {
+  throw new Error('Set SITE_URL in Cloudflare Pages env (for example https://example.com)');
+}
+
 export default defineConfig({
   output: 'static',
-  site: 'https://web-tools.pages.dev',
+  site: process.env.SITE_URL || 'https://web-tools.pages.dev',
   trailingSlash: 'always',
   integrations: [sitemap()],
   vite: {
