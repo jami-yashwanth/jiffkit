@@ -1,0 +1,37 @@
+---
+import '../styles/tokens.css';
+
+interface Props {
+  title: string;
+  description: string;
+  path: string; // e.g. "/heic-to-jpg/"
+  jsonLd?: object;
+}
+const { title, description, path, jsonLd } = Astro.props;
+const canonical = new URL(path, Astro.site).href;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+  </head>
+  <body>
+    <div class="page">
+      <nav class="site-nav"><a href="/">Image tools</a></nav>
+      <main><slot /></main>
+      <footer class="site-footer">
+        <p>Everything runs on your device. <a href="/licenses/">Open-source licences</a></p>
+      </footer>
+    </div>
+  </body>
+</html>

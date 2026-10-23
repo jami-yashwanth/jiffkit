@@ -1,0 +1,18 @@
+---
+import Base from '../layouts/Base.astro';
+const libs = [
+  { name: 'libheif-js', licence: 'LGPL-3.0', note: 'Decodes HEIC photos.', href: 'https://github.com/catdad-experiments/libheif-js' },
+  { name: '@jsquash/*', licence: 'Apache-2.0', note: 'JPG, PNG, WebP and OxiPNG codecs.', href: 'https://github.com/jamsinclair/jSquash' },
+  { name: 'fflate', licence: 'MIT', note: 'Builds ZIP downloads.', href: 'https://github.com/101arrowz/fflate' },
+  { name: 'Astro', licence: 'MIT', note: 'Static site framework.', href: 'https://github.com/withastro/astro' },
+];
+---
+<Base title="Open-source licences" description="Open-source software used by these image tools, with licences and source links." path="/licenses/">
+  <h1>Open-source licences</h1>
+  <p class="subhead">These tools are built on open-source software. Source code is linked below.</p>
+  <ul>
+    {libs.map((l) => (
+      <li><a href={l.href}>{l.name}</a> ({l.licence}). {l.note}</li>
+    ))}
+  </ul>
+</Base>

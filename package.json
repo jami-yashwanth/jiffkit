@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "fixtures": "bash scripts/make-fixtures.sh",
-    "typecheck": "astro check"
+    "typecheck": "astro check",
+    "check:budget": "node scripts/check-budget.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

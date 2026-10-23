@@ -1,16 +1,35 @@
 ---
+import Base from '../layouts/Base.astro';
+import { TOOLS } from '../tools';
 ---
+<Base
+  title="Private Image Tools - Convert and Compress in Your Browser"
+  description="Free image tools that run on your device: HEIC to JPG, compress images, WebP to JPG. Nothing is uploaded."
+  path="/"
+>
+  <h1>Image tools that never upload your files</h1>
+  <p class="subhead">Convert and compress images right in your browser. Free, no sign-up.</p>
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+  <label for="filter" class="subhead">Find a tool</label>
+  <input id="filter" class="filter" type="search" placeholder="Try HEIC, WebP or compress" autocomplete="off" />
+
+  <ul class="tool-list" id="tools">
+    {TOOLS.map((t) => (
+      <li data-name={`${t.h1} ${t.subhead}`.toLowerCase()}>
+        <a href={`/${t.slug}/`}><strong>{t.h1}</strong>{t.subhead}</a>
+      </li>
+    ))}
+  </ul>
+  <p id="no-match" hidden>No tool matches that. Try "HEIC", "WebP" or "compress".</p>
+
+  <script is:inline>
+    (function () {
+      var i = document.getElementById('filter'), items = document.querySelectorAll('#tools li'), m = document.getElementById('no-match');
+      i.addEventListener('input', function () {
+        var q = i.value.trim().toLowerCase(), n = 0;
+        items.forEach(function (li) { var s = li.dataset.name.indexOf(q) > -1; li.hidden = !s; if (s) n++; });
+        m.hidden = n > 0;
+      });
+    })();
+  </script>
+</Base>
