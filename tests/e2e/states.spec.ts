@@ -194,9 +194,9 @@ test('codec load failed, then Try again', async ({ page }) => {
 });
 
 test('out of memory, then Retry', async ({ page }) => {
-  // A worker that dies is how an out-of-memory crash reaches the page.
+  // A worker that dies after starting work is how an out-of-memory crash reaches the page.
   await page.context().route(/\/worker-[^/]*\.js$/, (route) =>
-    route.fulfill({ contentType: 'text/javascript', body: 'self.onmessage = () => { throw new Error("boom"); };' }),
+    route.fulfill({ contentType: 'text/javascript', body: 'self.onmessage = (e) => { self.postMessage({ kind: "progress", id: e.data.job.id, stage: "decoding" }); throw new Error("boom"); };' }),
   );
   await page.goto('/heic-to-jpg/');
   await choose(page, 'rotated-6.heic');

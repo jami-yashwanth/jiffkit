@@ -19,6 +19,8 @@ export function createEngine(workerFactory: () => Worker = defaultWorkerFactory)
   const queue: Job[] = [];
   let inFlight: Job | null = null;
   let worker: Worker | null = null;
+  /** Has the current worker posted anything yet? An error before its first message means the script never loaded. */
+  let heardFromWorker = false;
   const listeners: { progress: ((p: Progress) => void)[]; done: ((d: Done) => void)[]; failed: ((f: Failed) => void)[] } = {
     progress: [],
     done: [],
@@ -30,8 +32,11 @@ export function createEngine(workerFactory: () => Worker = defaultWorkerFactory)
   function getWorker(): Worker {
     if (worker) return worker;
     const w = workerFactory();
+    heardFromWorker = false;
     w.onmessage = (e: MessageEvent<WorkerResponse>) => {
-      if (w === worker) handle(e.data);
+      if (w !== worker) return;
+      heardFromWorker = true;
+      handle(e.data);
     };
     w.onerror = () => {
       if (w === worker) crash();
@@ -86,13 +91,17 @@ export function createEngine(workerFactory: () => Worker = defaultWorkerFactory)
     next();
   }
 
-  /** The worker died (most likely out of memory). Fail the job it was running and start over with a fresh worker. */
+  /**
+   * The worker raised an error event. Before its first message that means its script failed to load (codec-load);
+   * after it, the worker died mid-job (most likely out of memory). Fail the job and start over with a fresh worker.
+   */
   function crash(): void {
+    const reason = heardFromWorker ? 'oom' : 'codec-load';
     worker?.terminate();
     worker = null;
     const lost = inFlight;
     inFlight = null;
-    if (lost) emit(listeners.failed, { id: lost.id, reason: 'oom' });
+    if (lost) emit(listeners.failed, { id: lost.id, reason });
     next();
   }
 

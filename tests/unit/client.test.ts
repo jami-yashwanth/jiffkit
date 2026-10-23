@@ -89,17 +89,26 @@ describe('engine client', () => {
     expect(engine.pending()).toBe(2);
   });
 
-  it('fails the in-flight job as oom when the worker crashes, then uses a fresh worker', () => {
+  it('fails the in-flight job as codec-load when the worker errors before its first message', () => {
+    const { engine, workers, events } = setup();
+    engine.enqueue(job('a'));
+    workers[0].crash();
+    expect(events).toEqual(['failed:a:codec-load']);
+    expect(workers[0].terminated).toBe(true);
+  });
+
+  it('fails the in-flight job as oom when the worker crashes after its first message, then uses a fresh worker', () => {
     const { engine, workers, events } = setup();
     engine.enqueue(job('a'));
     engine.enqueue(job('b'));
+    workers[0].reply({ kind: 'progress', id: 'a', stage: 'decoding' });
     workers[0].crash();
-    expect(events).toEqual(['failed:a:oom']);
+    expect(events).toEqual(['progress:a:decoding', 'failed:a:oom']);
     expect(workers[0].terminated).toBe(true);
     expect(workers).toHaveLength(2);
     expect(workers[1].jobIds).toEqual(['b']);
     workers[1].reply(done('b'));
-    expect(events).toEqual(['failed:a:oom', 'done:b']);
+    expect(events).toEqual(['progress:a:decoding', 'failed:a:oom', 'done:b']);
     expect(engine.pending()).toBe(0);
   });
 
@@ -118,14 +127,14 @@ describe('engine client', () => {
     engine.enqueue(job('a'));
     engine.enqueue(job('b'));
     const old = workers[0];
-    old.crash();
+    old.crash(); // before any message: codec-load
     expect(workers[1].jobIds).toEqual(['b']);
     // A stale answer for the job the NEW worker is running must not complete it.
     old.reply(done('b'));
-    expect(events).toEqual(['failed:a:oom']);
+    expect(events).toEqual(['failed:a:codec-load']);
     expect(engine.pending()).toBe(1);
     workers[1].reply(done('b'));
-    expect(events).toEqual(['failed:a:oom', 'done:b']);
+    expect(events).toEqual(['failed:a:codec-load', 'done:b']);
   });
 
   it('keeps the queue moving when a listener throws', () => {
