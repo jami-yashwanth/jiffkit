@@ -8,6 +8,32 @@ describe('tool registry', () => {
     for (const s of ['1.0 becomes 1', 'duplicate keys', 'numeric keys', 'escapes']) expect(a).toContain(s);
   });
 
+  it('QR copy does not claim the visit is untracked', () => {
+    const t = getTool('qr-code-generator');
+    expect(t.title).toBe('QR Code Generator - Free, Static, No Sign-up');
+    expect(t.subhead).toBe('Turn text or a link into a QR code. Made on your device, and the code itself has no tracking.');
+    expect(t.description).toMatch(/Nothing is uploaded, the code has no tracking, and it never expires\.$/);
+    expect(`${t.title} ${t.description} ${t.subhead}`).not.toMatch(/nothing is tracked|Private, No Tracking/i);
+  });
+
+  it('has exactly the 9 unique slugs', () => {
+    const slugs = TOOLS.map((t) => t.slug);
+    expect(new Set(slugs).size).toBe(slugs.length);
+    expect([...slugs].sort()).toEqual(
+      [
+        'base64-encode-decode',
+        'compress-image',
+        'heic-to-jpg',
+        'json-formatter',
+        'jwt-decoder',
+        'merge-pdf',
+        'qr-code-generator',
+        'split-pdf',
+        'webp-to-jpg',
+      ].sort(),
+    );
+  });
+
   it('uses the spec H1s', () => {
     const h1 = (s: Parameters<typeof getTool>[0]) => getTool(s).h1;
     expect(h1('merge-pdf')).toBe('Merge PDF');

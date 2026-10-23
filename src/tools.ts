@@ -378,11 +378,11 @@ const OTHER_TOOLS: (PdfTool | TextTool | QrTool)[] = [
     kind: 'qr',
     category: 'qr',
     slug: 'qr-code-generator',
-    title: 'QR Code Generator - Free, Private, No Tracking',
+    title: 'QR Code Generator - Free, Static, No Sign-up',
     description:
-      'Make a QR code from any text or link in your browser. Download it as PNG or SVG. Nothing is uploaded, nothing is tracked, and it never expires. Free.',
+      'Make a QR code from any text or link in your browser. Download it as PNG or SVG. Nothing is uploaded, the code has no tracking, and it never expires.',
     h1: 'QR code generator',
-    subhead: 'Turn text or a link into a QR code. Made on your device, nothing is tracked.',
+    subhead: 'Turn text or a link into a QR code. Made on your device, and the code itself has no tracking.',
     howTo: [
       'Type or paste your text or link.',
       'Choose the error correction level and the size you want.',
