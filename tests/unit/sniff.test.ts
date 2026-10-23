@@ -102,4 +102,29 @@ describe('sniff', () => {
   it.each(['empty.heic', 'text-as.heic'])('returns unknown for %s', async (name) => {
     expect(await sniff(fixture(name))).toEqual({ type: 'unknown' });
   });
+
+  describe('crafted HEIC', () => {
+    const u32 = (n: number) => [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
+    const box = (type: string, payload: number[]) => [
+      ...u32(8 + payload.length),
+      ...[...type].map((c) => c.charCodeAt(0)),
+      ...payload,
+    ];
+    const ftyp = box('ftyp', [...[...'heic'].map((c) => c.charCodeAt(0)), 0, 0, 0, 0]);
+    const blob = (bytes: number[]) => new Blob([new Uint8Array(bytes)]);
+
+    it('survives a short ipma', async () => {
+      const iprp = box('iprp', [...box('ipco', []), ...box('ipma', [])]);
+      const pitm = box('pitm', [0, 0, 0, 0, 0, 1]);
+      const meta = box('meta', [0, 0, 0, 0, ...pitm, ...iprp]);
+      expect(await sniff(blob([...ftyp, ...meta]))).toEqual({ type: 'heic' });
+    });
+
+    it('survives a version-1 pitm cut off at the end of the buffer', async () => {
+      const pitm = box('pitm', [1, 0, 0, 0, 0, 0]);
+      const iprp = box('iprp', []);
+      const meta = box('meta', [0, 0, 0, 0, ...iprp, ...pitm]);
+      expect(await sniff(blob([...ftyp, ...meta]))).toEqual({ type: 'heic' });
+    });
+  });
 });

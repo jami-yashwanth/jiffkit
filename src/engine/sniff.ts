@@ -19,18 +19,27 @@ export async function sniff(file: Blob): Promise<Sniffed> {
   const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
 
   if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) {
-    return { type: 'jpg', ...jpegSize(b, v) };
+    return { type: 'jpg', ...safe(() => jpegSize(b, v)) };
   }
   if (b.length >= 4 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) {
     return b.length >= 24 ? { type: 'png', width: v.getUint32(16), height: v.getUint32(20) } : { type: 'png' };
   }
   if (b.length >= 12 && ascii(b, 0, 4) === 'RIFF' && ascii(b, 8, 4) === 'WEBP') {
-    return { type: 'webp', ...webpInfo(b, v) };
+    return { type: 'webp', ...safe(() => webpInfo(b, v)) };
   }
   if (b.length >= 12 && ascii(b, 4, 4) === 'ftyp' && HEIC_BRANDS.has(ascii(b, 8, 4))) {
-    return { type: 'heic', ...heicSize(b, v) };
+    return { type: 'heic', ...safe(() => heicSize(b, v)) };
   }
   return { type: 'unknown' };
+}
+
+/** Dimension parsing is best effort: malformed input must never make sniff() reject. */
+function safe<T extends object>(parse: () => T): T | Record<string, never> {
+  try {
+    return parse();
+  } catch {
+    return {};
+  }
 }
 
 function jpegSize(b: Uint8Array, v: DataView): { width?: number; height?: number } {
@@ -57,7 +66,7 @@ function jpegSize(b: Uint8Array, v: DataView): { width?: number; height?: number
   return {};
 }
 
-function webpInfo(b: Uint8Array, v: DataView): { width?: number; height?: number; animated: boolean } {
+function webpInfo(b: Uint8Array, v: DataView): { width?: number; height?: number; animated?: boolean } {
   const fourcc = b.length >= 16 ? ascii(b, 12, 4) : '';
   if (fourcc === 'VP8X' && b.length >= 30) {
     return {
@@ -73,7 +82,7 @@ function webpInfo(b: Uint8Array, v: DataView): { width?: number; height?: number
   if (fourcc === 'VP8 ' && b.length >= 30 && b[23] === 0x9d && b[24] === 0x01 && b[25] === 0x2a) {
     return { animated: false, width: v.getUint16(26, true) & 0x3fff, height: v.getUint16(28, true) & 0x3fff };
   }
-  return { animated: false };
+  return fourcc === 'VP8X' ? {} : { animated: false };
 }
 
 interface Box {
@@ -111,7 +120,9 @@ function heicSize(b: Uint8Array, v: DataView): { width?: number; height?: number
   const pitm = kids.find((x) => x.type === 'pitm');
   const iprp = kids.find((x) => x.type === 'iprp');
   if (!pitm || !iprp || pitm.start + 6 > pitm.end) return {};
-  const primary = v.getUint8(pitm.start) === 0 ? v.getUint16(pitm.start + 4) : v.getUint32(pitm.start + 4);
+  const pitmVersion = v.getUint8(pitm.start);
+  if (pitmVersion !== 0 && pitm.start + 8 > pitm.end) return {};
+  const primary = pitmVersion === 0 ? v.getUint16(pitm.start + 4) : v.getUint32(pitm.start + 4);
 
   const props = boxes(v, b, iprp.start, iprp.end);
   const ipco = props.find((x) => x.type === 'ipco');
@@ -119,6 +130,7 @@ function heicSize(b: Uint8Array, v: DataView): { width?: number; height?: number
   if (!ipco || !ipma) return {};
   const all = boxes(v, b, ipco.start, ipco.end); // association indices are 1-based over every property box
 
+  if (ipma.start + 8 > ipma.end) return {};
   // ipma: version, flags, entry_count, then (item_id, assoc_count, assocs)
   const version = v.getUint8(ipma.start);
   const flags = v.getUint8(ipma.start + 3);

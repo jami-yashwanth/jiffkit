@@ -43,7 +43,7 @@ exiftool -q -overwrite_original -n -Orientation=6 "$OUT/rotated-6.heic"
 
 magick -size 400x300 gradient:'#ff7a18-#2b5876' "$TMP/m1.jpg"
 magick -size 200x150 gradient:'#00ff88-#ff0088' "$TMP/m2.jpg"
-heif-enc -q 80 "$TMP/m1.jpg" "$TMP/m2.jpg" -o "$OUT/multi.heic" >/dev/null 2>&1 || \
+heif-enc -q 80 "$TMP/m1.jpg" "$TMP/m2.jpg" -o "$OUT/multi.heic" >/dev/null || \
   heif-enc -q 80 "$TMP/m1.jpg" "$TMP/m2.jpg" --output "$OUT/multi.heic" >/dev/null
 
 # --- JPG ---
