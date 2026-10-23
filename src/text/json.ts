@@ -4,6 +4,8 @@ export type JsonResult =
 
 type Indent = 2 | 4 | '\t';
 
+const TOO_DEEP = 'Nested too deeply to format';
+
 interface ScanError {
   offset: number;
   message: string;
@@ -85,82 +87,79 @@ function scan(text: string): ScanError | null {
     return null;
   }
 
-  function value(): ScanError | null {
+  // Iterative (explicit stack) so deeply nested input cannot overflow the call
+  // stack and real errors keep their true position.
+  function key(): ScanError | null {
     skipWs();
-    if (i >= n) return unexpected(i);
-    const c = text[i];
-    if (c === '{') return object();
-    if (c === '[') return array();
-    if (c === '"') return string();
-    if (c === '-' || isDigit(c)) return number();
-    if (c === 't') return literal('true');
-    if (c === 'f') return literal('false');
-    if (c === 'n') return literal('null');
-    return unexpected(i);
-  }
-
-  function object(): ScanError | null {
-    i++;
-    skipWs();
-    if (text[i] === '}') {
-      i++;
-      return null;
-    }
-    for (;;) {
-      skipWs();
-      if (text[i] !== '"') return unexpected(i);
-      let err = string();
-      if (err) return err;
-      skipWs();
-      if (i >= n) return unexpected(i);
-      if (text[i] !== ':') return fail(i, "Expected ':'");
-      i++;
-      err = value();
-      if (err) return err;
-      skipWs();
-      if (i >= n) return unexpected(i);
-      if (text[i] === '}') {
-        i++;
-        return null;
-      }
-      if (text[i] !== ',') return fail(i, "Expected ',' or '}'");
-      i++;
-      skipWs();
-      if (text[i] === '}') return fail(i, "Trailing comma before '}'");
-    }
-  }
-
-  function array(): ScanError | null {
-    i++;
-    skipWs();
-    if (text[i] === ']') {
-      i++;
-      return null;
-    }
-    for (;;) {
-      const err = value();
-      if (err) return err;
-      skipWs();
-      if (i >= n) return unexpected(i);
-      if (text[i] === ']') {
-        i++;
-        return null;
-      }
-      if (text[i] !== ',') return fail(i, "Expected ',' or ']'");
-      i++;
-      skipWs();
-      if (text[i] === ']') return fail(i, "Trailing comma before ']'");
-    }
-  }
-
-  try {
-    const err = value();
+    if (text[i] !== '"') return unexpected(i);
+    const err = string();
     if (err) return err;
     skipWs();
-    if (i < n) return fail(i, 'Unexpected content after end of JSON');
+    if (i >= n) return unexpected(i);
+    if (text[i] !== ':') return fail(i, "Expected ':'");
+    i++;
     return null;
-  } catch {
-    return null; // e.g. stack overflow on absurd nesting: caller falls back
+  }
+
+  const stack: ('o' | 'a')[] = [];
+  let expectValue = true;
+  for (;;) {
+    let err: ScanError | null;
+    if (expectValue) {
+      skipWs();
+      if (i >= n) return unexpected(i);
+      const c = text[i];
+      if (c === '{') {
+        i++;
+        stack.push('o');
+        skipWs();
+        if (text[i] === '}') {
+          i++;
+          stack.pop();
+          expectValue = false;
+        } else if ((err = key())) return err;
+        continue;
+      }
+      if (c === '[') {
+        i++;
+        stack.push('a');
+        skipWs();
+        if (text[i] === ']') {
+          i++;
+          stack.pop();
+          expectValue = false;
+        }
+        continue;
+      }
+      if (c === '"') err = string();
+      else if (c === '-' || isDigit(c)) err = number();
+      else if (c === 't') err = literal('true');
+      else if (c === 'f') err = literal('false');
+      else if (c === 'n') err = literal('null');
+      else err = unexpected(i);
+      if (err) return err;
+      expectValue = false;
+      continue;
+    }
+    skipWs();
+    if (stack.length === 0) return i < n ? fail(i, 'Unexpected content after end of JSON') : null;
+    if (i >= n) return unexpected(i);
+    const inObject = stack[stack.length - 1] === 'o';
+    const close = inObject ? '}' : ']';
+    if (text[i] === close) {
+      i++;
+      stack.pop();
+    } else if (text[i] === ',') {
+      i++;
+      skipWs();
+      if (text[i] === close) return fail(i, `Trailing comma before '${close}'`);
+      if (inObject) {
+        if ((err = key())) return err;
+      }
+      expectValue = true;
+    } else {
+      return fail(i, `Expected ',' or '${close}'`);
+    }
   }
 }
 
@@ -178,11 +177,18 @@ function locate(text: string, offset: number): { line: number; column: number } 
 
 function run(input: string, indent?: Indent): JsonResult {
   const text = input.charCodeAt(0) === 0xfeff ? input.slice(1) : input;
+  let parsed: unknown;
   try {
-    return { ok: true, output: JSON.stringify(JSON.parse(text), null, indent) };
+    parsed = JSON.parse(text);
   } catch {
-    const err = scan(text) ?? { offset: 0, message: 'Invalid JSON' };
+    // Valid JSON the engine still cannot parse can only be too deeply nested.
+    const err = scan(text) ?? { offset: 0, message: TOO_DEEP };
     return { ok: false, ...locate(text, err.offset), message: err.message };
+  }
+  try {
+    return { ok: true, output: JSON.stringify(parsed, null, indent) };
+  } catch {
+    return { ok: false, line: 1, column: 1, message: TOO_DEEP };
   }
 }
 

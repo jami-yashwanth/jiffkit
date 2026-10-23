@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { formatJson, minifyJson } from '../../src/text/json';
 
 describe('formatJson', () => {
@@ -89,6 +89,34 @@ describe('JSON errors', () => {
       const r = formatJson(s, 2);
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.message.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('deeply nested input', () => {
+  it('reports valid but too deeply nested JSON as such, not as invalid', () => {
+    const r = formatJson('['.repeat(50_000) + ']'.repeat(50_000), 2);
+    expect(r).toEqual({ ok: false, line: 1, column: 1, message: 'Nested too deeply to format' });
+  });
+  it('still reports the true position of an error in deep input', () => {
+    const r = formatJson('['.repeat(5000) + '1,' + ']'.repeat(5000), 2);
+    expect(r).toMatchObject({ ok: false, line: 1, column: 5003 });
+    if (!r.ok) expect(r.message).toMatch(/trailing comma/i);
+  });
+  it('scans absurdly deep invalid input without overflowing', () => {
+    const r = formatJson('['.repeat(1_000_000) + '1,', 2);
+    expect(r).toMatchObject({ ok: false, line: 1, column: 1_000_003 });
+    if (!r.ok) expect(r.message).toBe('Unexpected end of input');
+  });
+  it('treats valid JSON that an engine refuses to parse as too deep (fallback path)', () => {
+    // V8 parses any depth; other engines may throw on valid deep input.
+    const spy = vi.spyOn(JSON, 'parse').mockImplementation(() => {
+      throw new SyntaxError('engine limit');
+    });
+    try {
+      expect(formatJson('[[1]]', 2)).toEqual({ ok: false, line: 1, column: 1, message: 'Nested too deeply to format' });
+    } finally {
+      spy.mockRestore();
     }
   });
 });

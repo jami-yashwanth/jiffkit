@@ -28,16 +28,16 @@ describe('base64', () => {
     expect(decodeBase64('aGVsbG8', { urlSafe: false })).toEqual({ ok: true, text: 'hello' });
   });
   it('rejects characters outside the alphabet', () => {
-    expect(decodeBase64('###', { urlSafe: false })).toEqual({ ok: false });
-    expect(decodeBase64('Pz8-', { urlSafe: false })).toEqual({ ok: false });
+    expect(decodeBase64('###', { urlSafe: false })).toEqual({ ok: false, reason: 'invalid' });
+    expect(decodeBase64('Pz8-', { urlSafe: false })).toEqual({ ok: false, reason: 'invalid' });
   });
   it('rejects impossible lengths and misplaced padding', () => {
-    expect(decodeBase64('a', { urlSafe: false })).toEqual({ ok: false });
-    expect(decodeBase64('aG=Vs', { urlSafe: false })).toEqual({ ok: false });
+    expect(decodeBase64('a', { urlSafe: false })).toEqual({ ok: false, reason: 'invalid' });
+    expect(decodeBase64('aG=Vs', { urlSafe: false })).toEqual({ ok: false, reason: 'invalid' });
   });
   it('rejects invalid UTF-8', () => {
-    // 0xFF 0xFE is never valid UTF-8
-    expect(decodeBase64('//4=', { urlSafe: false })).toEqual({ ok: false });
+    // 0xFF 0xFE is never valid UTF-8: valid Base64, but not text
+    expect(decodeBase64('//4=', { urlSafe: false })).toEqual({ ok: false, reason: 'not-text' });
   });
   it('handles large input', () => {
     const text = 'x'.repeat(500_000);

@@ -16,6 +16,8 @@ export function relativeTime(target: Date, now: Date): string {
   // Rounding can reach the next unit ("60 minutes"): promote instead.
   if (idx + 1 < UNITS.length && Math.round(abs / UNITS[idx][1]) * UNITS[idx][1] >= UNITS[idx + 1][1]) idx++;
 
+  if (UNITS[idx][0] === 'month' && Math.round(abs / UNITS[idx][1]) >= 12) idx++; // 364 days is a year, not 12 months
+
   const [name, size] = UNITS[idx];
   const n = Math.round(abs / size);
   const phrase = `${n} ${name}${n === 1 ? '' : 's'}`;
