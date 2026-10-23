@@ -2,6 +2,8 @@ import { PdfError } from './ops';
 import type { PdfOut, PdfRequest, PdfResponse, SplitMode } from './types';
 
 export interface PdfEngine {
+  /** Load pdf-lib in the worker ahead of the first real job. Rejects with codec-load if it can't. */
+  warm(): Promise<void>;
   count(id: string, file: File): Promise<number>;
   merge(files: File[]): Promise<PdfOut>;
   split(file: File, mode: SplitMode): Promise<PdfOut[]>;
@@ -75,15 +77,23 @@ export function createPdfEngine(workerFactory: () => Worker = defaultWorkerFacto
     const job = inFlight;
     inFlight = null;
     if (m.kind === 'done') job.resolve(m.result as never);
-    else job.reject(new PdfError(m.reason));
+    else {
+      // A browser may cache a failed import in the worker's module map: retire the worker so a retry loads afresh.
+      if (m.reason === 'codec-load') retire();
+      job.reject(new PdfError(m.reason));
+    }
     next();
+  }
+
+  function retire(): void {
+    worker?.terminate();
+    worker = null;
   }
 
   /** Before the worker's first message its script failed to load (codec-load); after it, it died mid-job. */
   function crash(): void {
     const reason = heardFromWorker ? 'corrupt' : 'codec-load';
-    worker?.terminate();
-    worker = null;
+    retire();
     if (inFlight) fail(inFlight, reason);
     else next();
   }
@@ -98,6 +108,10 @@ export function createPdfEngine(workerFactory: () => Worker = defaultWorkerFacto
   const jobId = (kind: string) => `${kind}-${++seq}`;
 
   return {
+    async warm() {
+      const id = jobId('warm');
+      await enqueue<number>(id, async () => ({ message: { kind: 'job', id, op: 'warm' }, transfer: [] }));
+    },
     count: (id, file) =>
       enqueue(id, async () => {
         const bytes = await read(file);

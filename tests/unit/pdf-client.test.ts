@@ -120,4 +120,30 @@ describe('pdf client', () => {
     workers[1].reply({ kind: 'done', id: workers[1].posted[0].id, result: 5 });
     expect(await b).toBe(5);
   });
+  it('a codec-load reply retires the worker, so a retry re-imports pdf-lib in a fresh one', async () => {
+    const { engine, workers } = setup();
+    const a = settle(engine.count('1', file()));
+    await tick();
+    workers[0].reply({ kind: 'failed', id: workers[0].posted[0].id, reason: 'codec-load' });
+    const r = await a;
+    expect(r.ok === false && (r.e as PdfError).reason).toBe('codec-load');
+    expect(workers[0].terminated).toBe(true);
+    const b = engine.count('2', file());
+    await tick();
+    expect(workers).toHaveLength(2);
+    workers[1].reply({ kind: 'done', id: workers[1].posted[0].id, result: 3 });
+    expect(await b).toBe(3);
+  });
+
+  it('warm() asks the worker to load pdf-lib and resolves when it has', async () => {
+    const { engine, workers } = setup();
+    let warmed = false;
+    const w = engine.warm().then(() => (warmed = true));
+    await tick();
+    expect(workers[0].posted[0]).toMatchObject({ kind: 'job', op: 'warm' });
+    expect(warmed).toBe(false);
+    workers[0].reply({ kind: 'done', id: workers[0].posted[0].id, result: 0 });
+    await w;
+    expect(warmed).toBe(true);
+  });
 });

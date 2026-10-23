@@ -9,6 +9,7 @@ export type SplitMode = { kind: 'every' } | { kind: 'ranges'; ranges: [number, n
 
 /** Page -> worker. File bytes travel as transferred ArrayBuffers. */
 export type PdfRequest =
+  | { kind: 'job'; id: string; op: 'warm' }
   | { kind: 'job'; id: string; op: 'count'; bytes: ArrayBuffer }
   | { kind: 'job'; id: string; op: 'merge'; files: ArrayBuffer[] }
   | { kind: 'job'; id: string; op: 'split'; bytes: ArrayBuffer; base: string; mode: SplitMode };

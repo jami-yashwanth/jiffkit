@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { PDFDocument } from 'pdf-lib';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { merge, pageCount, PdfError, split } from '../../src/pdf/ops';
 
 const fx = (name: string): ArrayBuffer => {
@@ -79,5 +79,25 @@ describe('pdf ops', () => {
   it.each(['not-a.pdf', 'truncated.pdf'])('reports %s as corrupt', async (name) => {
     expect(await reasonOf(pageCount(fx(name)))).toBe('corrupt');
     expect(await reasonOf(merge([fx(name)]))).toBe('corrupt');
+  });
+});
+
+describe('pdf ops when the pdf-lib chunk fails to load', () => {
+  afterEach(() => {
+    vi.doUnmock('pdf-lib');
+    vi.resetModules();
+  });
+
+  it('fails every op as codec-load, not corrupt', async () => {
+    vi.resetModules();
+    vi.doMock('pdf-lib', () => {
+      throw new TypeError('Failed to fetch dynamically imported module');
+    });
+    const ops = await import('../../src/pdf/ops');
+    const reason = (p: Promise<unknown>) => p.then(() => null, (e: { reason?: string }) => e.reason);
+    expect(await reason(ops.loadLib())).toBe('codec-load');
+    expect(await reason(ops.pageCount(fx('three-pages.pdf')))).toBe('codec-load');
+    expect(await reason(ops.merge([fx('three-pages.pdf'), fx('two-pages.pdf')]))).toBe('codec-load');
+    expect(await reason(ops.split(fx('three-pages.pdf'), 'x', { kind: 'every' }))).toBe('codec-load');
   });
 });

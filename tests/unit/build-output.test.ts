@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { gzipSync } from 'node:zlib';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import config from '../../astro.config.mjs';
@@ -177,5 +178,14 @@ describe('site', () => {
   it('has sitemap index and robots.txt', () => {
     expect(existsSync('dist/sitemap-index.xml')).toBe(true);
     expect(readFileSync('dist/robots.txt', 'utf8')).toContain(`Sitemap: ${SITE}/sitemap-index.xml`);
+  });
+  it('PDF pages show the measured gzip size of the PDF worker and pdf-lib', () => {
+    const astro = readdirSync('dist/_astro');
+    const lib = astro.find((f) => /^pdf-lib-[^/]*\.js$/.test(f))!;
+    const worker = astro.find((f) => /^worker-.*\.js$/.test(f) && readFileSync(`dist/_astro/${f}`, 'utf8').includes(lib))!;
+    expect(lib && worker).toBeTruthy();
+    const bytes = [lib, worker].reduce((n, f) => n + gzipSync(readFileSync(`dist/_astro/${f}`)).length, 0);
+    const shown = `${(bytes / 1e6).toFixed(1)} MB`;
+    for (const slug of ['merge-pdf', 'split-pdf']) expect(html(`${slug}/`)).toContain(`data-codec-size="${shown}"`);
   });
 });

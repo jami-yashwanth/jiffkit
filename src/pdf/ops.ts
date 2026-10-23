@@ -9,8 +9,18 @@ export class PdfError extends Error {
 }
 
 // pdf-lib is large: load it on first use, so it never counts toward a page's first-load budget.
-const lib = () => import('pdf-lib');
-type Lib = Awaited<ReturnType<typeof lib>>;
+type Lib = typeof import('./pdf-lib');
+
+/** Load pdf-lib. A chunk that fails to load (offline, blocked) is codec-load, never a damaged file. */
+export async function loadLib(): Promise<Lib> {
+  try {
+    return await import('./pdf-lib');
+  } catch (err) {
+    console.error('pdf: could not load pdf-lib', err);
+    throw new PdfError('codec-load');
+  }
+}
+const lib = loadLib;
 
 /** The trailer and xref dictionaries (where /Encrypt lives) sit at the ends of the file; don't decode the middle. */
 const SCAN_BYTES = 64 * 1024;

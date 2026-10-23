@@ -1,4 +1,4 @@
-import { merge, pageCount, PdfError, split } from './ops';
+import { loadLib, merge, pageCount, PdfError, split } from './ops';
 import type { PdfOut, PdfRequest, PdfResponse } from './types';
 
 // Minimal view of the worker global, so the DOM lib's `self` types stay untouched.
@@ -12,6 +12,9 @@ const buffersOf = (result: number | PdfOut | PdfOut[]): Transferable[] =>
 
 async function run(msg: PdfRequest): Promise<number | PdfOut | PdfOut[]> {
   switch (msg.op) {
+    case 'warm':
+      await loadLib();
+      return 0;
     case 'count':
       return pageCount(msg.bytes);
     case 'merge':
