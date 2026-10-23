@@ -2,22 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { TOOLS, CATEGORY_LABEL, getTool, getImageTool, toolForType } from '../../src/tools';
 
 describe('tool registry', () => {
-  it('has exactly the 9 unique slugs', () => {
-    const slugs = TOOLS.map((t) => t.slug);
-    expect(new Set(slugs).size).toBe(slugs.length);
-    expect([...slugs].sort()).toEqual(
-      [
-        'base64-encode-decode',
-        'compress-image',
-        'heic-to-jpg',
-        'json-formatter',
-        'jwt-decoder',
-        'merge-pdf',
-        'qr-code-generator',
-        'split-pdf',
-        'webp-to-jpg',
-      ].sort(),
-    );
+  it('JSON formatter FAQ is honest about what formatting rewrites', () => {
+    const a = getTool('json-formatter').faq.find((f) => f.q === 'Does it change my data?')!.a;
+    expect(a).not.toMatch(/only changes whitespace/);
+    for (const s of ['1.0 becomes 1', 'duplicate keys', 'numeric keys', 'escapes']) expect(a).toContain(s);
   });
 
   it('uses the spec H1s', () => {

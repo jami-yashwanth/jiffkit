@@ -287,7 +287,7 @@ const OTHER_TOOLS: (PdfTool | TextTool | QrTool)[] = [
       },
       {
         q: 'Does it change my data?',
-        a: 'Formatting only changes whitespace, with three exceptions: very large numbers lose precision, duplicate keys keep only the last value, and numeric keys such as "1" move to the front.',
+        a: 'Formatting rewrites the JSON from its parsed value. Besides whitespace, numbers are written in their shortest form (1.0 becomes 1) and very large ones lose precision, escapes like \\u00e9 become the character, duplicate keys keep only the last value, and numeric keys such as "1" move to the front.',
       },
       {
         q: 'How large a file can I format?',
