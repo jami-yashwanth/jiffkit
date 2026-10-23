@@ -1,5 +1,6 @@
 ---
 import '../styles/tokens.css';
+import { jsonLdString } from '../json-ld';
 
 interface Props {
   title: string;
@@ -23,7 +24,7 @@ const canonical = new URL(path, Astro.site).href;
     <meta property="og:url" content={canonical} />
     <meta property="og:type" content="website" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+    {jsonLd && <script type="application/ld+json" set:html={jsonLdString(jsonLd)} />}
   </head>
   <body>
     <div class="page">

@@ -46,7 +46,7 @@ a { color: var(--accent); }
 
 .drop { border: 2px dashed var(--line); border-radius: var(--radius); padding: var(--s6) var(--s3); text-align: center; }
 .drop-title { font-size: 1.25rem; font-weight: 600; margin-bottom: var(--s3); }
-.btn { display: inline-block; background: var(--accent); color: var(--accent-ink); border-radius: var(--radius); padding: var(--s2) var(--s4); font-weight: 600; cursor: pointer; min-height: 44px; line-height: 28px; }
+.btn { position: relative; display: inline-block; background: var(--accent); color: var(--accent-ink); border-radius: var(--radius); padding: var(--s2) var(--s4); font-weight: 600; cursor: pointer; min-height: 44px; line-height: 28px; }
 .btn:focus-within, .btn:hover { outline: 2px solid var(--ink); outline-offset: 2px; }
 .drop input[type='file'] { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
 .privacy { color: var(--ink-muted); font-size: 0.875rem; margin: var(--s3) 0 0; }
@@ -63,4 +63,53 @@ a { color: var(--accent); }
   .drop { border: 0; padding: 0; }
   .drop-title { display: none; }
   .btn { display: block; width: 100%; text-align: center; }
+}
+
+/* --- drop zone island --- */
+[hidden] { display: none !important; }
+.drop.is-over { border-color: var(--accent); }
+.settings { margin: var(--s3) 0 0; border: 0; padding: 0; }
+.settings summary { cursor: pointer; color: var(--ink-muted); }
+.settings legend { padding: 0; margin-bottom: var(--s2); font-weight: 600; }
+.quality { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); font-weight: 600; }
+.quality input { flex: 1 1 12rem; accent-color: var(--accent); }
+.quality output { min-width: 3ch; font-variant-numeric: tabular-nums; }
+.details-body, details.settings .quality { margin-top: var(--s2); }
+.toggle { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; }
+.toggle legend { float: left; margin: 0 var(--s2) 0 0; }
+.toggle label { display: inline-flex; align-items: center; gap: var(--s1); min-height: 44px; cursor: pointer; }
+.toggle input { accent-color: var(--accent); }
+.note { color: var(--ink-muted); font-size: 0.875rem; margin: 0; }
+
+.results { margin-top: var(--s4); }
+.results-head { display: grid; gap: var(--s2); margin-bottom: var(--s3); }
+.status { font-weight: 600; margin: 0; }
+.loading p { margin: 0 0 var(--s1); color: var(--ink-muted); }
+.loading progress { width: 100%; accent-color: var(--accent); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); }
+.actions .gps { margin: 0; color: var(--ink-muted); font-size: 0.875rem; }
+.btn-quiet { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+button.btn { font: inherit; font-weight: 600; border: 0; }
+button.btn-quiet { border: 1px solid var(--line); }
+button.btn:disabled { opacity: 0.6; cursor: progress; }
+a.btn { text-decoration: none; text-align: center; }
+
+.rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: var(--s3); padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.thumb { width: 48px; height: 48px; border-radius: var(--s1); background: var(--line); object-fit: cover; display: block; }
+.thumb-failed { background: transparent; border: 1px dashed var(--line); }
+.info { display: grid; min-width: 0; }
+.name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.size, .row .note { color: var(--ink-muted); font-size: 0.875rem; }
+.error { color: var(--ink); font-size: 0.875rem; }
+.link { font-weight: 600; white-space: nowrap; }
+.spinner { width: 20px; height: 20px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+
+@media (max-width: 600px) {
+  .privacy { text-align: center; }
+  .row { grid-template-columns: 48px minmax(0, 1fr); }
+  .row > .btn, .row > .link { grid-column: 1 / -1; }
+  .actions .btn { flex: 1 1 100%; }
 }

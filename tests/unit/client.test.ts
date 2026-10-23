@@ -119,9 +119,91 @@ describe('engine client', () => {
     engine.enqueue(job('b'));
     const old = workers[0];
     old.crash();
-    old.reply(done('a'));
+    expect(workers[1].jobIds).toEqual(['b']);
+    // A stale answer for the job the NEW worker is running must not complete it.
+    old.reply(done('b'));
     expect(events).toEqual(['failed:a:oom']);
     expect(engine.pending()).toBe(1);
+    workers[1].reply(done('b'));
+    expect(events).toEqual(['failed:a:oom', 'done:b']);
+  });
+
+  it('keeps the queue moving when a listener throws', () => {
+    const { engine, workers, events } = setup();
+    const errors: unknown[] = [];
+    const original = console.error;
+    console.error = (...args: unknown[]) => errors.push(args);
+    try {
+      engine.on('done', () => {
+        throw new Error('listener bug');
+      });
+      engine.on('progress', () => {
+        throw new Error('listener bug');
+      });
+      engine.enqueue(job('a'));
+      engine.enqueue(job('b'));
+      workers[0].reply({ kind: 'progress', id: 'a', stage: 'decoding' });
+      workers[0].reply(done('a'));
+      expect(workers[0].jobIds).toEqual(['a', 'b']);
+      workers[0].reply(done('b'));
+      expect(events).toEqual(['progress:a:decoding', 'done:a', 'done:b']);
+      expect(engine.pending()).toBe(0);
+      expect(errors.length).toBe(3);
+    } finally {
+      console.error = original;
+    }
+  });
+
+  it('fails jobs as codec-load instead of stalling when the worker cannot be created', () => {
+    let calls = 0;
+    const workers: FakeWorker[] = [];
+    const engine = createEngine(() => {
+      calls++;
+      if (calls === 1) throw new Error('blocked');
+      const w = new FakeWorker();
+      workers.push(w);
+      return w as unknown as Worker;
+    });
+    const events: string[] = [];
+    engine.on('failed', (f: Failed) => events.push(`failed:${f.id}:${f.reason}`));
+    const original = console.error;
+    console.error = () => {};
+    try {
+      engine.enqueue(job('a'));
+    } finally {
+      console.error = original;
+    }
+    expect(events).toEqual(['failed:a:codec-load']);
+    expect(engine.pending()).toBe(0);
+    engine.enqueue(job('b'));
+    expect(workers[0].jobIds).toEqual(['b']);
+  });
+
+  it('does not throw from preload when the worker cannot be created', () => {
+    const engine = createEngine(() => {
+      throw new Error('blocked');
+    });
+    const original = console.error;
+    console.error = () => {};
+    try {
+      expect(() => engine.preload(['heic'])).not.toThrow();
+    } finally {
+      console.error = original;
+    }
+  });
+
+  it('restart() replaces the worker and resends the in-flight job', () => {
+    const { engine, workers, events } = setup();
+    engine.enqueue(job('a'));
+    engine.enqueue(job('b'));
+    engine.restart();
+    expect(workers[0].terminated).toBe(true);
+    expect(workers[1].jobIds).toEqual(['a']);
+    workers[0].reply(done('a')); // stale
+    expect(events).toEqual([]);
+    workers[1].reply(done('a'));
+    expect(workers[1].jobIds).toEqual(['a', 'b']);
+    expect(events).toEqual(['done:a']);
   });
 
   it('forwards preload to the worker', () => {

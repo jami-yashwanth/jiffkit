@@ -8,6 +8,8 @@ export interface EngineClient {
   on(e: 'done', cb: (d: Done) => void): void;
   on(e: 'failed', cb: (f: Failed) => void): void;
   pending(): number;
+  /** Throw away the worker (and the codec modules it loaded) and continue with a fresh one. Used by "Try again". */
+  restart(): void;
 }
 
 const defaultWorkerFactory = (): Worker => new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
@@ -38,26 +40,47 @@ export function createEngine(workerFactory: () => Worker = defaultWorkerFactory)
     return w;
   }
 
+  /** Call every listener; one that throws is logged and must never stop the queue. */
+  function emit<T>(cbs: ((x: T) => void)[], x: T): void {
+    for (const cb of cbs) {
+      try {
+        cb(x);
+      } catch (err) {
+        console.error('engine: listener failed', err);
+      }
+    }
+  }
+
   function next(): void {
-    if (inFlight) return;
-    inFlight = queue.shift() ?? null;
-    if (inFlight) post({ kind: 'job', job: inFlight });
+    while (!inFlight && queue.length) {
+      const job = queue.shift()!;
+      inFlight = job;
+      try {
+        post({ kind: 'job', job });
+      } catch (err) {
+        // The worker could not even be created (blocked script, CSP, no Worker support): fail this job and move on.
+        console.error('engine: could not start the worker', err);
+        worker = null;
+        inFlight = null;
+        emit(listeners.failed, { id: job.id, reason: 'codec-load' });
+      }
+    }
   }
 
   function handle(m: WorkerResponse): void {
     if (m.kind === 'progress') {
       const { kind: _, ...p } = m;
-      listeners.progress.forEach((cb) => cb(p));
+      emit(listeners.progress, p);
       return;
     }
     if (!inFlight || m.id !== inFlight.id) return;
     inFlight = null;
     if (m.kind === 'done') {
       const { kind: _, ...d } = m;
-      listeners.done.forEach((cb) => cb(d));
+      emit(listeners.done, d);
     } else {
       const { kind: _, ...f } = m;
-      listeners.failed.forEach((cb) => cb(f));
+      emit(listeners.failed, f);
     }
     next();
   }
@@ -68,7 +91,7 @@ export function createEngine(workerFactory: () => Worker = defaultWorkerFactory)
     worker = null;
     const lost = inFlight;
     inFlight = null;
-    if (lost) listeners.failed.forEach((cb) => cb({ id: lost.id, reason: 'oom' }));
+    if (lost) emit(listeners.failed, { id: lost.id, reason: 'oom' });
     next();
   }
 
@@ -78,11 +101,22 @@ export function createEngine(workerFactory: () => Worker = defaultWorkerFactory)
       next();
     },
     preload(types) {
-      post({ kind: 'preload', types });
+      try {
+        post({ kind: 'preload', types });
+      } catch (err) {
+        console.error('engine: could not start the worker', err); // the real job will report it
+      }
     },
     on(e: 'progress' | 'done' | 'failed', cb: never) {
       (listeners[e] as unknown[]).push(cb);
     },
     pending: () => queue.length + (inFlight ? 1 : 0),
+    restart() {
+      worker?.terminate();
+      worker = null;
+      if (inFlight) queue.unshift(inFlight);
+      inFlight = null;
+      next();
+    },
   };
 }
