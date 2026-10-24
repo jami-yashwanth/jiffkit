@@ -253,6 +253,32 @@ describe('site', () => {
     expect(h).not.toMatch(/<h2/);
   });
 
+  it('every tool page opens with a centred icon header', () => {
+    for (const t of TOOLS) {
+      const h = html(`${t.slug}/`);
+      const head = h.match(/<header class="tool-head">([\s\S]*?)<\/header>/);
+      expect(head, t.slug).not.toBeNull();
+      expect(head![1], t.slug).toMatch(/^<span class="tool-tile"><svg width="28" height="28"[^>]*>[\s\S]*?<\/svg><\/span><h1>[^<]+<\/h1><p class="subhead">/);
+    }
+  });
+
+  it('related tools are cards, in registry order', () => {
+    for (const t of TOOLS) {
+      const h = html(`${t.slug}/`);
+      const list = h.match(/<ul class="card-grid related">([\s\S]*?)<\/ul>/);
+      expect(list, t.slug).not.toBeNull();
+      const cards = [...list![1].matchAll(/<a class="card" href="\/([^"]+)\/"/g)].map((m) => m[1]);
+      expect(cards, t.slug).toEqual(t.related);
+      expect(h, t.slug).not.toContain('class="tool-list"');
+    }
+  });
+
+  it('the 404 page lists every tool as a card', () => {
+    const h = readFileSync('dist/404.html', 'utf8');
+    expect([...h.matchAll(/<a class="card" href="/g)]).toHaveLength(TOOLS.length);
+    expect(h).not.toContain('class="tool-list"');
+  });
+
   it('homepage uses the wide page container; tool pages keep the measure', () => {
     expect(html('')).toContain('<div class="page page-wide">');
     expect(html('merge-pdf/')).toContain('<div class="page">');

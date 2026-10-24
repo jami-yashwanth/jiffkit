@@ -118,15 +118,16 @@ section ol > li::marker { color: var(--accent); font-weight: 700; font-variant-n
 .faq dt:first-child { margin-top: 0; }
 .faq dd { margin: var(--s1) 0 0; color: var(--ink-muted); }
 
-/* Tool lists (home, related): a ruled list, not a card grid. */
-.tool-list { list-style: none; padding: 0; margin: var(--s3) 0 0; border-top: 1px solid var(--line); }
-.tool-list li { border-bottom: 1px solid var(--line); }
-.tool-list:not(:has(li:not([hidden]))) { border-top: 0; }
-.tool-list li[hidden] { display: none; }
-.tool-list a { display: block; padding: var(--s3) 0; text-decoration: none; color: var(--ink-muted); }
-.tool-list strong { display: block; color: var(--ink); font-size: 1.125rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: var(--s1); transition: color var(--ease); }
-.tool-list a:hover strong { color: var(--accent); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.18em; }
-.tool-list a:focus-visible { outline-offset: 4px; }
+/* --- tool pages: a centred icon header; related tools reuse the homepage cards --- */
+.tool-head { display: flex; flex-direction: column; align-items: center; gap: var(--s2); text-align: center; }
+.tool-head h1 { margin: var(--s2) 0 0; }
+.tool-head .subhead { margin-inline: auto; }
+.tool-tile {
+  display: flex; align-items: center; justify-content: center; width: 56px; height: 56px;
+  border-radius: 14px; background: var(--tint); color: var(--accent);
+}
+.related { margin-top: var(--s3); }
+@media (min-width: 720px) { .related { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 /* --- homepage: a wide page, a centred hero, category chips over a grid of tool cards --- */
 .page-wide { max-width: 70rem; }
