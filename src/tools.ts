@@ -520,7 +520,7 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
     slug: 'upscale-image',
     title: 'Upscale Image - Enlarge Photos with AI, No Upload',
     description:
-      'Enlarge a small image 2x or 4x with on-device AI and see before and after. Nothing is uploaded. Download a PNG. Free, private and no sign-up needed.',
+      'Enlarge a small image up to 4x with on-device AI and see before and after. Nothing is uploaded. Download a PNG. Free, private and no sign-up needed.',
     h1: 'Upscale image',
     subhead: 'Make a small image bigger and sharper with AI that runs on your device. Nothing is uploaded.',
     accepts: IMAGE_ACCEPT,
@@ -540,7 +540,7 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
       },
       {
         q: 'Why is 4× not offered on my device?',
-        a: '4× needs a fast graphics chip in the browser (WebGPU) and is not offered on phones. 2× works on any device that can run the tool.',
+        a: 'A 4× image has four times as many pixels as a 2× one and needs much more memory, so 4× is not offered on phones or on devices with less than 8 GB of memory. 2× is offered whenever the tool can run.',
       },
       {
         q: 'Will it add real detail?',

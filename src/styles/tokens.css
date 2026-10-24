@@ -318,6 +318,8 @@ pre[data-results]:empty { display: none; }
 .compare-handle:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
 .compare-handle:focus-visible::after { border-color: var(--accent); }
 .bg-options { margin: 0; }
+/* Upscale's scale choice belongs to the drop zone: it goes while a run or its result is on screen. */
+[data-kind='ai'] .drop[hidden] ~ [data-scale] { display: none; }
 .bg-options .bg-colour { width: 44px; height: 44px; padding: 2px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); cursor: pointer; align-self: center; }
 .pdf-rows { margin-bottom: var(--s3); }
 .pdf-rows .row { grid-template-columns: minmax(0, 1fr) auto; }

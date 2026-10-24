@@ -173,6 +173,23 @@ describe('site', () => {
     expect(html('remove-background/')).toContain('data-model-size="5 MB"');
     expect(html('remove-background/')).toContain('data-model-bytes="4574861"');
     expect(html('transcribe-audio/')).toContain('data-model-size="80 MB"');
+    expect(html('upscale-image/')).toContain('data-model-size="5 MB"');
+    expect(html('upscale-image/')).toContain('data-model-bytes="4866420"');
+  });
+
+  it('Upscale image offers 2× and, once the device is known to take it, 4×', () => {
+    const h = html('upscale-image/');
+    expect(h).toMatch(/<legend[^>]*>Scale<\/legend>/);
+    expect(h).toMatch(/<input[^>]*value="2"[^>]*checked[^>]*>2×/);
+    expect(h).toMatch(/<label[^>]*hidden[^>]*data-scale-4[^>]*><input[^>]*value="4"[^>]*>4×/);
+  });
+
+  it('licences page lists the upscaling model, pinned, with the Real-ESRGAN licence', () => {
+    const h = html('licenses/');
+    expect(h).toContain('realesr-general-x4v3');
+    expect(h).toContain('vlad-grig/realesr-general-x4v3-onnx/blob/0e95d93e454cf6b5de9bdf5a1c9e7ec340d38231/onnx/model.onnx');
+    expect(h).toContain('7b10e80021ec3e0ff35017ae5022791879d93a799b2e201e1010a37510202266');
+    expect(h).toContain('Copyright (c) 2021, Xintao Wang');
   });
 
   it('homepage links to all tools and the filter', () => {

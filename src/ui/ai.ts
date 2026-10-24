@@ -36,6 +36,8 @@ export interface AiToolDef<Res> {
   check?(file: File, caps: Caps): Promise<void>;
   /** Do the work. Report download and work progress; reject with an AiError. */
   run(file: File, caps: Caps, onProgress: (p: AiProgress) => void, ctx: AiRunContext): Promise<Res>;
+  /** Called once, as soon as the device's capabilities are known (to offer what this device can do). */
+  ready?(caps: Caps): void;
   /** Show the result in `root`. May return a cleanup (revoke object URLs) run on Start over or a new file. */
   renderResult(res: Res, root: HTMLElement): void | (() => void);
 }
@@ -110,6 +112,7 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
   let onRetry: (() => void) | null = null;
   let capsPromise: Promise<Caps> | undefined;
   const caps = () => (capsPromise ??= detect());
+  if (def.ready) void caps().then((c) => def.ready!(c));
 
   /** Announce to screen readers only; what's on screen says the same. */
   function say(text: string): void {

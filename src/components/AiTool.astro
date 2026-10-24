@@ -31,6 +31,14 @@ const MODEL_SIZE = megabytes(MODEL_BYTES);
     </label>
     <p class="privacy">Runs on your device with on-device AI. Your {COPY.noun} are never uploaded.</p>
   </div>
+  {/* 4× is shown once the island knows this device can take it (src/ui/upscale.ts). */}
+  {tool.model === 'upscale' && (
+    <fieldset class="settings toggle" data-scale>
+      <legend>Scale</legend>
+      <label><input type="radio" name="scale" value="2" checked />2×</label>
+      <label hidden data-scale-4><input type="radio" name="scale" value="4" />4×</label>
+    </fieldset>
+  )}
   <p class="status" role="status" aria-live="polite" data-status></p>
   <div data-results></div>
 </div>
@@ -41,4 +49,5 @@ const MODEL_SIZE = megabytes(MODEL_BYTES);
   const el = document.querySelector<HTMLElement>('[data-kind="ai"]');
   if (el?.dataset.model === 'ocr') void import('../ui/ocr').then(({ ocrDef }) => mountAi(el, ocrDef()));
   if (el?.dataset.model === 'bg') void import('../ui/bg').then(({ bgDef }) => mountAi(el, bgDef()));
+  if (el?.dataset.model === 'upscale') void import('../ui/upscale').then(({ upscaleDef }) => mountAi(el, upscaleDef(el)));
 </script>

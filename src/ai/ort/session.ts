@@ -1,7 +1,7 @@
 import { AiError } from '../errors';
 
-// Creating the onnxruntime session for Remove background, and what its failures mean. Kept apart from the worker
-// so the mapping can be tested with a stand-in runtime.
+// Creating an onnxruntime session (Remove background, Upscale image), and what its failures mean. Kept apart from
+// the workers so the mapping can be tested with a stand-in runtime.
 
 type Ort = typeof import('onnxruntime-web');
 type Session = import('onnxruntime-web').InferenceSession;

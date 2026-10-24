@@ -20,3 +20,17 @@ export function stubBgMask(size: number): Float32Array {
     for (let x = 0; x < size; x++) mask[y * size + x] = ((x - c) / rx) ** 2 + ((y - c) / ry) ** 2 <= 1 ? 1 : 0;
   return mask;
 }
+
+/**
+ * Upscale image: the model's ×`scale` output for a w × h tile (planar RGB), as nearest-neighbour enlargement would
+ * give it. Tiling, stitching, halving to 2× and encoding around it are the real code.
+ */
+export function stubUpscale(input: Float32Array, w: number, h: number, scale: number): Float32Array {
+  const ow = w * scale;
+  const oh = h * scale;
+  const out = new Float32Array(3 * ow * oh);
+  for (let c = 0; c < 3; c++)
+    for (let y = 0; y < oh; y++)
+      for (let x = 0; x < ow; x++) out[c * ow * oh + y * ow + x] = input[c * w * h + Math.floor(y / scale) * w + Math.floor(x / scale)]!;
+  return out;
+}

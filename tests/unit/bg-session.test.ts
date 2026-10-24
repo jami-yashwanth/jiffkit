@@ -1,7 +1,7 @@
 import { readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
-import { createSession, looksLikeOnnx, sessionFailure } from '../../src/ai/bg/session';
+import { createSession, looksLikeOnnx, sessionFailure } from '../../src/ai/ort/session';
 import { MODELS } from '../../src/ai/config';
 import { AiError } from '../../src/ai/errors';
 

@@ -23,12 +23,20 @@ export const MODELS: Record<ModelKey, { path: string; bytes: number; licence: st
     bytes: 4_574_861,
     licence: 'Apache-2.0',
   },
-  // onnxruntime-web's WebAssembly runtime (MIT), the .wasm Remove background runs the model with. It ships with the
-  // site (14 MB, under the host's 25 MB file cap) and is downloaded and cached like a model, so its first download
-  // is shown and counted with the model's.
+  // onnxruntime-web's WebAssembly runtime (MIT), the .wasm Remove background and Upscale image run their models
+  // with. It ships with the site (14 MB, under the host's 25 MB file cap) and is downloaded and cached like a model,
+  // so its first download is shown and counted with the model's.
   ortWasm: { path: ORT_WASM_URL.replace(/^\/+/, ''), bytes: 14_239_897, licence: 'MIT', sameOrigin: true },
-  // realesr-general-x4v3. Verified in Task 6.
-  upscale: { path: 'xinntao/Real-ESRGAN/resolve/main/realesr-general-x4v3.onnx', bytes: 4_900_000, licence: 'BSD-3-Clause' },
+  // realesr-general-x4v3, Real-ESRGAN's small general model (Xintao Wang et al., BSD-3-Clause), as an fp32 ONNX export
+  // of the official weights (realesr-general-x4v3.pth from Real-ESRGAN release v0.2.5.0, sha256 8dc7edb9…6292) by
+  // vlad-grig/realesr-general-x4v3-onnx (BSD-3-Clause, the upstream LICENSE in the repo), pinned to commit 0e95d93.
+  // sha256 7b10e80021ec3e0ff35017ae5022791879d93a799b2e201e1010a37510202266. Verified in Task 6: its output matches
+  // the official weights run in PyTorch to within 6e-6 (on a 0..1 scale).
+  upscale: {
+    path: 'vlad-grig/realesr-general-x4v3-onnx/resolve/0e95d93e454cf6b5de9bdf5a1c9e7ec340d38231/onnx/model.onnx',
+    bytes: 4_866_420,
+    licence: 'BSD-3-Clause',
+  },
   // Whisper base, quantised (a directory of files). Verified in Task 7.
   whisper: { path: 'onnx-community/whisper-base/resolve/main', bytes: 80_000_000, licence: 'MIT' },
   // tessdata_fast `eng` 4.1.0, gzipped (its sha256 is on /licenses/). At 2 MB it ships with the site, from
