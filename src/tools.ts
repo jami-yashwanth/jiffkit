@@ -456,7 +456,7 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
       },
       {
         q: 'Why does it download a model the first time?',
-        a: 'The AI model is about 45 MB (about 5 MB on phones and low-memory devices). It is downloaded once and cached in your browser, so later visits start straight away. The download contains none of your data.',
+        a: 'The AI model is about 176 MB (about 5 MB on phones and low-memory devices). It is downloaded once and cached in your browser, so later visits start straight away. The download contains none of your data.',
       },
       {
         q: 'What do I get?',

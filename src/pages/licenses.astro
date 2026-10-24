@@ -170,6 +170,33 @@ const libs = [
     source: 'https://github.com/tesseract-ocr/tessdata_fast/blob/4.1.0/eng.traineddata',
     texts: [{ label: 'LICENSE', text: licenceText(null, 'tessdata-fast-LICENSE.txt') }],
   },
+  {
+    name: 'onnxruntime-web',
+    version: pkgVersion('onnxruntime-web'),
+    licence: 'MIT',
+    note: 'Runs the background-removal model (Remove background). Its WebAssembly runtime is part of this site, not loaded from a CDN. The WebGPU runtime (ort-wasm-simd-threaded.asyncify.wasm, unchanged, 26.8 MB) is over our host\'s file size limit, so it is fetched from our model host when your browser can use WebGPU. Bundles third-party code listed in its notices.',
+    source: `https://github.com/microsoft/onnxruntime/tree/v${pkgVersion('onnxruntime-web')}`,
+    texts: [
+      { label: 'LICENSE', text: licenceText(null, 'onnxruntime-LICENSE.txt') },
+      { label: 'Third-party notices', text: licenceText(null, 'onnxruntime-ThirdPartyNotices.txt') },
+    ],
+  },
+  {
+    name: 'U²-Net (u2net)',
+    version: 'rembg ONNX export',
+    licence: 'Apache-2.0',
+    note: 'The background-removal model by Xuebin Qin et al., downloaded the first time you remove a background. We use rembg\'s ONNX export of the authors\' weights, unchanged (u2net.onnx, 175,997,641 bytes, sha256 8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491), as redistributed under Apache-2.0 at huggingface.co/BritishWerewolf/U-2-Net (commit c08042b). Original weights and licence: github.com/xuebinqin/U-2-Net (commit ac7e1c8).',
+    source: 'https://huggingface.co/BritishWerewolf/U-2-Net/blob/c08042b462485d8597c89d3ce831d00be8582c5c/onnx/model.onnx',
+    texts: [{ label: 'LICENSE (U-2-Net)', text: licenceText(null, 'u2net-LICENSE.txt') }],
+  },
+  {
+    name: 'U²-Net small (u2netp)',
+    version: 'rembg ONNX export',
+    licence: 'Apache-2.0',
+    note: 'The smaller background-removal model, used on phones and low-memory devices. rembg\'s ONNX export of the authors\' weights, unchanged (u2netp.onnx, 4,574,861 bytes, sha256 309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8), from huggingface.co/BritishWerewolf/U-2-Netp (commit 7112208).',
+    source: 'https://huggingface.co/BritishWerewolf/U-2-Netp/blob/7112208dbac3a3642496c8d54e2f0f9bb3dc1dc8/onnx/model.onnx',
+    texts: [{ label: 'LICENSE (U-2-Net)', text: licenceText(null, 'u2net-LICENSE.txt') }],
+  },
   ...(
     [
       ['zlibjs', 'MIT', 'LICENSE', 'Gunzip'],

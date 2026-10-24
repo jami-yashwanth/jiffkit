@@ -73,6 +73,9 @@ magick -size 200x150 gradient:'#ff7a18-#2b5876' -depth 16 PNG48:"$OUT/png16.png"
 magick -size 200x150 gradient:'#ffffff-#000000' -colorspace Gray -type Grayscale -depth 8 PNG:"$OUT/grey.png"
 magick -size 200x150 gradient:'#ff7a18-#2b5876' -colors 16 PNG8:"$OUT/palette.png"
 
+# Remove background: just over its 25 MP cap (one flat colour, so the file stays small).
+magick -size 5200x5000 xc:'#3a7a5c' -depth 8 PNG24:"$OUT/bg-26mp.png"
+
 # --- Broken / disguised ---
 head -c 2048 "$OUT/iphone-12mp.heic" > "$OUT/truncated.heic"
 : > "$OUT/empty.heic"

@@ -299,6 +299,26 @@ pre[data-results]:empty { display: none; }
 [data-ai-result] .field, [data-ai-result] .actions { width: 100%; margin: 0; }
 [data-ai-result] .note { margin: 0; }
 [data-ai-result] [data-low-confidence] { color: var(--ink); }
+/* Before/after comparison (src/ui/compare.ts): the box keeps the images' shape and is never taller than 70% of the
+   screen; the "before" photo shows left of the divider. */
+.compare {
+  --pos: 50%;
+  position: relative; width: min(100%, calc(70vh * var(--w) / var(--h))); aspect-ratio: var(--ratio);
+  border-radius: var(--radius); overflow: hidden; touch-action: pan-y; cursor: ew-resize; user-select: none;
+}
+.compare img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.compare-stage { position: absolute; inset: 0; }
+.compare-stage[data-checkerboard] { background: repeating-conic-gradient(#e4e8e6 0 25%, var(--paper) 0 50%) 0 0 / 16px 16px; }
+.compare-before { clip-path: inset(0 calc(100% - var(--pos)) 0 0); }
+.compare-handle { position: absolute; top: 0; bottom: 0; left: var(--pos); width: 2px; margin-left: -1px; background: var(--paper); outline: 1px solid var(--ink); }
+.compare-handle::after {
+  content: ''; position: absolute; top: 50%; left: 50%; width: 32px; height: 32px; translate: -50% -50%;
+  border-radius: 50%; background: var(--paper); border: 2px solid var(--ink);
+}
+.compare-handle:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+.compare-handle:focus-visible::after { border-color: var(--accent); }
+.bg-options { margin: 0; }
+.bg-options .bg-colour { width: 44px; height: 44px; padding: 2px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); cursor: pointer; align-self: center; }
 .pdf-rows { margin-bottom: var(--s3); }
 .pdf-rows .row { grid-template-columns: minmax(0, 1fr) auto; }
 .row-tools { display: flex; gap: var(--s1); }

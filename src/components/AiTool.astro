@@ -4,7 +4,7 @@ import { MODELS, megabytes, type ModelKey } from '../ai/config';
 
 interface Props { tool: AiTool }
 const { tool } = Astro.props;
-// Spec §4 empty states. The island (src/ui/ai.ts) takes over in a later task.
+// Spec §4 empty states. The island (src/ui/ai.ts) takes over once its script loads.
 const COPY = {
   bg: { title: 'Drop a photo here', choose: 'Choose photo', noun: 'photos' },
   ocr: { title: 'Drop an image with text', choose: 'Choose image', noun: 'images' },
@@ -39,11 +39,8 @@ const MODEL_SIZE_SMALL = tool.model === 'bg' ? megabytes(MODELS.bgSmall.bytes) :
 
 <script>
   import { mountAi } from '../ui/ai';
-  // Each tool's island registers here as it lands. Until then, the E2E build (PUBLIC_AI_STUB=1) mounts a stand-in on
-  // Remove background so the shared states can be tested. The env check comes first so production drops the branch.
+  // Each tool's definition is its own chunk, imported only on that tool's page.
   const el = document.querySelector<HTMLElement>('[data-kind="ai"]');
   if (el?.dataset.model === 'ocr') void import('../ui/ocr').then(({ ocrDef }) => mountAi(el, ocrDef()));
-  if (import.meta.env.PUBLIC_AI_STUB === '1' && el?.dataset.model === 'bg') {
-    void import('../ai/stub').then(({ stubBgDef }) => mountAi(el, stubBgDef()));
-  }
+  if (el?.dataset.model === 'bg') void import('../ui/bg').then(({ bgDef }) => mountAi(el, bgDef()));
 </script>

@@ -2,15 +2,15 @@ import { expect, test, type Page } from '@playwright/test';
 import { stubPlausible } from './plausible';
 import { modelBytes, routeModels } from './models';
 
-// The shared on-device AI states (spec §4), driven on Remove background. In the E2E build (PUBLIC_AI_STUB=1) that
-// page mounts a stand-in tool: the model really downloads through the shared loader (from routed bytes), the
-// inference is faked. The model is 45 MB, so it asks before its first download.
+// The shared on-device AI states (spec §4), driven on Remove background. In the E2E build (PUBLIC_AI_STUB=1) the model
+// really downloads through the shared loader (from routed bytes); only the inference is faked. The model is 176 MB,
+// so it asks before its first download.
 
 const PHOTO = 'tests/fixtures/photo.jpg';
-const CONSENT = "This tool downloads a 45 MB AI model the first time. It's cached for next time.";
+const CONSENT = "This tool downloads a 176 MB AI model the first time. It's cached for next time.";
 const CELLULAR = 'You seem to be on mobile data.';
 const FAILED = "Couldn't download the AI model. Check your connection.";
-const RESULT = /__AI_STUB__ result: model 45000000 bytes/;
+const RESULT = 'Download PNG'; // the result's own action: the run finished
 
 async function open(page: Page) {
   await stubPlausible(page.context());
@@ -44,16 +44,16 @@ test('on mobile data the consent screen adds "You seem to be on mobile data."', 
   await expect(panel(page).getByText(CELLULAR, { exact: true })).toBeVisible();
 });
 
-test('downloading shows "<done> of 45 MB" with progress; Cancel goes back to consent and caches nothing', async ({ page }) => {
+test('downloading shows "<done> of 176 MB" with progress; Cancel goes back to consent and caches nothing', async ({ page }) => {
   const models = await open(page);
   models.mode = 'slow';
   await choose(page);
   await start(page).click();
   const text = panel(page).locator('p').first();
-  await expect(text).toHaveText(/^Downloading the AI model… [1-9]\d* of 45 MB, one time only$/);
+  await expect(text).toHaveText(/^Downloading the AI model… [1-9]\d* of 176 MB, one time only$/);
   const bar = panel(page).locator('progress');
   await expect(bar).toBeVisible();
-  expect(Number(await bar.getAttribute('max'))).toBe(45_000_000);
+  expect(Number(await bar.getAttribute('max'))).toBe(175_997_641);
   expect(await bar.evaluate((b: HTMLProgressElement) => b.value)).toBeGreaterThan(0);
 
   await page.getByRole('button', { name: 'Cancel' }).click();
@@ -65,7 +65,7 @@ test('downloading shows "<done> of 45 MB" with progress; Cancel goes back to con
   models.mode = 'serve';
   const before = models.requests;
   await start(page).click();
-  await expect(page.getByText(RESULT)).toBeVisible();
+  await expect(page.getByRole('button', { name: RESULT })).toBeVisible();
   expect(models.requests).toBe(before + 1);
 });
 
@@ -79,7 +79,7 @@ test('a failed download says so, and Try again downloads and runs', async ({ pag
   await expect(page.locator('.drop')).toBeHidden(); // the file is kept: Try again is the one action
   models.mode = 'serve';
   await page.getByRole('button', { name: 'Try again' }).click();
-  await expect(page.getByText(RESULT)).toBeVisible();
+  await expect(page.getByRole('button', { name: RESULT })).toBeVisible();
 });
 
 test('a model that fails to parse is dropped from the cache and shown as a failed download; Try again fetches it afresh', async ({ page }) => {
@@ -91,7 +91,7 @@ test('a model that fails to parse is dropped from the cache and shown as a faile
   expect(await page.evaluate(async () => (await (await caches.open('models-v1')).keys()).length)).toBe(0);
   models.mode = 'serve';
   await page.getByRole('button', { name: 'Try again' }).click();
-  await expect(page.getByText(RESULT)).toBeVisible();
+  await expect(page.getByRole('button', { name: RESULT })).toBeVisible();
   expect(models.requests).toBe(2);
 });
 
@@ -100,18 +100,18 @@ test('working shows "Removing background… n%"; once downloaded, the model is u
   await choose(page);
   await start(page).click();
   await expect(panel(page).locator('p').first()).toHaveText(/^Removing background… \d+%$/);
-  await expect(page.getByText(RESULT)).toBeVisible();
+  await expect(page.getByRole('button', { name: RESULT })).toBeVisible();
   expect(models.requests).toBe(1);
 
   await page.getByRole('button', { name: 'Start over' }).click();
   await expect(page.locator('.drop')).toBeVisible();
-  await expect(page.getByText(RESULT)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: RESULT })).toHaveCount(0);
 
   // Review Focus 2: offline, a cached model needs no consent and no download.
   models.mode = 'abort';
   await page.context().setOffline(true);
   await choose(page);
-  await expect(page.getByText(RESULT)).toBeVisible();
+  await expect(page.getByRole('button', { name: RESULT })).toBeVisible();
   await expect(start(page)).toHaveCount(0);
   expect(models.requests).toBe(1);
 });
@@ -123,10 +123,10 @@ test('after one successful download, a reload skips consent', async ({ page, bro
   const models = await open(page);
   await choose(page);
   await start(page).click();
-  await expect(page.getByText(RESULT)).toBeVisible();
+  await expect(page.getByRole('button', { name: RESULT })).toBeVisible();
   await page.reload();
   await choose(page);
-  await expect(page.getByText(RESULT)).toBeVisible();
+  await expect(page.getByRole('button', { name: RESULT })).toBeVisible();
   await expect(start(page)).toHaveCount(0);
   expect(models.requests).toBe(1); // served from Cache Storage
 });

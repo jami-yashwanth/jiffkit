@@ -356,7 +356,7 @@ test.describe('AI tools', () => {
     const models = await routeModels(page, await modelBytes(page));
     await page.locator('[data-kind="ai"] input[type=file]').setInputFiles('tests/fixtures/photo.jpg');
     await page.getByRole('button', { name: 'Download and start' }).click();
-    await expect(page.getByText(/__AI_STUB__ result/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Download PNG' })).toBeVisible();
     await settle(page);
     expect(models.requests).toBe(1);
     const model = requests.filter((r) => isModel(r.url));

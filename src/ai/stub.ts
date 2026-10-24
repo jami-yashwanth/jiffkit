@@ -1,48 +1,22 @@
 // Test-only stand-ins used when the site is built with PUBLIC_AI_STUB=1 (the Playwright build). Every import of
 // this module sits behind `import.meta.env.PUBLIC_AI_STUB === '1'`, so a production build drops it; the build test
 // checks that this marker never reaches dist: __AI_STUB__
-import { sniff } from '../engine/sniff';
-import type { AiToolDef } from '../ui/ai';
-import { MODELS, modelUrl } from './config';
-import { AiError } from './errors';
-import { loadModel } from './loader';
+// Only inference is stubbed: models still download through the real loader (from routed test bytes), and the
+// pixels around the model (decode, orientation, mask upsampling, composing, PNG) are the real code.
 
 export const STUB_MARKER = '__AI_STUB__';
 
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** The routed test models are filler bytes. All zeros stands for a model that fails to parse ('bad' mode). */
+export const isStubBadModel = (model: ArrayBuffer): boolean =>
+  new Uint8Array(model, 0, Math.min(16, model.byteLength)).every((b) => b === 0);
 
-/**
- * A stand-in Remove background, so the shared AI states can be tested before the real tool exists: it checks the
- * type like the real one, downloads the model through the real loader (from the routed test URL), fakes the work,
- * and shows a one-line result. Task 5 replaces it with the real definition.
- */
-export function stubBgDef(): AiToolDef<{ modelBytes: number }> {
-  return {
-    verb: 'Removing background',
-    modelKey: 'bg',
-    inputName: 'JPG, PNG or WebP image',
-    elsewhere: { heic: { href: '/heic-to-jpg/', h1: 'HEIC to JPG' } },
-    async check(file) {
-      const { type } = await sniff(file);
-      if (type !== 'jpg' && type !== 'png' && type !== 'webp') throw new AiError('wrong-type', type === 'unknown' ? {} : { detectedType: type });
-    },
-    async run(_file, _caps, onProgress, { signal }) {
-      const model = await loadModel(modelUrl('bg'), {
-        bytes: MODELS.bg.bytes,
-        signal,
-        onProgress: (done, total) => onProgress({ stage: 'download', done, total }),
-      });
-      // A model of all zero bytes stands for one that fails to parse (the E2E 'bad' mode serves one).
-      if (new Uint8Array(model, 0, Math.min(16, model.byteLength)).every((b) => b === 0)) throw new AiError('network', { badModel: true });
-      for (let i = 0; i <= 4; i++) {
-        if (signal.aborted) throw new AiError('cancelled');
-        onProgress({ stage: 'work', done: i, total: 4 });
-        await wait(100);
-      }
-      return { modelBytes: model.byteLength };
-    },
-    renderResult(res, root) {
-      root.append(Object.assign(document.createElement('p'), { textContent: `${STUB_MARKER} result: model ${res.modelBytes} bytes` }));
-    },
-  };
+/** Remove background: a size × size mask of a centre ellipse (1 inside, 0 outside), as the model would predict. */
+export function stubBgMask(size: number): Float32Array {
+  const mask = new Float32Array(size * size);
+  const c = (size - 1) / 2;
+  const rx = size * 0.35;
+  const ry = size * 0.42;
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) mask[y * size + x] = ((x - c) / rx) ** 2 + ((y - c) / ry) ** 2 <= 1 ? 1 : 0;
+  return mask;
 }

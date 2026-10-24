@@ -1,6 +1,12 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
+import { fileURLToPath } from 'node:url';
+
+// onnxruntime-web's builds that load their .wasm from a URL we give them. Its package exports only the builds with the
+// .wasm referenced next to the script, which would put a 14 MB (or, for WebGPU, a 27 MB) file into dist unasked.
+/** @param {string} file */
+const ort = (file) => fileURLToPath(new URL(`./node_modules/onnxruntime-web/dist/${file}`, import.meta.url));
 
 // The canonical origin: used for canonical links, the sitemap and robots.txt. Production builds on Cloudflare Pages
 // must say which domain they serve, or every canonical would point at the placeholder.
@@ -14,6 +20,9 @@ export default defineConfig({
   trailingSlash: 'always',
   integrations: [sitemap()],
   vite: {
+    resolve: {
+      alias: { 'ort-wasm-runtime': ort('ort.wasm.min.mjs'), 'ort-webgpu-runtime': ort('ort.webgpu.min.mjs') },
+    },
     // The engine worker is a module worker. 'es' lets it code-split, so each codec stays its own
     // dynamically imported chunk; the default 'iife' inlines every codec (2+ MB) into the worker file.
     worker: { format: 'es' },
