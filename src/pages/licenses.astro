@@ -174,7 +174,7 @@ const libs = [
     name: 'onnxruntime-web',
     version: pkgVersion('onnxruntime-web'),
     licence: 'MIT',
-    note: 'Runs the background-removal model (Remove background). Its WebAssembly runtime is part of this site, not loaded from a CDN. The WebGPU runtime (ort-wasm-simd-threaded.asyncify.wasm, unchanged, 26.8 MB) is over our host\'s file size limit, so it is fetched from our model host when your browser can use WebGPU. Bundles third-party code listed in its notices.',
+    note: 'Runs the background-removal model (Remove background) on its WebAssembly backend. Its script and .wasm are part of this site, not loaded from a CDN. Bundles third-party code listed in its notices.',
     source: `https://github.com/microsoft/onnxruntime/tree/v${pkgVersion('onnxruntime-web')}`,
     texts: [
       { label: 'LICENSE', text: licenceText(null, 'onnxruntime-LICENSE.txt') },

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { stubPlausible } from './plausible';
+import { panelSeen, recordPanel } from './panel';
 
 // Image to text, with the real tesseract.js and the real tessdata_fast `eng` model (the committed fixture, served
 // from the routed model host). Only the host is routed: the OCR itself is not stubbed.
@@ -10,16 +11,7 @@ const HELLO = 'tests/fixtures/ocr/hello.png';
 
 async function open(page: Page) {
   await stubPlausible(page.context());
-  // Record every text the panel shows, so a progress state that passes in a blink is still seen.
-  await page.addInitScript(() => {
-    (window as unknown as { seen: string[] }).seen = [];
-    addEventListener('DOMContentLoaded', () => {
-      new MutationObserver(() => {
-        const t = document.querySelector('[data-ai-panel]')?.querySelector('p')?.textContent;
-        if (t) (window as unknown as { seen: string[] }).seen.push(t);
-      }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
-    });
-  });
+  await recordPanel(page);
   // The language data ships with the site (same origin), so no model host is routed. Count its requests.
   const models = { requests: 0, body: undefined as Buffer | undefined };
   await page.route('**/models/tessdata/eng-fast.traineddata.gz.bin', (route) => {
@@ -39,7 +31,7 @@ test('reads the text, shows download then reading progress, and Copy and Downloa
 
   await expect(box(page)).toHaveValue(/quick brown fox/i);
   await expect(box(page)).toHaveValue(/12345/);
-  const seen = await page.evaluate(() => (window as unknown as { seen: string[] }).seen);
+  const seen = await panelSeen(page);
   expect(seen.some((t) => /^Downloading the AI model… /.test(t))).toBe(true); // first use, no consent screen
   expect(seen.some((t) => /^Reading text… \d+%$/.test(t))).toBe(true);
   expect(models.requests).toBe(1);

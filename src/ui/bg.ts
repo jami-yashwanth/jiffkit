@@ -11,13 +11,14 @@ import { createCompare } from './compare';
 // the mask it kept, without running the model again.
 
 interface BgOut extends BgResult {
-  photo: File;
   /** The photo's file name without its extension: the PNG takes it. */
   base: string;
 }
 
 /** While a colour is being picked, wait this long after the last change before blending a PNG. */
 const COLOUR_SETTLE_MS = 250;
+/** §4 Low memory: a PNG for another background that can't be built is the device running out of memory. */
+const LOW_MEMORY = 'This tool needs more memory than this device has.';
 
 const baseName = (name: string): string => name.replace(/\.[^./\\]*$/, '').trim() || 'photo';
 
@@ -33,10 +34,64 @@ const hexToRgb = (hex: string) => {
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 };
 
+/** Which PNG a background choice downloads: 'transparent', 'white', or a colour as '#rrggbb'. */
+export type BgChoice = string;
+
+/**
+ * The object URLs of the PNGs made so far, at most three: transparent, white and the latest colour. A new colour
+ * replaces (and revokes) the previous one; a colour that is no longer the latest when its PNG arrives is revoked.
+ */
+export class BackgroundPngs {
+  private readonly fixed = new Map<'transparent' | 'white', string>();
+  private colour: { hex: string; url: string } | null = null;
+  /** The colour most recently chosen: only its PNG is kept. */
+  private latestColour: string | null = null;
+
+  constructor(private readonly revoke: (url: string) => void) {}
+
+  get(choice: BgChoice): string | undefined {
+    if (choice === 'transparent' || choice === 'white') return this.fixed.get(choice);
+    return this.colour?.hex === choice ? this.colour.url : undefined;
+  }
+
+  /** A colour was chosen (before its PNG exists): later colours' PNGs take its place. */
+  choose(choice: BgChoice): void {
+    if (choice !== 'transparent' && choice !== 'white') this.latestColour = choice;
+  }
+
+  /** Keep a PNG's URL. Returns false (and revokes it) when it is for a colour no longer wanted. */
+  set(choice: BgChoice, url: string): boolean {
+    if (choice === 'transparent' || choice === 'white') {
+      const old = this.fixed.get(choice);
+      if (old && old !== url) this.revoke(old);
+      this.fixed.set(choice, url);
+      return true;
+    }
+    if (choice !== this.latestColour) {
+      this.revoke(url);
+      return false;
+    }
+    if (this.colour && this.colour.url !== url) this.revoke(this.colour.url);
+    this.colour = { hex: choice, url };
+    return true;
+  }
+
+  /** Revoke everything (Start over, a new photo). */
+  clear(): void {
+    for (const url of this.fixed.values()) this.revoke(url);
+    if (this.colour) this.revoke(this.colour.url);
+    this.fixed.clear();
+    this.colour = null;
+    this.latestColour = null;
+  }
+}
+
 export function bgDef(): AiToolDef<BgOut> {
   return {
     verb: 'Removing background',
     modelKey: 'bg',
+    // The runtime's 14 MB .wasm downloads with the model on first use; it counts towards the size shown.
+    withModel: ['ortWasm'],
     inputName: 'JPG, PNG or WebP image',
     elsewhere: { heic: { href: '/heic-to-jpg/', h1: 'HEIC to JPG' } },
 
@@ -45,30 +100,25 @@ export function bgDef(): AiToolDef<BgOut> {
       if (type !== 'jpg' && type !== 'png' && type !== 'webp') throw new AiError('wrong-type', type === 'unknown' ? {} : { detectedType: type });
     },
 
-    async run(file, caps, onProgress, { signal }) {
+    async run(file, _caps, onProgress, { signal }) {
       const image = await file.arrayBuffer();
-      const res = await bgEngine.run(
-        { op: 'remove', image, webgpu: caps.webgpu },
-        [image],
-        onProgress,
-        signal,
-      );
-      return { ...res, photo: file, base: baseName(file.name) };
+      const res = await bgEngine.run({ op: 'remove', image }, [image], onProgress, signal);
+      return { ...res, base: baseName(file.name) };
     },
 
     renderResult(res, root) {
-      const urls = new Set<string>();
-      const track = (blob: Blob) => {
-        const url = URL.createObjectURL(blob);
-        urls.add(url);
-        return url;
-      };
-      const transparent = track(new Blob([res.png], { type: 'image/png' }));
+      // Take what's needed out of `res` and hold nothing else: its bytes live on only in the Blobs below.
+      const { base, width, height, downscaled } = res;
+      const pngs = new BackgroundPngs((url) => URL.revokeObjectURL(url));
+      const pngUrl = (bytes: ArrayBuffer) => URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
+      const transparent = pngUrl(res.png);
+      pngs.set('transparent', transparent);
+      const before = URL.createObjectURL(new Blob([res.preview!], { type: 'image/jpeg' }));
       const compare = createCompare(
-        { src: track(res.photo), alt: 'Your photo' },
+        { src: before, alt: 'Your photo' },
         { src: transparent, alt: 'Your photo with the background removed' },
-        res.width,
-        res.height,
+        width,
+        height,
       );
 
       // --- background: Transparent (default) / White / Colour ---
@@ -88,45 +138,47 @@ export function bgDef(): AiToolDef<BgOut> {
 
       // --- download: the PNG for the chosen background, blended by the worker when first chosen ---
       const download = h('button', { type: 'button', class: 'btn' }, 'Download PNG');
-      const failed = h('p', { class: 'error', role: 'alert' }, "Couldn't make the PNG for this background. Start over and try again.");
+      const failed = h('p', { class: 'error', role: 'alert' }, LOW_MEMORY);
       failed.hidden = true;
-      const pngs = new Map<string, string>([['transparent', transparent]]);
-      let chosen = 'transparent';
+      let chosen: BgChoice = 'transparent';
       let timer: number | undefined;
       let alive = true;
 
-      const keyOf = (): { key: string; bg: Background } => {
+      const current = (): { choice: BgChoice; bg: Background } => {
         const value = options.querySelector<HTMLInputElement>('input[name=bg]:checked')!.value;
-        if (value === 'white') return { key: 'white', bg: { r: 255, g: 255, b: 255 } };
-        if (value === 'colour') return { key: colour.value, bg: hexToRgb(colour.value) };
-        return { key: 'transparent', bg: 'transparent' };
+        if (value === 'white') return { choice: 'white', bg: { r: 255, g: 255, b: 255 } };
+        if (value === 'colour') return { choice: colour.value, bg: hexToRgb(colour.value) };
+        return { choice: 'transparent', bg: 'transparent' };
       };
-      const showPreview = (key: string) => {
-        const solid = key === 'transparent' ? '' : key === 'white' ? '#ffffff' : key;
+      const showPreview = (choice: BgChoice) => {
+        const solid = choice === 'transparent' ? '' : choice === 'white' ? '#ffffff' : choice;
         compare.stage.style.background = solid;
         compare.stage.toggleAttribute('data-checkerboard', !solid);
       };
-      const blend = async (key: string, bg: Background) => {
-        if (pngs.has(key)) return;
+      const blend = async (choice: BgChoice, bg: Background) => {
+        if (pngs.get(choice)) return;
         try {
           const out = await bgEngine.run({ op: 'compose', bg });
           if (!alive) return;
-          pngs.set(key, track(new Blob([out.png], { type: 'image/png' })));
+          pngs.set(choice, pngUrl(out.png));
         } catch (err) {
           if (!alive) return;
           console.error('bg: could not blend the background', err);
-          failed.hidden = false;
+          if (choice === chosen) failed.hidden = false;
         }
-        if (key === chosen) download.disabled = !pngs.has(key);
+        if (choice === chosen) download.disabled = !pngs.get(choice);
       };
       const choose = (settle: number) => {
-        const { key, bg } = keyOf();
-        chosen = key;
-        colour.hidden = options.querySelector<HTMLInputElement>('input[value=colour]')!.checked === false;
-        showPreview(key);
-        download.disabled = !pngs.has(key);
+        const { choice, bg } = current();
+        chosen = choice;
+        pngs.choose(choice);
+        colour.hidden = !options.querySelector<HTMLInputElement>('input[value=colour]')!.checked;
+        showPreview(choice);
+        const ready = !!pngs.get(choice);
+        download.disabled = !ready;
+        failed.hidden = true;
         clearTimeout(timer);
-        if (!pngs.has(key)) timer = window.setTimeout(() => void blend(key, bg), settle);
+        if (!ready) timer = window.setTimeout(() => void blend(choice, bg), settle);
       };
       options.addEventListener('change', (e) => choose((e.target as HTMLElement) === colour ? COLOUR_SETTLE_MS : 0));
       colour.addEventListener('input', () => choose(COLOUR_SETTLE_MS));
@@ -134,22 +186,22 @@ export function bgDef(): AiToolDef<BgOut> {
       download.addEventListener('click', () => {
         const url = pngs.get(chosen);
         if (!url) return;
-        const a = h('a', { href: url, download: `${res.base}-no-bg.png` });
+        const a = h('a', { href: url, download: `${base}-no-bg.png` });
         document.body.append(a);
         a.click();
         a.remove();
       });
 
       const note = h('p', { class: 'note' }, 'Large photo: processed at 25 MP.');
-      note.hidden = !res.downscaled;
+      note.hidden = !downscaled;
       showPreview('transparent');
       root.append(compare.el, options, note, failed, h('div', { class: 'actions' }, download));
 
       return () => {
         alive = false;
         clearTimeout(timer);
-        for (const url of urls) URL.revokeObjectURL(url);
-        urls.clear();
+        pngs.clear();
+        URL.revokeObjectURL(before);
       };
     },
   };

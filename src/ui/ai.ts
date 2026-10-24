@@ -21,6 +21,11 @@ export interface AiToolDef<Res> {
   verb: string;
   /** The model the tool downloads, which decides the consent screen. A function picks by device (e.g. a small model on phones). */
   modelKey?: ModelKey | ((caps: Caps) => ModelKey);
+  /**
+   * Files downloaded and cached with the model on first use (a runtime). Their sizes count towards the size shown,
+   * and towards the consent threshold; the tool reports their download as part of the model's.
+   */
+  withModel?: ModelKey[];
   /** Wrong-type copy: "This is a HEIC, not a <inputName>." */
   inputName?: string;
   /** Where to send a file of a type this tool can't take: { heic: { href: '/heic-to-jpg/', h1: 'HEIC to JPG' } }. */
@@ -148,8 +153,8 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
   }
   panelBtn.addEventListener('click', () => onPanelBtn());
 
-  function showConsent(file: File, key: ModelKey, c: Caps, focus = false): void {
-    const text = `This tool downloads a ${megabytes(MODELS[key].bytes)} AI model the first time. It's cached for next time.`;
+  function showConsent(file: File, key: ModelKey, bytes: number, c: Caps, focus = false): void {
+    const text = `This tool downloads a ${megabytes(bytes)} AI model the first time. It's cached for next time.`;
     showPanel(text, { label: 'Download and start', action: () => void start(file, c, key, true) });
     cellularNote.hidden = !c.cellular;
     say(c.cellular ? `${text} ${CELLULAR}` : text);
@@ -197,8 +202,13 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
   });
 
   const keyFor = (c: Caps): ModelKey | undefined => (typeof def.modelKey === 'function' ? def.modelKey(c) : def.modelKey);
-  const needsConsent = async (key: ModelKey | undefined) =>
-    !!key && MODELS[key].bytes > CONSENT_BYTES && !(await isCached(modelUrl(key)));
+  /** Bytes still to download for this model: it and the files that come with it, less what is cached. */
+  async function pendingBytes(key: ModelKey | undefined): Promise<number> {
+    if (!key) return 0;
+    const files = [key, ...(def.withModel ?? [])];
+    const cached = await Promise.all(files.map((k) => isCached(modelUrl(k))));
+    return files.reduce((sum, k, i) => sum + (cached[i] ? 0 : MODELS[k].bytes), 0);
+  }
 
   /** A file was chosen or dropped: check it, then ask for consent or start. */
   async function take(file: File): Promise<void> {
@@ -211,9 +221,9 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
       const c = await caps();
       await def.check?.(file, c);
       const key = keyFor(c);
-      const consent = await needsConsent(key);
+      const pending = await pendingBytes(key);
       if (g !== gen) return;
-      if (consent) showConsent(file, key!, c, true);
+      if (pending > CONSENT_BYTES) showConsent(file, key!, pending, c, true);
       else await start(file, c, key, false);
     } catch (err) {
       if (g !== gen) return;
@@ -229,22 +239,21 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
     const ctrl = new AbortController();
     controller = ctrl;
     running = true;
-    const total = key ? MODELS[key].bytes : 0;
+    const total = await pendingBytes(key);
+    if (g !== gen) return;
     const cancel = () => {
       if (g !== gen) return;
       abortRun();
       gen++;
       failed('cancelled');
-      if (consented && key) showConsent(file, key, c, true);
+      if (consented && key) showConsent(file, key, total, c, true);
       else {
         view('drop');
         say('');
         input.focus();
       }
     };
-    const downloading = !!key && !(await isCached(modelUrl(key)));
-    if (g !== gen) return;
-    if (downloading) {
+    if (total > 0) {
       showDownloading(0, total, cancel);
       say('Downloading the AI model');
     } else {

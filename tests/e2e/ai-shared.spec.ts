@@ -1,29 +1,29 @@
 import { expect, test, type Page } from '@playwright/test';
 import { stubPlausible } from './plausible';
+import { statSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { modelBytes, routeModels } from './models';
+import { clearPanelSeen, panelSeen, recordPanel } from './panel';
 
 // The shared on-device AI states (spec §4), driven on Remove background. In the E2E build (PUBLIC_AI_STUB=1) the model
-// really downloads through the shared loader (from routed bytes); only the inference is faked. Its model is 5 MB, under
-// the 20 MB consent threshold, so it starts downloading straight away. The consent screen (models over 20 MB) is
+// really downloads through the shared loader (from routed bytes); only the inference is faked. Its first download (model
+// and runtime, 19 MB) is under the 20 MB consent threshold, so it starts straight away. The consent screen (models over 20 MB) is
 // tested once a tool with such a model is mounted (Transcribe, Task 7).
 
 const PHOTO = 'tests/fixtures/photo.jpg';
 const FAILED = "Couldn't download the AI model. Check your connection.";
 const RESULT = 'Download PNG'; // the result's own action: the run finished
+// The first-use download is the model plus onnxruntime's .wasm (same origin, not routed): 4.6 + 14.2 MB.
+const RUNTIME = statSync(createRequire(import.meta.url).resolve('onnxruntime-web/ort-wasm-simd-threaded.wasm')).size;
+const firstUse = async (page: Page) => (await modelBytes(page)) + RUNTIME;
+const mb = (bytes: number) => `${Math.round(bytes / 1e6)} MB`;
+/** Is the routed model in Cache Storage? (The runtime may be: it is cached as soon as it has downloaded.) */
+const modelCached = (page: Page) =>
+  page.evaluate(async () => (await (await caches.open('models-v1')).keys()).some((r) => r.url.includes('/test-models/')));
 
 async function open(page: Page) {
   await stubPlausible(page.context());
-  // Record every text the panel shows while it is on screen, so a state that passes in a blink is still seen.
-  await page.addInitScript(() => {
-    (window as unknown as { seen: string[] }).seen = [];
-    addEventListener('DOMContentLoaded', () => {
-      new MutationObserver(() => {
-        const panel = document.querySelector<HTMLElement>('[data-ai-panel]');
-        const t = panel?.querySelector('p')?.textContent;
-        if (t && !panel!.hidden) (window as unknown as { seen: string[] }).seen.push(t);
-      }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
-    });
-  });
+  await recordPanel(page);
   await page.goto('/remove-background/');
   const models = await routeModels(page, await modelBytes(page));
   return models;
@@ -31,7 +31,7 @@ async function open(page: Page) {
 const choose = (page: Page, file: string | { name: string; mimeType: string; buffer: Buffer } = PHOTO) =>
   page.locator('[data-kind="ai"] input[type=file]').setInputFiles(file);
 const panel = (page: Page) => page.locator('[data-ai-panel]');
-const seen = (page: Page) => page.evaluate(() => (window as unknown as { seen: string[] }).seen);
+const seen = panelSeen;
 const consent = (page: Page) => page.getByRole('button', { name: 'Download and start' });
 
 test('a model of 20 MB or less starts at once: no consent screen, the download shows on first use', async ({ page }) => {
@@ -39,27 +39,29 @@ test('a model of 20 MB or less starts at once: no consent screen, the download s
   await choose(page);
   await expect(page.getByRole('button', { name: RESULT })).toBeVisible();
   expect(models.requests).toBe(1);
-  expect((await seen(page)).some((t) => /^Downloading the AI model… \d+ of 5 MB, one time only$/.test(t))).toBe(true);
+  const total = mb(await firstUse(page));
+  expect(total).toBe('19 MB');
+  expect((await seen(page)).some((t) => t.startsWith('Downloading the AI model… ') && t.endsWith(` of ${total}, one time only`))).toBe(true);
   expect((await seen(page)).some((t) => t.startsWith('This tool downloads'))).toBe(false);
   await expect(consent(page)).toHaveCount(0);
 });
 
-test('downloading shows "<done> of 5 MB" with progress; Cancel goes back to the drop zone and caches nothing', async ({ page }) => {
+test('downloading shows "<done> of 19 MB" (model and runtime) with progress; Cancel goes back to the drop zone and caches nothing', async ({ page }) => {
   const models = await open(page);
   models.mode = 'slow';
   await choose(page);
   const text = panel(page).locator('p').first();
-  await expect(text).toHaveText(/^Downloading the AI model… [1-9]\d* of 5 MB, one time only$/);
+  await expect(text).toHaveText(new RegExp(`^Downloading the AI model… [1-9]\\d* of ${mb(await firstUse(page))}, one time only$`));
   const bar = panel(page).locator('progress');
   await expect(bar).toBeVisible();
-  expect(Number(await bar.getAttribute('max'))).toBe(4_574_861);
+  expect(Number(await bar.getAttribute('max'))).toBe(await firstUse(page));
   expect(await bar.evaluate((b: HTMLProgressElement) => b.value)).toBeGreaterThan(0);
 
   await page.getByRole('button', { name: 'Cancel' }).click();
   await expect(page.locator('.drop')).toBeVisible();
   await expect(panel(page)).toBeHidden();
   await expect(page.locator('[data-kind="ai"] input[type=file]')).toBeFocused();
-  expect(await page.evaluate(async () => (await (await caches.open('models-v1')).keys()).length)).toBe(0);
+  expect(await modelCached(page)).toBe(false);
 
   // Choosing the photo again downloads afresh, to the end.
   models.mode = 'serve';
@@ -86,7 +88,7 @@ test('a model that fails to parse is dropped from the cache and shown as a faile
   models.mode = 'bad';
   await choose(page);
   await expect(page.getByRole('alert').getByText(FAILED, { exact: true })).toBeVisible();
-  expect(await page.evaluate(async () => (await (await caches.open('models-v1')).keys()).length)).toBe(0);
+  expect(await modelCached(page)).toBe(false);
   models.mode = 'serve';
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByRole('button', { name: RESULT })).toBeVisible();
@@ -107,7 +109,7 @@ test('working shows "Removing background… n%"; once downloaded, the model is u
   // Review Focus 2: offline, a cached model needs no download.
   models.mode = 'abort';
   await page.context().setOffline(true);
-  await page.evaluate(() => ((window as unknown as { seen: string[] }).seen = []));
+  await clearPanelSeen(page);
   await choose(page);
   await expect(page.getByRole('button', { name: RESULT })).toBeVisible();
   expect((await seen(page)).some((t) => t.startsWith('Downloading'))).toBe(false);

@@ -3,6 +3,7 @@ import { PNG } from 'pngjs';
 import { expect, test, type Page } from '@playwright/test';
 import { stubPlausible } from './plausible';
 import { modelBytes, routeModels } from './models';
+import { panelSeen, recordPanel } from './panel';
 
 // Remove background. In the E2E build (PUBLIC_AI_STUB=1) only the inference is stubbed: the model downloads
 // through the real loader (routed bytes), the photo is really decoded and turned upright, and the mask (a centre
@@ -13,17 +14,7 @@ const BIG = 'tests/fixtures/bg-26mp.png'; // 5200×5000, 26 MP
 
 async function open(page: Page) {
   await stubPlausible(page.context());
-  // Record every text the panel shows while it is on screen, so a progress state that passes in a blink is seen.
-  await page.addInitScript(() => {
-    (window as unknown as { seen: string[] }).seen = [];
-    addEventListener('DOMContentLoaded', () => {
-      new MutationObserver(() => {
-        const panel = document.querySelector<HTMLElement>('[data-ai-panel]');
-        const t = panel?.querySelector('p')?.textContent;
-        if (t && !panel!.hidden) (window as unknown as { seen: string[] }).seen.push(t);
-      }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
-    });
-  });
+  await recordPanel(page);
   await page.goto('/remove-background/');
   return routeModels(page, await modelBytes(page));
 }
@@ -47,7 +38,7 @@ test('download (no consent: 5 MB) → "Removing background… n%" → a checkerb
   const models = await open(page);
   await run(page);
   expect(models.requests).toBe(1);
-  const seen = await page.evaluate(() => (window as unknown as { seen: string[] }).seen);
+  const seen = await panelSeen(page);
   expect(seen.some((t) => /^Downloading the AI model… \d+ of \d+ MB, one time only$/.test(t))).toBe(true);
   expect(seen.some((t) => /^Removing background… \d+%$/.test(t))).toBe(true);
 
@@ -82,7 +73,7 @@ test('Download PNG gives photo-no-bg.png: a PNG with an alpha channel, transpare
 test('White gives opaque white corners, re-composed without running the model again', async ({ page }) => {
   const models = await open(page);
   await run(page);
-  const seenBefore = await page.evaluate(() => (window as unknown as { seen: string[] }).seen.length);
+  const seenBefore = (await panelSeen(page)).length;
   await page.getByRole('radio', { name: 'White' }).check();
   await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled();
   const { name, png } = await downloadPng(page);
@@ -90,7 +81,7 @@ test('White gives opaque white corners, re-composed without running the model ag
   for (const [x, y] of [[0, 0], [1599, 1199]] as const) expect(pixel(png, x, y)).toEqual([255, 255, 255, 255]);
   // No new download, and the working state never came back.
   expect(models.requests).toBe(1);
-  expect(await page.evaluate(() => (window as unknown as { seen: string[] }).seen.length)).toBe(seenBefore);
+  expect((await panelSeen(page)).length).toBe(seenBefore);
 
   // Colour: a colour input appears; its colour fills the corners.
   await page.getByRole('radio', { name: 'Colour' }).check();

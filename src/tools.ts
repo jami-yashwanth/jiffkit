@@ -456,7 +456,7 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
       },
       {
         q: 'Why does it download a model the first time?',
-        a: 'The AI model is about 5 MB. It is downloaded once and cached in your browser, so later visits start straight away. The download contains none of your data.',
+        a: 'The AI model is about 5 MB, and the engine that runs it about 14 MB. Both are downloaded once and cached in your browser, so later visits start straight away. The download contains none of your data.',
       },
       {
         q: 'What do I get?',
@@ -536,7 +536,7 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
       },
       {
         q: 'Why does it download a model the first time?',
-        a: 'The AI model is about 5 MB. It is downloaded once and cached in your browser, so later visits start straight away. The download contains none of your data.',
+        a: 'The AI model is about 5 MB, and the engine that runs it about 14 MB. Both are downloaded once and cached in your browser, so later visits start straight away. The download contains none of your data.',
       },
       {
         q: 'Why is 4× not offered on my device?',

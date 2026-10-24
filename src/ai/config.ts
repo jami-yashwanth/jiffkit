@@ -1,10 +1,12 @@
+import ORT_WASM_URL from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url';
+
 // Where the AI models are downloaded from. Every model URL is `${MODEL_BASE}/<path>`; this is the one place the
 // default is set. For launch the owner points PUBLIC_MODEL_BASE_URL at their own bucket holding the same paths.
 const DEFAULT_MODEL_BASE = 'https://huggingface.co';
 
 export const MODEL_BASE: string = (import.meta.env.PUBLIC_MODEL_BASE_URL || DEFAULT_MODEL_BASE).replace(/\/+$/, '');
 
-export type ModelKey = 'bg' | 'ortWebgpu' | 'upscale' | 'whisper' | 'tessdata';
+export type ModelKey = 'bg' | 'ortWasm' | 'upscale' | 'whisper' | 'tessdata';
 
 /**
  * Each model's path under MODEL_BASE, its download size in bytes (shown before the first download) and its licence.
@@ -21,10 +23,10 @@ export const MODELS: Record<ModelKey, { path: string; bytes: number; licence: st
     bytes: 4_574_861,
     licence: 'Apache-2.0',
   },
-  // onnxruntime-web's WebGPU runtime (MIT), 1.30.0, unchanged. At 26.8 MB it is over the 25 MB per-file cap of the
-  // site's host, so it is read from MODEL_BASE, not shipped in dist; where MODEL_BASE doesn't hold it (the default),
-  // Remove background runs on the WebAssembly runtime that ships with the site. Not a model: never asked about.
-  ortWebgpu: { path: 'onnxruntime-web/1.30.0/ort-wasm-simd-threaded.asyncify.wasm', bytes: 26_781_914, licence: 'MIT' },
+  // onnxruntime-web's WebAssembly runtime (MIT), the .wasm Remove background runs the model with. It ships with the
+  // site (14 MB, under the host's 25 MB file cap) and is downloaded and cached like a model, so its first download
+  // is shown and counted with the model's.
+  ortWasm: { path: ORT_WASM_URL.replace(/^\/+/, ''), bytes: 14_239_897, licence: 'MIT', sameOrigin: true },
   // realesr-general-x4v3. Verified in Task 6.
   upscale: { path: 'xinntao/Real-ESRGAN/resolve/main/realesr-general-x4v3.onnx', bytes: 4_900_000, licence: 'BSD-3-Clause' },
   // Whisper base, quantised (a directory of files). Verified in Task 7.

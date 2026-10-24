@@ -3,8 +3,8 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import { fileURLToPath } from 'node:url';
 
-// onnxruntime-web's builds that load their .wasm from a URL we give them. Its package exports only the builds with the
-// .wasm referenced next to the script, which would put a 14 MB (or, for WebGPU, a 27 MB) file into dist unasked.
+// onnxruntime-web's build that loads its .wasm from bytes or a URL we give it. Its package exports only the builds
+// with the .wasm referenced next to the script, which the bundler would copy into dist a second time.
 /** @param {string} file */
 const ort = (file) => fileURLToPath(new URL(`./node_modules/onnxruntime-web/dist/${file}`, import.meta.url));
 
@@ -21,11 +21,13 @@ export default defineConfig({
   integrations: [sitemap()],
   vite: {
     resolve: {
-      alias: { 'ort-wasm-runtime': ort('ort.wasm.min.mjs'), 'ort-webgpu-runtime': ort('ort.webgpu.min.mjs') },
+      alias: { 'ort-wasm-runtime': ort('ort.wasm.min.mjs') },
     },
     // The engine worker is a module worker. 'es' lets it code-split, so each codec stays its own
     // dynamically imported chunk; the default 'iife' inlines every codec (2+ MB) into the worker file.
-    worker: { format: 'es' },
+    // Worker assets take the page build's names, so a file both import (onnxruntime's .wasm: the page checks whether
+    // it is cached, the worker loads it) is one file at one URL.
+    worker: { format: 'es', rollupOptions: { output: { assetFileNames: '_astro/[name].[hash][extname]' } } },
     // Always a string, so `import.meta.env.PUBLIC_AI_STUB === '1'` folds to a constant and a production build drops
     // the test-only AI stubs (src/ai/stub.ts) entirely. Set to 1 only by the Playwright build.
     define: { 'import.meta.env.PUBLIC_AI_STUB': JSON.stringify(process.env.PUBLIC_AI_STUB ?? '') },
