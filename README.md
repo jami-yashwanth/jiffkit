@@ -43,7 +43,8 @@ CI (`.github/workflows/ci.yml`) runs the whole gate on every push: fixtures, uni
 1. Add an entry to `TOOLS` in `src/tools.ts` (and its slug to `ToolSlug`). Reuse the existing fields: `accepts`, `outputs`, `defaults`, `faq`, `related`.
 2. Only if it reads or writes a format that is not already supported, add a codec in `src/engine/codecs.ts` and the matching decode/encode path in `src/engine/`, plus a sniff case in `sniff.ts` and a fixture in `scripts/make-fixtures.sh`.
 3. Add its codec to the licences list in `src/pages/licenses.astro` if it brings a new dependency.
-4. `npm test` and `npx playwright test`. The build-output test covers every registry entry automatically.
+4. Add its icon to `ICON_NAME` and `ICONS` in `src/icons.ts`: a Lucide name from the pinned `lucide-static`, with that icon's `<svg>` children copied in.
+5. `npm test` and `npx playwright test`. The build-output test covers every registry entry automatically.
 
 ## Privacy
 

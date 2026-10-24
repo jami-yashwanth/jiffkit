@@ -283,6 +283,11 @@ describe('site', () => {
     expect(h).toContain('Copyright (c) 2023 Vanilagy');
   });
 
+  it('licences page lists Lucide (ISC), version-tagged', () => {
+    const h = html('licenses/');
+    for (const s of ['Lucide', 'ISC', 'lucide-icons/lucide/tree/1.52.0', 'Lucide Icons and Contributors']) expect(h).toContain(s);
+  });
+
   it('licences page lists gifenc (MIT), version-tagged, with its licence text', () => {
     const h = html('licenses/');
     const version = JSON.parse(readFileSync('node_modules/gifenc/package.json', 'utf8')).version;
