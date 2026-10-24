@@ -235,6 +235,22 @@ const libs = [
     source: `https://huggingface.co/${WHISPER_REPO}/tree/${WHISPER_REVISION}`,
     texts: [{ label: 'LICENSE (openai/whisper)', text: licenceText(null, 'whisper-LICENSE.txt') }],
   },
+  {
+    name: 'mp4box.js',
+    version: pkgVersion('mp4box'),
+    licence: 'BSD-3-Clause',
+    note: 'Reads MP4 and MOV files (Compress video): their tracks, and where each frame lies in the file.',
+    source: `https://github.com/gpac/mp4box.js/tree/v${pkgVersion('mp4box')}`,
+    texts: [{ label: 'LICENSE', text: licenceText('mp4box/LICENSE') }],
+  },
+  {
+    name: 'mp4-muxer',
+    version: pkgVersion('mp4-muxer'),
+    licence: 'MIT',
+    note: 'Writes the compressed MP4 (Compress video).',
+    source: `https://github.com/Vanilagy/mp4-muxer/tree/v${pkgVersion('mp4-muxer')}`,
+    texts: [{ label: 'LICENSE', text: licenceText('mp4-muxer/LICENSE') }],
+  },
   ...(
     [
       ['zlibjs', 'MIT', 'LICENSE', 'Gunzip'],

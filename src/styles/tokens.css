@@ -288,12 +288,13 @@ pre[data-results]:empty { display: none; }
 .pdf-alert { display: grid; justify-items: start; gap: var(--s3); background: var(--tint); border-radius: var(--radius); padding: var(--s3); }
 .pdf-alert .error { margin: 0; font-size: 1rem; }
 [data-list], .pdf-done { margin-top: var(--s4); }
-/* AI tools: consent, downloading and working share one tinted panel; failures use the same shape as the PDF alert. */
-.ai-panel, .ai-alert { display: grid; justify-items: start; gap: var(--s3); background: var(--tint); border-radius: var(--radius); padding: var(--s3); margin-top: var(--s4); }
-.ai-panel p, .ai-alert p { margin: 0; }
-.ai-panel > p:first-child { color: var(--ink); font-size: 1rem; font-variant-numeric: tabular-nums; }
-.ai-panel progress { display: block; width: 100%; height: 8px; accent-color: var(--accent); }
-.ai-alert .error { font-size: 1rem; }
+/* AI tools: consent, downloading and working share one tinted panel; failures use the same shape as the PDF alert.
+   Compress video's working panel and alert are the same. */
+.ai-panel, .ai-alert, .video-panel, .video-alert { display: grid; justify-items: start; gap: var(--s3); background: var(--tint); border-radius: var(--radius); padding: var(--s3); margin-top: var(--s4); }
+.ai-panel p, .ai-alert p, .video-panel p, .video-alert p { margin: 0; }
+.ai-panel > p:first-child, .video-panel > p:first-child { color: var(--ink); font-size: 1rem; font-variant-numeric: tabular-nums; }
+.ai-panel progress, .video-panel progress { display: block; width: 100%; height: 8px; accent-color: var(--accent); }
+.ai-alert .error, .video-alert .error { font-size: 1rem; }
 /* Output that comes while the tool works (the transcript so far): the latest lines stay in view. */
 .ai-live { width: 100%; max-height: 12rem; overflow-y: auto; }
 .ai-live:empty { display: none; }
@@ -303,6 +304,13 @@ textarea.text-input.prose { font-family: inherit; font-size: 1rem; }
 /* Upscale's scale choice belongs to the drop zone: it goes while a run or its result is on screen. */
 [data-kind='ai'] .drop[hidden] ~ [data-scale] { display: none; }
 .ai-done { margin-top: var(--s4); display: grid; gap: var(--s4); }
+/* Compress video: the file and its settings under the (compact) drop zone; the result is the two sizes. */
+.video-file, .video-done { margin-top: var(--s4); display: grid; gap: var(--s3); }
+.video-file .settings, .video-done .note, [data-kind='video'] .actions { margin: 0; }
+/* Three choices each: the legend sits above them, so a narrow screen wraps whole choices, not the legend's row. */
+.video-file .toggle { column-gap: var(--s4); row-gap: 0; }
+.video-file .toggle legend { float: none; width: 100%; margin: 0 0 var(--s1); }
+.video-sizes { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em; font-variant-numeric: tabular-nums; }
 [data-ai-result] { display: grid; gap: var(--s3); justify-items: start; }
 [data-ai-result] .field, [data-ai-result] .actions { width: 100%; margin: 0; }
 [data-ai-result] .note { margin: 0; }

@@ -104,4 +104,31 @@ magick -size 900x160 xc:white -font "$FONT" -pointsize 56 -fill '#999' -gravity 
 # --- Transcribe audio (tests/fixtures/audio) ---
 node "$ROOT/scripts/make-audio-fixtures.ts" "$OUT/audio"
 
+# --- Video (tests/fixtures/video). ffmpeg (`brew install ffmpeg`) is a dev-only tool: nothing it makes ships. ---
+if command -v ffmpeg >/dev/null 2>&1; then
+  mkdir -p "$OUT/video"
+  FF=(ffmpeg -hide_banner -loglevel error -y)
+  SRC=(-f lavfi -i "testsrc2=size=640x360:rate=30" -f lavfi -i "sine=frequency=440:sample_rate=48000")
+  # 3 s, H.264 High + AAC, 640 x 360 at 30 fps. Grain and a generous bitrate, so compressing it makes it smaller.
+  "${FF[@]}" -f lavfi -i "testsrc2=size=640x360:rate=30,noise=alls=20:allf=t" -f lavfi -i "sine=frequency=440:sample_rate=48000" \
+    -t 3 -c:v libx264 -profile:v high -pix_fmt yuv420p -b:v 2200k -maxrate 2400k -bufsize 2400k -c:a aac -b:a 96k \
+    -movflags +faststart "$OUT/video/clip.mp4"
+  # The same picture as VP9 + Opus in WebM (not supported: the tool says so).
+  "${FF[@]}" "${SRC[@]}" -t 3 -c:v libvpx-vp9 -b:v 300k -c:a libopus -b:a 64k "$OUT/video/clip.webm"
+  # H.264 with Opus sound in MP4: the picture is compressed, the sound can't be kept.
+  "${FF[@]}" -f lavfi -i "testsrc2=size=640x360:rate=30,noise=alls=20:allf=t" -f lavfi -i "sine=frequency=440:sample_rate=48000" \
+    -t 2 -c:v libx264 -pix_fmt yuv420p -b:v 1500k -maxrate 1600k -bufsize 1600k -c:a libopus -b:a 48k "$OUT/video/opus-sound.mp4"
+  # 1 s at 1920 x 1080 (no sound): 720p makes it 1280 x 720.
+  "${FF[@]}" -f lavfi -i "testsrc2=size=1920x1080:rate=30" -t 1 -c:v libx264 -pix_fmt yuv420p -crf 35 -an "$OUT/video/hd.mp4"
+  # Grain squeezed into 80 kbit/s, no sound: any encoder spends more than that on it, so the result isn't smaller.
+  "${FF[@]}" -f lavfi -i "testsrc2=size=640x360:rate=30,noise=alls=20:allf=t" -t 2 -c:v libx264 -pix_fmt yuv420p \
+    -b:v 80k -maxrate 80k -bufsize 160k -an "$OUT/video/well-compressed.mp4"
+  # 2 min 1 s (over the 2 minute limit) but only a few KB: 32 x 32 at 1 fps.
+  "${FF[@]}" -f lavfi -i "color=c=0x3a7a5c:size=32x32:rate=1" -t 121 -c:v libx264 -pix_fmt yuv420p -crf 45 -an \
+    "$OUT/video/too-long.mp4"
+  head -c 30000 "$OUT/video/clip.mp4" > "$OUT/video/truncated.mp4"
+else
+  echo "ffmpeg not found: skipping tests/fixtures/video (brew install ffmpeg)" >&2
+fi
+
 echo "Fixtures written to $OUT"

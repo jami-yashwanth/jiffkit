@@ -1,7 +1,8 @@
 import type { Page } from '@playwright/test';
 
-// The AI island's panel (consent, downloading, working) can pass in a blink when files are local. These record
-// every text it shows while it is on screen, so a test can check a state was shown after the fact.
+// The AI island's panel (consent, downloading, working) and Compress video's working panel can pass in a blink when
+// files are local. These record every text it shows while it is on screen, so a test can check a state was shown
+// after the fact.
 
 type Recorded = { seen: string[]; extra: string[] };
 
@@ -13,7 +14,7 @@ export async function recordPanel(page: Page): Promise<void> {
     rec.extra = [];
     addEventListener('DOMContentLoaded', () => {
       new MutationObserver(() => {
-        const panel = document.querySelector<HTMLElement>('[data-ai-panel]');
+        const panel = document.querySelector<HTMLElement>('[data-ai-panel], [data-video-panel]');
         if (!panel || panel.hidden) return;
         const t = panel.querySelector('p')?.textContent;
         if (t) rec.seen.push(t);

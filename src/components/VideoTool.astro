@@ -3,8 +3,9 @@ import type { VideoTool } from '../tools';
 
 interface Props { tool: VideoTool }
 const { tool } = Astro.props;
-// Spec §4 empty state. The island (src/ui/video.ts) takes over in a later task.
-const ACCEPT = 'video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm';
+const compress = tool.op === 'compress';
+// Spec §4 empty state. MP4 and MOV only this round: WebM is not read (Task 8 ruling).
+const ACCEPT = 'video/mp4,video/quicktime,.mp4,.mov,.m4v';
 ---
 <div data-kind="video" data-tool={tool.slug} data-op={tool.op}>
   <div class="drop">
@@ -15,6 +16,59 @@ const ACCEPT = 'video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm';
     </label>
     <p class="privacy">Converted on your device. Your videos are never uploaded.</p>
   </div>
+  {compress && (
+    <>
+      {/* The island (src/ui/video.ts) shows one of these at a time. */}
+      <div class="video-alert" role="alert" data-video-alert hidden>
+        <p class="error" data-alert-text></p>
+        <a class="link" data-try hidden></a>
+        <button type="button" class="btn" data-retry hidden>Try again</button>
+      </div>
+      <div class="video-file" data-video-file hidden>
+        <div class="info">
+          <span class="name" data-name></span>
+          <span class="size" data-meta></span>
+        </div>
+        <fieldset class="settings toggle">
+          <legend>Quality</legend>
+          <label><input type="radio" name="preset" value="small" />Smaller file</label>
+          <label><input type="radio" name="preset" value="balanced" checked />Balanced</label>
+          <label><input type="radio" name="preset" value="better" />Better quality</label>
+        </fieldset>
+        <fieldset class="settings toggle">
+          <legend>Max width</legend>
+          <label><input type="radio" name="resolution" value="" checked />Original</label>
+          <label><input type="radio" name="resolution" value="1080" />1080p</label>
+          <label><input type="radio" name="resolution" value="720" />720p</label>
+        </fieldset>
+        <div class="actions">
+          <button type="button" class="btn" data-run disabled>Compress</button>
+        </div>
+      </div>
+      <div class="video-panel" data-video-panel hidden>
+        <p data-panel-text></p>
+        <progress max="100" value="0" aria-label="Compressing"></progress>
+        <button type="button" class="btn btn-quiet" data-cancel>Cancel</button>
+      </div>
+    </>
+  )}
   <p class="status" role="status" aria-live="polite" data-status></p>
-  <div data-results></div>
+  <div data-results>
+    {compress && (
+      <div class="video-done" data-video-done hidden>
+        <p class="video-sizes" data-video-sizes></p>
+        <p class="note" data-video-notes hidden></p>
+        <div class="actions">
+          <button type="button" class="btn" data-download>Download MP4</button>
+          <button type="button" class="btn btn-quiet" data-reset>Start over</button>
+        </div>
+      </div>
+    )}
+  </div>
 </div>
+
+<script>
+  // Only Compress video has its island so far; Video to GIF keeps the empty state until its own.
+  const el = document.querySelector<HTMLElement>('[data-kind="video"][data-op="compress"]');
+  if (el) void import('../ui/video').then(({ mountCompress }) => mountCompress(el));
+</script>

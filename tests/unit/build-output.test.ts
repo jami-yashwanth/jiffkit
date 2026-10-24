@@ -241,6 +241,24 @@ describe('site', () => {
     expect(html('').match(/<li[^>]*>[\s\S]*?<\/li>/g)!.join('')).not.toContain('/licenses/');
   });
 
+  it('licences page lists mp4box.js (BSD-3) and mp4-muxer (MIT), version-tagged', () => {
+    const h = html('licenses/');
+    const version = (n: string) => JSON.parse(readFileSync(`node_modules/${n}/package.json`, 'utf8')).version;
+    expect(h).toContain(`gpac/mp4box.js/tree/v${version('mp4box')}`);
+    expect(h).toContain('BSD-3-Clause');
+    expect(h).toContain('Telecom ParisTech');
+    expect(h).toContain(`Vanilagy/mp4-muxer/tree/v${version('mp4-muxer')}`);
+    expect(h).toContain('Copyright (c) 2023 Vanilagy');
+  });
+
+  it('Compress video and Video to GIF take MP4 and MOV, not WebM, and say so', () => {
+    for (const slug of ['compress-video', 'video-to-gif']) {
+      const h = html(`${slug}/`);
+      expect(h).toContain('Drop an MP4 or MOV video onto the page');
+      expect(h).not.toMatch(/accept="[^"]*webm/);
+    }
+  });
+
   it('licences page lists the dependencies', () => {
     const h = html('licenses/');
     for (const n of ['libheif-js', 'LGPL-3.0', '@jsquash', 'Apache-2.0', 'fflate', 'Astro']) expect(h).toContain(n);

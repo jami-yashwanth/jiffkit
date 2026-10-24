@@ -682,7 +682,7 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
     h1: 'Compress video',
     subhead: 'Make a short video smaller. It is compressed on your device and never uploaded.',
     howTo: [
-      'Drop an MP4, MOV or WebM video onto the page, or choose one from your device.',
+      'Drop an MP4 or MOV video onto the page, or choose one from your device.',
       'Choose the quality and the maximum width.',
       'Select Compress, then download the MP4.',
     ],
@@ -721,7 +721,7 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
     h1: 'Video to GIF',
     subhead: 'Turn a short clip into an animated GIF. It is made on your device and never uploaded.',
     howTo: [
-      'Drop an MP4, MOV or WebM video onto the page, or choose one from your device.',
+      'Drop an MP4 or MOV video onto the page, or choose one from your device.',
       'Set where the clip starts and ends, up to 15 seconds, then pick the width and frame rate.',
       'Select Make GIF, then download it.',
     ],
