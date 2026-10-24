@@ -131,7 +131,8 @@ section ol > li::marker { color: var(--accent); font-weight: 700; font-variant-n
   border-radius: 14px; background: var(--tint); color: var(--accent);
 }
 .related { margin-top: var(--s3); }
-@media (min-width: 720px) { .related { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* .card-grid.related, not .related: it must beat the homepage grid's 4 columns at 1024px inside the 40rem measure. */
+@media (min-width: 720px) { .card-grid.related { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 /* --- homepage: a wide page, a centred hero, category chips over a grid of tool cards --- */
 .page-wide { max-width: 70rem; }
@@ -300,8 +301,11 @@ pre[data-results]:empty { display: none; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* --- PDF tools --- */
-.drop-compact { padding: var(--s4) var(--s3); }
-.drop-compact .drop-title { font-size: 1.125rem; margin-bottom: var(--s3); }
+/* After files are chosen the zone steps back to its earlier look, a tinted box with the title on top and a secondary
+   button, so the tool's own next step (Merge PDFs, Convert…) is the strongest element on the page. */
+.drop-compact { padding: var(--s4) var(--s3); border-color: var(--edge); background: var(--tint); }
+.drop-compact .drop-title { order: 0; font-size: 1.125rem; font-weight: 700; color: var(--ink); margin: 0 0 var(--s3); }
+.drop-compact > label.btn { min-height: 44px; min-width: 0; font-size: 1.0625rem; font-weight: 600; line-height: 26px; border-radius: var(--radius); }
 .drop-compact .privacy { margin-top: var(--s3); }
 /* With files in, Merge/Split is the one primary action: adding more steps back. */
 .drop-compact label.btn { background: var(--paper); color: var(--accent); border-color: var(--edge); }
