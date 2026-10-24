@@ -1,0 +1,8 @@
+---
+import Icon from './Icon.astro';
+import type { Tool } from '../tools';
+
+interface Props { tool: Tool }
+const { tool } = Astro.props;
+---
+<a class="card" href={`/${tool.slug}/`}><span class="card-tile"><Icon slug={tool.slug} size={22} /></span><strong>{tool.h1}</strong><span class="card-sub">{tool.subhead}</span></a>

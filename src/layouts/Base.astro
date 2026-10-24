@@ -7,8 +7,9 @@ interface Props {
   description: string;
   path: string; // e.g. "/heic-to-jpg/"
   jsonLd?: object;
+  wide?: boolean; // the homepage grid; every other page keeps the reading measure
 }
-const { title, description, path, jsonLd } = Astro.props;
+const { title, description, path, jsonLd, wide = false } = Astro.props;
 const plausibleDomain = import.meta.env.PUBLIC_PLAUSIBLE_DOMAIN;
 const canonical = new URL(path, Astro.site).href;
 ---
@@ -40,7 +41,7 @@ const canonical = new URL(path, Astro.site).href;
     {jsonLd && <script type="application/ld+json" set:html={jsonLdString(jsonLd)} />}
   </head>
   <body>
-    <div class="page">
+    <div class:list={['page', { 'page-wide': wide }]}>
       <nav class="site-nav"><a href="/">jiffkit</a></nav>
       <main><slot /></main>
       <footer class="site-footer">

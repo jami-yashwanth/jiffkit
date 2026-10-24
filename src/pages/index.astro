@@ -1,8 +1,12 @@
 ---
 import Base from '../layouts/Base.astro';
-import { CATEGORY_LABEL, TOOLS, type Category } from '../tools';
+import ToolCard from '../components/ToolCard.astro';
+import { TOOLS, type Category } from '../tools';
 
 const order: Category[] = ['image', 'pdf', 'ai', 'video', 'developer', 'qr'];
+const tools = order.flatMap((c) => TOOLS.filter((t) => t.category === c));
+// A chip shows these categories; Developer also covers the one QR tool.
+const chips: [string, string][] = [['All', ''], ['Image', 'image'], ['PDF', 'pdf'], ['AI', 'ai'], ['Video', 'video'], ['Developer', 'developer qr']];
 // The site name search engines show next to the result, in place of a brand suffix on every title.
 const website = { '@context': 'https://schema.org', '@type': 'WebSite', name: 'jiffkit', url: new URL('/', Astro.site).href };
 ---
@@ -11,40 +15,34 @@ const website = { '@context': 'https://schema.org', '@type': 'WebSite', name: 'j
   description="Free tools that run on your device: remove backgrounds, transcribe audio, compress video, merge PDFs and convert photos. Nothing is uploaded."
   path="/"
   jsonLd={website}
+  wide
 >
-  <h1>Tools that never upload your files</h1>
-  <p class="subhead">Remove backgrounds, transcribe audio, compress video, merge PDFs and convert photos right in your browser. Free,&nbsp;no&nbsp;sign-up.</p>
+  <div class="home-hero">
+    <h1>Tools that never upload your files</h1>
+    <p class="subhead">Remove backgrounds, transcribe audio, compress video, merge PDFs and convert photos right in your browser. Free,&nbsp;no&nbsp;sign-up.</p>
+  </div>
 
-  <label for="filter" class="subhead">Find a tool</label>
-  <input id="filter" class="filter" type="search" placeholder="Try PDF, video, background or HEIC" autocomplete="off" />
-
-  <div id="tools">
-    {order.map((c) => (
-      <section class="category">
-        <h2>{CATEGORY_LABEL[c]}</h2>
-        <ul class="tool-list">
-          {TOOLS.filter((t) => t.category === c).map((t) => (
-            <li data-name={`${t.h1} ${t.subhead}`.toLowerCase()}>
-              <a href={`/${t.slug}/`}><strong>{t.h1}</strong>{t.subhead}</a>
-            </li>
-          ))}
-        </ul>
-      </section>
+  <!-- Hidden until the script below runs: without JavaScript every card shows and no chip does nothing. -->
+  <div class="chips" role="group" aria-label="Filter tools" hidden>
+    {chips.map(([label, cats], i) => (
+      <button type="button" aria-pressed={i === 0 ? 'true' : 'false'} data-cats={cats}>{label}</button>
     ))}
   </div>
-  <p id="no-match" hidden>No tool matches that. Try "PDF", "video", "background" or "HEIC".</p>
+
+  <ul id="tools" class="card-grid">
+    {tools.map((t) => <li data-category={t.category}><ToolCard tool={t} /></li>)}
+  </ul>
 
   <script is:inline>
     (function () {
-      var i = document.getElementById('filter'), m = document.getElementById('no-match'), s = document.querySelectorAll('.category');
-      i.addEventListener('input', function () {
-        var q = i.value.trim().toLowerCase(), n = 0;
-        s.forEach(function (c) {
-          var k = 0;
-          c.querySelectorAll('li').forEach(function (li) { var h = li.dataset.name.indexOf(q) < 0; li.hidden = h; if (!h) k++; });
-          c.hidden = !k; n += k;
+      var g = document.querySelector('.chips'), bs = g.querySelectorAll('button'), lis = document.querySelectorAll('#tools li');
+      g.hidden = false;
+      bs.forEach(function (b) {
+        b.addEventListener('click', function () {
+          var cats = b.dataset.cats ? b.dataset.cats.split(' ') : null;
+          bs.forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+          lis.forEach(function (li) { li.hidden = !!cats && cats.indexOf(li.dataset.category) < 0; });
         });
-        m.hidden = n > 0;
       });
     })();
   </script>
