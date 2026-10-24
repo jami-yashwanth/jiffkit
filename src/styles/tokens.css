@@ -71,20 +71,24 @@ a:hover { color: var(--accent-strong); text-decoration-thickness: 2px; }
 .site-footer { border-top: 1px solid var(--line); margin-top: var(--s7); padding-top: var(--s3); color: var(--ink-muted); font-size: 0.875rem; }
 .site-footer p { margin: 0; }
 
-/* --- the drop zone: the page's one bold element --- */
+/* --- the drop zone: one big button at rest; the dashed edge shows only while a file is held over it ---
+   The border stays 2px (transparent) so the zone doesn't jump when the edge appears. The title is the hint under
+   the button ("Drop a PDF here"), moved there with order so the markup and the drop target stay as they were. */
 .drop {
-  margin-top: var(--s4);
-  border: 2px dashed var(--edge);
+  margin-top: var(--s5);
+  border: 2px dashed transparent;
   border-radius: var(--radius-lg);
-  background: var(--tint);
-  padding: var(--s6) var(--s4);
+  background: none;
+  padding: var(--s4);
+  display: flex; flex-direction: column; align-items: center;
   text-align: center;
   transition: background-color var(--ease), border-color var(--ease);
 }
-.drop:focus-within { border-style: solid; border-color: var(--accent); }
-.drop.is-over { border-style: solid; border-color: var(--accent); background: var(--tint-strong); }
+.drop.is-over { border-color: var(--edge); background: var(--tint-strong); }
 .drop.is-over .drop-title { color: var(--accent); }
-.drop-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.2; margin-bottom: var(--s4); }
+.drop > label.btn { order: 1; min-height: 64px; min-width: 320px; font-size: 1.1875rem; font-weight: 700; line-height: 44px; border-radius: 12px; }
+.drop-title { order: 2; font-size: 1rem; font-weight: 400; color: var(--ink-muted); margin: var(--s3) 0 0; }
+.drop > .privacy { order: 3; }
 
 .btn {
   position: relative; display: inline-block;
@@ -460,10 +464,11 @@ textarea.text-input.prose { font-family: inherit; font-size: 1rem; }
   .site-nav { padding-bottom: var(--s4); }
   .subhead { font-size: 1.0625rem; }
   /* The drop zone becomes one full-width Choose photos button (spec §5). */
-  .drop, .drop:focus-within, .drop.is-over { border: 0; padding: 0; background: none; border-radius: 0; }
+  .drop, .drop.is-over { border: 0; padding: 0; background: none; border-radius: 0; align-items: stretch; }
   .drop-title { display: none; }
   .btn { display: block; width: 100%; text-align: center; }
   label.btn { min-height: 56px; line-height: 38px; }
+  .drop > label.btn { min-width: 0; min-height: 64px; line-height: 46px; }
   .privacy { text-align: center; margin-top: var(--s3); }
   .row { grid-template-columns: 48px minmax(0, 1fr); row-gap: var(--s2); }
   .row > .btn { grid-column: 1 / -1; }
