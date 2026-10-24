@@ -2,10 +2,12 @@ import type { AiWorkerRequest, AiWorkerResponse } from '../ai/client';
 import { AiError, reasonOf } from '../ai/errors';
 import { compressVideo, type CompressOptions, type Compressed } from './compress';
 import { checkDecodable, demux } from './demux';
+import { makeGif, type GifOptions } from './gif';
 import { checkLimits } from './limits';
 
 // The video worker: one job at a time (protocol: ../ai/client.ts). `probe` reads a file's boxes and says whether it
-// can be compressed at all (its length, and whether this browser decodes its picture); `compress` makes the MP4.
+// can be worked on at all (its length, and whether this browser decodes its picture); `compress` makes the MP4 and
+// `gif` the GIF.
 
 export interface Probed {
   durationS: number;
@@ -13,8 +15,11 @@ export interface Probed {
   height: number;
 }
 
-export type VideoRequest = { op: 'probe'; file: File } | ({ op: 'compress'; file: File } & CompressOptions);
-export type VideoResult = Probed | Compressed;
+export type VideoRequest =
+  | { op: 'probe'; file: File }
+  | ({ op: 'compress'; file: File } & CompressOptions)
+  | ({ op: 'gif'; file: File } & GifOptions);
+export type VideoResult = Probed | Compressed | Blob;
 
 const scope = self as unknown as {
   onmessage: ((e: MessageEvent<AiWorkerRequest<VideoRequest>>) => void) | null;
@@ -42,12 +47,13 @@ function toAiError(err: unknown): AiError {
 scope.onmessage = async (e) => {
   const { id, req } = e.data;
   try {
+    const onProgress = (done: number, total: number) => scope.postMessage({ kind: 'progress', id, stage: 'work', done, total });
     const result =
       req.op === 'probe'
         ? await probe(req.file)
-        : await compressVideo(req.file, { preset: req.preset, resolution: req.resolution }, (done, total) =>
-            scope.postMessage({ kind: 'progress', id, stage: 'work', done, total }),
-          );
+        : req.op === 'compress'
+          ? await compressVideo(req.file, { preset: req.preset, resolution: req.resolution }, onProgress)
+          : await makeGif(req.file, { start: req.start, end: req.end, width: req.width, fps: req.fps }, onProgress);
     scope.postMessage({ kind: 'done', id, result }, 'mp4' in result ? [result.mp4] : []);
   } catch (raw) {
     const err = toAiError(raw);

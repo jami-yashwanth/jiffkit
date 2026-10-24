@@ -239,7 +239,7 @@ const libs = [
     name: 'mp4box.js',
     version: pkgVersion('mp4box'),
     licence: 'BSD-3-Clause',
-    note: 'Reads MP4 and MOV files (Compress video): their tracks, and where each frame lies in the file.',
+    note: 'Reads MP4 and MOV files (Compress video, Video to GIF): their tracks, and where each frame lies in the file.',
     source: `https://github.com/gpac/mp4box.js/tree/v${pkgVersion('mp4box')}`,
     texts: [{ label: 'LICENSE', text: licenceText('mp4box/LICENSE') }],
   },
@@ -250,6 +250,14 @@ const libs = [
     note: 'Writes the compressed MP4 (Compress video).',
     source: `https://github.com/Vanilagy/mp4-muxer/tree/v${pkgVersion('mp4-muxer')}`,
     texts: [{ label: 'LICENSE', text: licenceText('mp4-muxer/LICENSE') }],
+  },
+  {
+    name: 'gifenc',
+    version: pkgVersion('gifenc'),
+    licence: 'MIT',
+    note: 'Writes the GIF, with its own palette of 256 colours for each frame (Video to GIF).',
+    source: `https://github.com/mattdesl/gifenc/tree/v${pkgVersion('gifenc')}`,
+    texts: [{ label: 'LICENSE', text: licenceText('gifenc/LICENSE.md') }],
   },
   ...(
     [

@@ -217,7 +217,7 @@ textarea.text-input { resize: vertical; font-family: ui-monospace, SFMono-Regula
 /* Tool-level messages (invalid input, too much text, a large-file warning) read like v1's row errors: ink with an alert mark. */
 [data-kind='text'] .status, [data-kind='qr'] .status { font-size: 1rem; font-weight: 500; letter-spacing: 0; }
 [data-kind='qr'] .status { margin-bottom: var(--s3); }
-[data-kind='text'] .status::before, [data-kind='qr'] .status::before, [data-kind='pdf'] .error::before {
+[data-kind='text'] .status::before, [data-kind='qr'] .status::before, [data-kind='pdf'] .error::before, .video-trim .error::before {
   content: ''; display: inline-block; width: 1em; height: 1em; margin-right: 0.4em; vertical-align: -0.15em;
   background: var(--icon-alert) center / contain no-repeat;
 }
@@ -311,6 +311,15 @@ textarea.text-input.prose { font-family: inherit; font-size: 1rem; }
 .video-file .toggle { column-gap: var(--s4); row-gap: 0; }
 .video-file .toggle legend { float: none; width: 100%; margin: 0 0 var(--s1); }
 .video-sizes { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em; font-variant-numeric: tabular-nums; }
+/* Video to GIF: the preview to find the moment in, Start and End side by side, and the GIF itself as the result. */
+.video-preview, .gif-result { display: block; max-width: 100%; max-height: 60vh; border-radius: var(--radius); background: var(--tint); }
+.video-preview { width: 100%; }
+.gif-result { width: auto; height: auto; }
+.video-trim { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); align-items: center; }
+.video-trim legend { width: 100%; margin: 0 0 var(--s1); }
+.video-trim label { display: inline-flex; align-items: center; gap: var(--s2); font-weight: 500; }
+.video-trim .text-input { width: 6.5rem; font-variant-numeric: tabular-nums; }
+.video-trim .error { flex: 1 1 100%; margin: 0; }
 [data-ai-result] { display: grid; gap: var(--s3); justify-items: start; }
 [data-ai-result] .field, [data-ai-result] .actions { width: 100%; margin: 0; }
 [data-ai-result] .note { margin: 0; }

@@ -1,0 +1,6 @@
+<script>
+  // Imported statically, so the page-load budget counts the island (its worker and libraries load with the first file).
+  import { mountCompress } from '../ui/video';
+  const el = document.querySelector<HTMLElement>('[data-kind="video"][data-op="compress"]');
+  if (el) mountCompress(el);
+</script>

@@ -1,8 +1,9 @@
 import { createAiEngine, type AiProgress } from '../ai/client';
 import type { Compressed, CompressOptions } from './compress';
+import type { GifOptions } from './gif';
 import type { Probed, VideoRequest, VideoResult } from './worker';
 
-export type { CompressOptions, Probed };
+export type { CompressOptions, GifOptions, Probed };
 
 /** A compressed video, as the page holds it. */
 export interface CompressedVideo extends Omit<Compressed, 'mp4'> {
@@ -27,3 +28,7 @@ export const compressVideo = (
     // The worker's buffer, transferred: wrapped here and let go, so the page holds the video once.
     blob: new Blob([mp4], { type: 'video/mp4' }),
   }));
+
+/** The GIF of a trimmed span (a Blob from the worker: passed by reference, not copied). */
+export const makeGif = (file: File, opts: GifOptions, onProgress: (p: AiProgress) => void, signal?: AbortSignal): Promise<Blob> =>
+  engine.run({ op: 'gif', file, ...opts }, [], onProgress, signal) as Promise<Blob>;

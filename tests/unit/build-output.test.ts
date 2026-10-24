@@ -251,6 +251,21 @@ describe('site', () => {
     expect(h).toContain('Copyright (c) 2023 Vanilagy');
   });
 
+  it('licences page lists gifenc (MIT), version-tagged, with its licence text', () => {
+    const h = html('licenses/');
+    const version = JSON.parse(readFileSync('node_modules/gifenc/package.json', 'utf8')).version;
+    expect(h).toContain(`mattdesl/gifenc/tree/v${version}`);
+    expect(h).toContain('Copyright (c) 2017 Matt DesLauriers');
+  });
+
+  it('each video page loads only its own island', () => {
+    const scripts = (slug: string) => [...html(`${slug}/`).matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]).join(' ');
+    expect(scripts('compress-video')).toContain('VideoCompressScript');
+    expect(scripts('compress-video')).not.toContain('VideoGifScript');
+    expect(scripts('video-to-gif')).toContain('VideoGifScript');
+    expect(scripts('video-to-gif')).not.toContain('VideoCompressScript');
+  });
+
   it('Compress video and Video to GIF take MP4 and MOV, not WebM, and say so', () => {
     for (const slug of ['compress-video', 'video-to-gif']) {
       const h = html(`${slug}/`);
