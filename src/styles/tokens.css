@@ -233,7 +233,9 @@ textarea.text-input { resize: vertical; font-family: ui-monospace, SFMono-Regula
 [data-transform='json'] > .settings { order: 6; }
 /* A JWT is one long line: the box grows to show it (up to 12 lines) instead of hiding its start. */
 #jwt-in { field-sizing: content; min-height: 7.5em; max-height: calc(18em + 2 * var(--s2)); }
-[data-kind] .status:empty { display: none; }
+/* An empty status takes no room, but stays in the accessibility tree: display:none would drop the live region and lose announcements. */
+[data-kind] .status:empty { margin: 0; min-height: 0; padding: 0; }
+[data-kind] .status:empty::before { content: none; }
 .pane {
   margin: 0 0 var(--s3); padding: var(--s3); background: var(--tint); border-radius: var(--radius);
   font: 0.9375rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;

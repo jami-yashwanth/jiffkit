@@ -274,3 +274,17 @@ test.describe('mobile 390', () => {
     }
   });
 });
+
+test('empty status regions stay in the accessibility tree and take no room', async ({ page }) => {
+  for (const path of ['/json-formatter/', '/base64-encode-decode/', '/jwt-decoder/', '/qr-code-generator/']) {
+    await page.goto(path);
+    for (const s of await page.locator('[data-status]').all()) {
+      const m = await s.evaluate((el) => {
+        const cs = getComputedStyle(el);
+        return { empty: el.textContent === '', display: cs.display, height: el.getBoundingClientRect().height, margin: cs.marginTop };
+      });
+      expect(m, path).toMatchObject({ empty: true, height: 0, margin: '0px' });
+      expect(m.display, path).not.toBe('none');
+    }
+  }
+});
