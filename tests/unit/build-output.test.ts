@@ -274,6 +274,21 @@ describe('site', () => {
     }
   });
 
+  it('licences page lists every dependency in package.json and every model in MODELS', () => {
+    const h = html('licenses/');
+    const deps = Object.keys(JSON.parse(readFileSync('package.json', 'utf8')).dependencies as Record<string, string>);
+    for (const d of deps) expect(h, `dependency ${d}`).toContain(d);
+    // Each model: its licence, and a version-tagged (commit-pinned) source or the runtime's own version.
+    for (const [key, m] of Object.entries(MODELS)) {
+      expect(h, `${key} licence`).toContain(m.licence);
+      const hf = /^(.+?)\/resolve\/([0-9a-f]{40})(?:\/|$)/.exec(m.path);
+      if (hf) expect(h, `${key} source`).toContain(`${hf[1]}/${m.files ? 'tree' : 'blob'}/${hf[2]}`);
+      else if (key === 'ortWebgpu') expect(h, key).toContain(m.path.split('/').pop()!);
+      else if (key === 'tessdata') expect(h, key).toContain('tessdata_fast');
+      else expect(h, key).toContain('onnxruntime-web');
+    }
+  });
+
   it('licences page lists the dependencies', () => {
     const h = html('licenses/');
     for (const n of ['libheif-js', 'LGPL-3.0', '@jsquash', 'Apache-2.0', 'fflate', 'Astro']) expect(h).toContain(n);

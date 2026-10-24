@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page, type Request } from '@playwright/test';
 import { stubPlausible, PLAUSIBLE_STUB, type PlausibleEvent } from './plausible';
 import { modelBytes, routeModels } from './models';
+import { holdResults, installResultHold } from './pdf-hold';
 import { WHISPER_FILES, WHISPER_GPU_FILES } from '../../src/ai/whisper/files';
 
 // The privacy promise, checked on the wire: during a real 3-file conversion plus a ZIP download, nothing
@@ -388,5 +389,186 @@ test.describe('AI tools', () => {
       info.project.use.baseURL,
     );
     expectOnlyAllowedProps(events);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------
+// Round 3: the AI and video pages. One convert_success {tool, count} per finished job, one convert_error {tool, reason}
+// per failure the user sees (Cancel included), and the same promise on the wire: the model host sees bare GETs.
+
+const REASONS = ['network', 'cancelled', 'unsupported', 'too-large', 'too-long', 'corrupt', 'wrong-type', 'device', 'encrypted'];
+
+/** Props are only tool/count/reason, and a reason is one of the known ones. */
+function expectKnownReasons(events: PlausibleEvent[]) {
+  expectOnlyAllowedProps(events);
+  for (const e of events) if ('reason' in e.p) expect(REASONS).toContain(e.p.reason);
+}
+const only = (events: PlausibleEvent[]) => events.map((e) => [e.n, e.p]);
+const aiInput = (page: Page) => page.locator('[data-kind="ai"] input[type=file]');
+const videoInput = (page: Page) => page.locator('[data-kind="video"] input[type=file]');
+const noGpu = (page: Page) => page.addInitScript(() => Object.defineProperty(navigator, 'gpu', { value: undefined }));
+
+test.describe('AI tools: analytics', () => {
+  test('remove background: one convert_success {remove-background, count: 1}', async ({ page }, info) => {
+    const { events, requests } = await watch(page);
+    await page.goto('/remove-background/');
+    await routeModels(page, await modelBytes(page));
+    await aiInput(page).setInputFiles('tests/fixtures/photo.jpg');
+    await expect(page.getByRole('button', { name: 'Download PNG' })).toBeVisible();
+    await expect.poll(() => events.length).toBe(1);
+    await settle(page);
+    expect(only(events)).toEqual([['convert_success', { tool: 'remove-background', count: 1 }]]);
+    expectKnownReasons(events);
+    expectClean(requests, [Buffer.from('photo.jpg'), Buffer.from(head64('photo.jpg'))], info.project.use.baseURL);
+  });
+
+  test('remove background: a PDF fires convert_error {remove-background, wrong-type}', async ({ page }, info) => {
+    const { events, requests } = await watch(page);
+    await page.goto('/remove-background/');
+    await aiInput(page).setInputFiles(pdf('two-pages.pdf'));
+    await expect(page.getByText("This isn't a JPG, PNG or WebP image.", { exact: true })).toBeVisible();
+    await expect.poll(() => events.length).toBe(1);
+    await settle(page);
+    expect(only(events)).toEqual([['convert_error', { tool: 'remove-background', reason: 'wrong-type' }]]);
+    expectKnownReasons(events);
+    expectClean(requests, [Buffer.from('two-pages'), Buffer.from(pdfHead('two-pages.pdf'))], info.project.use.baseURL);
+  });
+
+  test('image to text: one convert_success {image-to-text, count: 1}; the text never leaves the page', async ({ page }, info) => {
+    const { events, requests } = await watch(page);
+    await page.goto('/image-to-text/');
+    await aiInput(page).setInputFiles('tests/fixtures/ocr/hello.png');
+    await expect(page.getByRole('textbox', { name: 'Text' })).toHaveValue(/quick brown fox/i);
+    await expect.poll(() => events.length).toBe(1);
+    await settle(page);
+    expect(only(events)).toEqual([['convert_success', { tool: 'image-to-text', count: 1 }]]);
+    expectKnownReasons(events);
+    expectClean(requests, [Buffer.from('hello.png'), Buffer.from('quick brown fox'), Buffer.from(head64('ocr/hello.png'))], info.project.use.baseURL);
+  });
+
+  test('image to text: a PDF fires convert_error {image-to-text, wrong-type}', async ({ page }) => {
+    const { events } = await watch(page);
+    await page.goto('/image-to-text/');
+    await aiInput(page).setInputFiles(pdf('two-pages.pdf'));
+    await expect(page.getByText('This is a PDF, not a JPG, PNG or WebP image.', { exact: true })).toBeVisible();
+    await expect.poll(() => events.length).toBe(1);
+    await settle(page);
+    expect(only(events)).toEqual([['convert_error', { tool: 'image-to-text', reason: 'wrong-type' }]]);
+  });
+
+  test('upscale: one convert_success {upscale-image, count: 1}, a failed model download one convert_error {network}', async ({ page }, info) => {
+    const { events, requests } = await watch(page);
+    await page.goto('/upscale-image/');
+    const models = await routeModels(page, await modelBytes(page));
+    models.mode = 'abort';
+    await aiInput(page).setInputFiles('tests/fixtures/photo.jpg');
+    await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+    await expect.poll(() => events.length).toBe(1);
+    expect(only(events)).toEqual([['convert_error', { tool: 'upscale-image', reason: 'network' }]]);
+    models.mode = 'serve';
+    await page.getByRole('button', { name: 'Try again' }).click();
+    await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled({ timeout: 60_000 });
+    await expect.poll(() => events.length).toBe(2);
+    await settle(page);
+    expect(only(events)).toEqual([
+      ['convert_error', { tool: 'upscale-image', reason: 'network' }],
+      ['convert_success', { tool: 'upscale-image', count: 1 }],
+    ]);
+    expectKnownReasons(events);
+    expectClean(requests, [Buffer.from('photo.jpg'), Buffer.from(head64('photo.jpg'))], info.project.use.baseURL);
+  });
+
+  test('transcribe: Cancel during the download fires convert_error {transcribe-audio, cancelled}; the run then fires one convert_success', async ({ page }, info) => {
+    const { events, requests } = await watch(page);
+    await noGpu(page);
+    const sizes = { ...WHISPER_FILES, ...WHISPER_GPU_FILES };
+    await page.goto('/transcribe-audio/');
+    const models = await routeModels(page, (url) => {
+      const name = Object.keys(sizes).find((f) => url.endsWith(`/${f}`));
+      return name ? sizes[name]!.bytes : 0;
+    });
+    models.mode = 'slow';
+    await aiInput(page).setInputFiles('tests/fixtures/audio/hello.wav');
+    await page.getByRole('button', { name: 'Download and start' }).click();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect.poll(() => events.length).toBe(1);
+    expect(only(events)).toEqual([['convert_error', { tool: 'transcribe-audio', reason: 'cancelled' }]]);
+    models.mode = 'serve';
+    await page.getByRole('button', { name: 'Download and start' }).click();
+    await expect(page.getByRole('textbox', { name: 'Transcript' })).toHaveValue('This is a test transcript.');
+    await expect.poll(() => events.length).toBe(2);
+    await settle(page);
+    expect(only(events)).toEqual([
+      ['convert_error', { tool: 'transcribe-audio', reason: 'cancelled' }],
+      ['convert_success', { tool: 'transcribe-audio', count: 1 }],
+    ]);
+    expectKnownReasons(events);
+    expectClean(requests, [Buffer.from('hello.wav'), Buffer.from('test transcript')], info.project.use.baseURL);
+  });
+});
+
+test.describe('video tools: analytics', () => {
+  const V = 'tests/fixtures/video';
+  const needles = [Buffer.from('clip.mp4'), Buffer.from(head64('video/clip.mp4'))];
+
+  test('compress video: one convert_success {compress-video, count: 1}', async ({ page }, info) => {
+    const { events, requests } = await watch(page);
+    await page.goto('/compress-video/');
+    await videoInput(page).setInputFiles(`${V}/clip.mp4`);
+    await page.getByRole('button', { name: 'Compress', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Download MP4' })).toBeVisible({ timeout: 60_000 });
+    await expect.poll(() => events.length).toBe(1);
+    await settle(page);
+    expect(only(events)).toEqual([['convert_success', { tool: 'compress-video', count: 1 }]]);
+    expectKnownReasons(events);
+    expectClean(requests, needles, info.project.use.baseURL);
+  });
+
+  test('compress video: a JPG fires convert_error {compress-video, wrong-type}', async ({ page }) => {
+    const { events } = await watch(page);
+    await page.goto('/compress-video/');
+    await videoInput(page).setInputFiles('tests/fixtures/photo.jpg');
+    await expect(page.getByText('This is a JPG, not a video.')).toBeVisible();
+    await expect.poll(() => events.length).toBe(1);
+    await settle(page);
+    expect(only(events)).toEqual([['convert_error', { tool: 'compress-video', reason: 'wrong-type' }]]);
+  });
+
+  test('video to gif: Cancel fires convert_error {video-to-gif, cancelled}; the next run fires one convert_success', async ({ page }, info) => {
+    await installResultHold(page);
+    const { events, requests } = await watch(page);
+    await page.goto('/video-to-gif/');
+    await expect(page.locator('[data-kind="video"][data-ready]')).toBeAttached();
+    await videoInput(page).setInputFiles(`${V}/clip.mp4`);
+    const make = page.getByRole('button', { name: 'Make GIF', exact: true });
+    await expect(make).toBeEnabled();
+    await holdResults(page);
+    await make.click();
+    await expect(page.getByText(/^Making GIF… \d+%$/)).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect.poll(() => events.length).toBe(1);
+    await page.evaluate(() => ((window as unknown as { __hold: boolean }).__hold = false));
+    await page.getByRole('spinbutton', { name: 'Start' }).fill('0');
+    await page.getByRole('spinbutton', { name: 'End' }).fill('0.5');
+    await make.click();
+    await expect(page.getByRole('button', { name: 'Download GIF' })).toBeVisible({ timeout: 60_000 });
+    await expect.poll(() => events.length).toBe(2);
+    await settle(page);
+    expect(only(events)).toEqual([
+      ['convert_error', { tool: 'video-to-gif', reason: 'cancelled' }],
+      ['convert_success', { tool: 'video-to-gif', count: 1 }],
+    ]);
+    expectKnownReasons(events);
+    expectClean(requests, needles, info.project.use.baseURL);
+  });
+
+  test('video to gif: a video over 2 minutes fires convert_error {video-to-gif, too-long}', async ({ page }) => {
+    const { events } = await watch(page);
+    await page.goto('/video-to-gif/');
+    await videoInput(page).setInputFiles(`${V}/too-long.mp4`);
+    await expect(page.getByText('Videos up to 2 minutes and 200 MB for now.')).toBeVisible();
+    await expect.poll(() => events.length).toBe(1);
+    await settle(page);
+    expect(only(events)).toEqual([['convert_error', { tool: 'video-to-gif', reason: 'too-long' }]]);
   });
 });

@@ -292,6 +292,14 @@ const libs = [
     source: `https://github.com/withastro/astro/tree/astro@${pkgVersion('astro')}`,
     texts: [{ label: 'LICENSE', text: licenceText('astro/LICENSE') }],
   },
+  {
+    name: '@astrojs/sitemap',
+    version: pkgVersion('@astrojs/sitemap'),
+    licence: 'MIT',
+    note: 'Writes the sitemap when the site is built. Not part of the code your browser runs.',
+    source: `https://github.com/withastro/astro/tree/@astrojs/sitemap@${pkgVersion('@astrojs/sitemap')}`,
+    texts: [{ label: 'LICENSE', text: licenceText('@astrojs/sitemap/LICENSE') }],
+  },
 ];
 ---
 <Base title="Open-source licences" description="Open-source software used by the tools on this site, with licences and source links." path="/licenses/">
