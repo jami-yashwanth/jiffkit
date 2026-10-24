@@ -13,7 +13,8 @@ const COPY = {
 }[tool.model];
 // First-use download, from the model list. Remove background uses a ~5 MB model on phones and low-memory devices.
 const MODEL_KEY: Record<AiTool['model'], ModelKey> = { bg: 'bg', ocr: 'tessdata', upscale: 'upscale', whisper: 'whisper' };
-const MODEL_SIZE = megabytes(MODELS[MODEL_KEY[tool.model]].bytes);
+const MODEL_BYTES = MODELS[MODEL_KEY[tool.model]].bytes;
+const MODEL_SIZE = megabytes(MODEL_BYTES);
 const MODEL_SIZE_SMALL = tool.model === 'bg' ? megabytes(MODELS.bgSmall.bytes) : undefined;
 ---
 <div
@@ -21,6 +22,7 @@ const MODEL_SIZE_SMALL = tool.model === 'bg' ? megabytes(MODELS.bgSmall.bytes) :
   data-tool={tool.slug}
   data-model={tool.model}
   data-model-size={MODEL_SIZE}
+  data-model-bytes={MODEL_BYTES}
   {...(MODEL_SIZE_SMALL ? { 'data-model-size-small': MODEL_SIZE_SMALL } : {})}
 >
   <div class="drop">

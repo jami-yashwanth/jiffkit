@@ -72,4 +72,21 @@ describe('detect', () => {
     stub({}, { VideoEncoder: encoder('throw') });
     expect((await detect()).webcodecs.h264Encode).toBe(false);
   });
+
+  it('an adapter request that hangs counts as no WebGPU after 1.5 s', async () => {
+    vi.useFakeTimers();
+    try {
+      stub({ gpu: { requestAdapter: () => new Promise(() => {}) } });
+      const caps = detect();
+      await vi.advanceTimersByTimeAsync(1499);
+      let settled = false;
+      void caps.then(() => (settled = true));
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect((await caps).webgpu).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

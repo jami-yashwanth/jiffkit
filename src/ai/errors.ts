@@ -1,14 +1,27 @@
 /** Why an on-device AI job failed. These are also the analytics reasons (`convert_error {tool, reason}`). */
 export type AiFail = 'network' | 'cancelled' | 'unsupported' | 'too-large' | 'too-long' | 'corrupt' | 'wrong-type' | 'device' | 'encrypted';
 
+export interface AiErrorDetail {
+  /** For wrong-type: the type the file really is, when known (a short code such as "heic"). */
+  detectedType?: string;
+  /**
+   * The model's bytes could not be parsed (a damaged download or cache entry). The island drops the cached model
+   * and shows the download-failed copy, so Try again downloads it afresh. Use with reason 'network'.
+   */
+  badModel?: boolean;
+}
+
 export class AiError extends Error {
+  readonly detectedType?: string;
+  readonly badModel: boolean;
   constructor(
     readonly reason: AiFail,
-    /** For wrong-type: the type the file really is, when known (a short code such as "heic"). */
-    readonly detectedType?: string,
+    detail: AiErrorDetail = {},
   ) {
     super(reason);
     this.name = 'AiError';
+    if (detail.detectedType) this.detectedType = detail.detectedType;
+    this.badModel = detail.badModel === true;
   }
 }
 

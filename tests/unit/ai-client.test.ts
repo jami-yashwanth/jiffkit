@@ -94,10 +94,11 @@ describe('ai client', () => {
   it('rejects with an AiError carrying the worker reason and keeps the worker', async () => {
     const { engine, workers } = setup();
     const a = settle(engine.run({ n: 1 }));
-    workers[0]!.reply({ kind: 'failed', id: workers[0]!.idAt(0), reason: 'device' });
+    workers[0]!.reply({ kind: 'failed', id: workers[0]!.idAt(0), reason: 'too-long' });
     const r = await a;
     expect(r.ok === false && r.e).toBeInstanceOf(AiError);
-    expect(reason(r)).toBe('device');
+    expect(reason(r)).toBe('too-long');
+    expect(workers[0]!.terminated).toBe(false);
     const b = engine.run({ n: 2 });
     expect(workers).toHaveLength(1);
     workers[0]!.reply({ kind: 'done', id: workers[0]!.idAt(1), result: { doubled: 4 } });
@@ -207,5 +208,32 @@ describe('ai client', () => {
     ctrl.abort();
     expect(reason(await settle(engine.run({ n: 1 }, [], undefined, ctrl.signal)))).toBe('cancelled');
     expect(workers).toHaveLength(0);
+  });
+
+  for (const why of ['device', 'corrupt'] as const) {
+    it(`a ${why} reply retires the worker, so the next job gets a fresh one`, async () => {
+      const { engine, workers } = setup();
+      const a = settle(engine.run({ n: 1 }));
+      workers[0]!.reply({ kind: 'failed', id: workers[0]!.idAt(0), reason: why });
+      expect(reason(await a)).toBe(why);
+      expect(workers[0]!.terminated).toBe(true);
+      const b = engine.run({ n: 2 });
+      expect(workers).toHaveLength(2);
+      workers[1]!.reply({ kind: 'done', id: workers[1]!.idAt(0), result: { doubled: 4 } });
+      expect(await b).toEqual({ doubled: 4 });
+    });
+  }
+
+  it('carries badModel and detectedType from the worker onto the AiError', async () => {
+    const { engine, workers } = setup();
+    const a = settle(engine.run({ n: 1 }));
+    workers[0]!.reply({ kind: 'failed', id: workers[0]!.idAt(0), reason: 'network', badModel: true });
+    const r = await a;
+    expect(r.ok === false && (r.e as AiError).badModel).toBe(true);
+    const b = settle(engine.run({ n: 2 }));
+    workers[1]!.reply({ kind: 'failed', id: workers[1]!.idAt(0), reason: 'wrong-type', detectedType: 'heic' });
+    const r2 = await b;
+    expect(r2.ok === false && (r2.e as AiError).detectedType).toBe('heic');
+    expect(r2.ok === false && (r2.e as AiError).badModel).toBe(false);
   });
 });

@@ -1,4 +1,4 @@
-import { AiError, type AiFail } from './errors';
+import { AiError, type AiErrorDetail, type AiFail } from './errors';
 
 // The message protocol between an AI tool's page and its worker. A worker answers each job with any number of
 // progress messages, then exactly one done or failed.
@@ -12,7 +12,7 @@ export interface AiProgress {
 export type AiWorkerResponse<Res> =
   | ({ kind: 'progress'; id: string } & AiProgress)
   | { kind: 'done'; id: string; result: Res }
-  | { kind: 'failed'; id: string; reason: AiFail };
+  | ({ kind: 'failed'; id: string; reason: AiFail } & Pick<AiErrorDetail, 'badModel' | 'detectedType'>);
 
 export interface AiEngine<Req, Res> {
   /** Run one job. Jobs run strictly one at a time, in order. Rejects with AiError. */
@@ -63,11 +63,11 @@ export function createAiEngine<Req, Res>(workerFactory: () => Worker): AiEngine<
     worker = null;
   }
 
-  function finish(job: Pending<Req, Res>, outcome: { result: Res } | { reason: AiFail }): void {
+  function finish(job: Pending<Req, Res>, outcome: { result: Res } | { reason: AiFail; detail?: AiErrorDetail }): void {
     if (inFlight === job) inFlight = null;
     job.dispose();
     if ('result' in outcome) job.resolve(outcome.result);
-    else job.reject(new AiError(outcome.reason));
+    else job.reject(new AiError(outcome.reason, outcome.detail));
     next();
   }
 
@@ -98,9 +98,13 @@ export function createAiEngine<Req, Res>(workerFactory: () => Worker): AiEngine<
       return;
     }
     if (m.kind === 'done') return finish(job, { result: m.result });
-    // A browser may cache a failed import in the worker's module map: retire the worker so a retry loads afresh.
-    if (m.reason === 'network') retire();
-    finish(job, { reason: m.reason });
+    // network: a browser may cache a failed import in the worker's module map. device / corrupt: the worker may be
+    // out of memory or in a bad state (wasm heaps never shrink). Retire it, so the next job starts afresh.
+    if (m.reason === 'network' || m.reason === 'device' || m.reason === 'corrupt') retire();
+    const detail: AiErrorDetail = {};
+    if (m.badModel) detail.badModel = true;
+    if (m.detectedType) detail.detectedType = m.detectedType;
+    finish(job, { reason: m.reason, detail });
   }
 
   function crash(): void {

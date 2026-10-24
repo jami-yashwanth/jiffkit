@@ -24,7 +24,7 @@ export function stubBgDef(): AiToolDef<{ modelBytes: number }> {
     elsewhere: { heic: { href: '/heic-to-jpg/', h1: 'HEIC to JPG' } },
     async check(file) {
       const { type } = await sniff(file);
-      if (type !== 'jpg' && type !== 'png' && type !== 'webp') throw new AiError('wrong-type', type === 'unknown' ? undefined : type);
+      if (type !== 'jpg' && type !== 'png' && type !== 'webp') throw new AiError('wrong-type', type === 'unknown' ? {} : { detectedType: type });
     },
     async run(_file, _caps, onProgress, { signal }) {
       const model = await loadModel(modelUrl('bg'), {
@@ -32,6 +32,8 @@ export function stubBgDef(): AiToolDef<{ modelBytes: number }> {
         signal,
         onProgress: (done, total) => onProgress({ stage: 'download', done, total }),
       });
+      // A model of all zero bytes stands for one that fails to parse (the E2E 'bad' mode serves one).
+      if (new Uint8Array(model, 0, Math.min(16, model.byteLength)).every((b) => b === 0)) throw new AiError('network', { badModel: true });
       for (let i = 0; i <= 4; i++) {
         if (signal.aborted) throw new AiError('cancelled');
         onProgress({ stage: 'work', done: i, total: 4 });

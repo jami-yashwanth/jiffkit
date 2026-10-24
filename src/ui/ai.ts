@@ -2,7 +2,7 @@ import { detect, type Caps } from '../ai/capability';
 import type { AiProgress } from '../ai/client';
 import { CONSENT_BYTES, MODELS, megabytes, modelUrl, type ModelKey } from '../ai/config';
 import { AiError, reasonOf, type AiFail } from '../ai/errors';
-import { isCached } from '../ai/loader';
+import { evictModel, isCached } from '../ai/loader';
 
 // The shared states of an on-device AI tool (spec §4), for one file at a time:
 // empty → (consent, for a large model not yet cached) → downloading → working → result, or an error.
@@ -56,6 +56,11 @@ const COPY: Record<AiFail, string> = {
 };
 const TYPE_NAMES: Record<string, string> = { heic: 'HEIC', jpg: 'JPG', png: 'PNG', webp: 'WebP', pdf: 'PDF', gif: 'GIF' };
 const CELLULAR = 'You seem to be on mobile data.';
+
+/** A failure that isn't an AiError is a bug or an unexpected browser error: shown as a damaged file, but logged. */
+function logUnexpected(err: unknown): void {
+  if (!(err instanceof AiError)) console.error('ai: unexpected failure', err);
+}
 
 function h<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, string> = {}, ...kids: (Node | string)[]) {
   const el = document.createElement(tag);
@@ -212,6 +217,7 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
       else await start(file, c, key, false);
     } catch (err) {
       if (g !== gen) return;
+      logUnexpected(err);
       fail(reasonOf(err), err instanceof AiError ? err.detectedType : undefined);
     }
   }
@@ -277,6 +283,14 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
       if (g !== gen) return; // cancelled from the button, or replaced by a new file
       running = false;
       controller = null;
+      logUnexpected(err);
+      if (err instanceof AiError && err.badModel) {
+        // The model's bytes didn't parse: drop the cached copy and treat it as a failed download, so Try again
+        // fetches it afresh.
+        if (key) await evictModel(modelUrl(key));
+        if (g !== gen) return;
+        return fail('network', undefined, () => void start(file, c, key, consented));
+      }
       const reason = reasonOf(err);
       if (reason === 'cancelled') return cancel();
       fail(reason, err instanceof AiError ? err.detectedType : undefined, reason === 'network' ? () => void start(file, c, key, consented) : undefined);

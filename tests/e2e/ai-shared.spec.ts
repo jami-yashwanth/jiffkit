@@ -82,6 +82,19 @@ test('a failed download says so, and Try again downloads and runs', async ({ pag
   await expect(page.getByText(RESULT)).toBeVisible();
 });
 
+test('a model that fails to parse is dropped from the cache and shown as a failed download; Try again fetches it afresh', async ({ page }) => {
+  const models = await open(page);
+  models.mode = 'bad';
+  await choose(page);
+  await start(page).click();
+  await expect(page.getByRole('alert').getByText(FAILED, { exact: true })).toBeVisible();
+  expect(await page.evaluate(async () => (await (await caches.open('models-v1')).keys()).length)).toBe(0);
+  models.mode = 'serve';
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByText(RESULT)).toBeVisible();
+  expect(models.requests).toBe(2);
+});
+
 test('working shows "Removing background… n%"; once downloaded, the model is used from the cache, even offline', async ({ page }) => {
   const models = await open(page);
   await choose(page);

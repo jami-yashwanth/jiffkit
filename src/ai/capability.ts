@@ -17,11 +17,19 @@ interface NavigatorExtras {
   userAgentData?: { mobile?: boolean };
 }
 
+/** Some drivers take seconds (or never answer) to hand out an adapter: past this, count WebGPU as absent. */
+const ADAPTER_TIMEOUT_MS = 1500;
+
 async function hasWebGpu(nav: NavigatorExtras): Promise<boolean> {
+  if (!nav.gpu) return false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    return !!(nav.gpu && (await nav.gpu.requestAdapter()));
+    const timeout = new Promise<null>((resolve) => (timer = setTimeout(() => resolve(null), ADAPTER_TIMEOUT_MS)));
+    return !!(await Promise.race([nav.gpu.requestAdapter(), timeout]));
   } catch {
     return false;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

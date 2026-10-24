@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiError } from '../../src/ai/errors';
-import { isCached, loadModel } from '../../src/ai/loader';
+import { MODELS, modelUrl } from '../../src/ai/config';
+import { evictModel, isCached, loadModel } from '../../src/ai/loader';
 
 // An in-memory Cache Storage, keyed by URL, enough for the loader.
 class MemoryCache {
@@ -9,9 +10,15 @@ class MemoryCache {
     return this.entries.get(url)?.clone();
   }
   async put(url: string, res: Response) {
-    // Like the real Cache API: the body is consumed in full before the entry exists.
+    // Like the real Cache API: the body is consumed in full before the entry exists; a body that errors stores nothing.
     const body = await res.arrayBuffer();
     this.entries.set(url, new Response(body, { headers: res.headers }));
+  }
+  async delete(req: string | Request) {
+    return this.entries.delete(typeof req === 'string' ? req : req.url);
+  }
+  async keys() {
+    return [...this.entries.keys()].map((url) => new Request(url));
   }
 }
 class MemoryCacheStorage {
@@ -193,5 +200,83 @@ describe('loadModel', () => {
     };
     fetchMock.mockResolvedValue(streamed(bytesOf(20)));
     expect((await loadModel(URL_A, { bytes: 20 })).byteLength).toBe(20);
+  });
+
+  it('asks for the model with no credentials and no referrer', async () => {
+    fetchMock.mockResolvedValue(streamed(bytesOf(10)));
+    await loadModel(URL_A, { bytes: 10 });
+    expect(fetchMock.mock.calls[0]![1]).toMatchObject({ credentials: 'omit', referrerPolicy: 'no-referrer' });
+  });
+
+  it('a body shorter than its Content-Length is network, and is not cached', async () => {
+    const body = bytesOf(50);
+    fetchMock.mockResolvedValue(
+      new Response(new ReadableStream({ start: (c) => (c.enqueue(body), c.close()) }), { headers: { 'Content-Length': '100' } }),
+    );
+    expect(await reasonOf(loadModel(URL_A, { bytes: 100 }))).toBe('network');
+    expect(await isCached(URL_A)).toBe(false);
+    expect((await storage.open('models-v1')).entries.size).toBe(0);
+  });
+
+  it('a compressed body is not held to its Content-Length (which counts compressed bytes)', async () => {
+    const body = bytesOf(80);
+    fetchMock.mockResolvedValue(
+      new Response(new ReadableStream({ start: (c) => (c.enqueue(body), c.close()) }), {
+        headers: { 'Content-Length': '30', 'Content-Encoding': 'gzip' },
+      }),
+    );
+    expect((await loadModel(URL_A, { bytes: 80 })).byteLength).toBe(80);
+    expect(await isCached(URL_A)).toBe(true);
+  });
+
+  it('records the length on the entry, also without a Content-Length', async () => {
+    fetchMock.mockResolvedValue(streamed(bytesOf(3_000_000), { length: false, chunks: 7 })); // grows past 1 MB
+    expect((await loadModel(URL_A, { bytes: 10 })).byteLength).toBe(3_000_000);
+    const entry = (await storage.open('models-v1')).entries.get(URL_A)!;
+    expect(entry.headers.get('X-Model-Bytes')).toBe('3000000');
+  });
+
+  it('a truncated cache entry is dropped and downloaded again', async () => {
+    const cache = await storage.open('models-v1');
+    cache.entries.set(URL_A, new Response(bytesOf(50), { headers: { 'X-Model-Bytes': '100' } }));
+    expect(await isCached(URL_A)).toBe(true); // it claims to be there…
+    fetchMock.mockResolvedValue(streamed(bytesOf(100)));
+    const buf = await loadModel(URL_A, { bytes: 100 });
+    expect(buf.byteLength).toBe(100); // …but the length check catches it
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect((await cache.match(URL_A))!.headers.get('X-Model-Bytes')).toBe('100');
+    expect((await (await cache.match(URL_A))!.arrayBuffer()).byteLength).toBe(100);
+  });
+
+  it('an entry without a recorded length is not trusted: not cached, and downloaded again', async () => {
+    const cache = await storage.open('models-v1');
+    cache.entries.set(URL_A, new Response(bytesOf(100)));
+    expect(await isCached(URL_A)).toBe(false);
+    fetchMock.mockResolvedValue(streamed(bytesOf(100)));
+    await loadModel(URL_A, { bytes: 100 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await isCached(URL_A)).toBe(true);
+  });
+
+  it('evictModel drops a cached model, so the next load downloads it', async () => {
+    fetchMock.mockResolvedValue(streamed(bytesOf(10)));
+    await loadModel(URL_A, { bytes: 10 });
+    await evictModel(URL_A);
+    expect(await isCached(URL_A)).toBe(false);
+    fetchMock.mockResolvedValue(streamed(bytesOf(10)));
+    await loadModel(URL_A, { bytes: 10 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('a successful load prunes entries that belong to no current model', async () => {
+    const cache = await storage.open('models-v1');
+    const stale = 'https://models.test/old/u2net-v0.onnx';
+    const current = modelUrl('bg');
+    const whisperFile = `${modelUrl('whisper')}/config.json`; // a file under a directory model is kept
+    for (const u of [stale, current, whisperFile]) cache.entries.set(u, new Response(bytesOf(1), { headers: { 'X-Model-Bytes': '1' } }));
+    fetchMock.mockResolvedValue(streamed(bytesOf(10)));
+    await loadModel(URL_A, { bytes: 10 });
+    expect([...cache.entries.keys()].sort()).toEqual([URL_A, current, whisperFile].sort());
+    expect(MODELS.bg.path).toBeTruthy();
   });
 });

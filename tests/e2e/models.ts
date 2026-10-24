@@ -8,35 +8,38 @@ import type { Page, Route } from '@playwright/test';
 
 export const MODEL_ROUTE = '**/test-models/**';
 
-const bodies = new Map<number, Buffer>();
-const bodyOf = (bytes: number) => bodies.get(bytes) ?? bodies.set(bytes, Buffer.alloc(bytes, 7)).get(bytes)!;
+const bodies = new Map<string, Buffer>();
+/** A model's bytes: 7s for a good model, zeros for one the stub tools treat as failing to parse. */
+const bodyOf = (bytes: number, fill: number) =>
+  bodies.get(`${bytes}:${fill}`) ?? bodies.set(`${bytes}:${fill}`, Buffer.alloc(bytes, fill)).get(`${bytes}:${fill}`)!;
 
-/** The page's model size in bytes, from its "45 MB" label (the label is derived from MODELS in src/ai/config.ts). */
+/** The page's exact model size in bytes (data-model-bytes, from MODELS in src/ai/config.ts). */
 export async function modelBytes(page: Page): Promise<number> {
-  const label = await page.locator('[data-kind="ai"]').getAttribute('data-model-size');
-  return Number(label!.replace(' MB', '')) * 1e6;
+  return Number(await page.locator('[data-kind="ai"]').getAttribute('data-model-bytes'));
 }
 
-export type ModelMode = 'serve' | 'abort' | 'slow';
+export type ModelMode = 'serve' | 'abort' | 'slow' | 'bad';
 
 /**
  * Answer model requests for this page. `mode` can be changed between steps; `requests` counts every request made.
  * 'slow' streams the body from a local server in 2 MB pieces every 200 ms, so download progress can be watched.
+ * 'bad' serves a body of the right length that the stub tools reject as unparseable.
  */
 export async function routeModels(page: Page, bytes: number) {
   const state = { mode: 'serve' as ModelMode, requests: 0 };
   let slow: Server | undefined;
-  let slowUrl = '';
+  let slowUrl: Promise<string> | undefined; // one server per page, however many requests race to start it
 
   await page.route(MODEL_ROUTE, async (route: Route) => {
     state.requests++;
     if (state.mode === 'abort') return route.abort('internetdisconnected');
     if (state.mode === 'slow') {
-      slowUrl ||= await startSlowServer(bytes, (s) => (slow = s));
+      slowUrl ??= startSlowServer(bytes, (s) => (slow = s));
       // The browser still sees its own URL; the response streams from the local server.
-      return route.continue({ url: slowUrl });
+      return route.continue({ url: await slowUrl });
     }
-    return route.fulfill({ status: 200, contentType: 'application/octet-stream', body: bodyOf(bytes) });
+    const body = bodyOf(bytes, state.mode === 'bad' ? 0 : 7);
+    return route.fulfill({ status: 200, contentType: 'application/octet-stream', body });
   });
   page.once('close', () => slow?.close());
   return state;
