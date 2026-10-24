@@ -19,8 +19,8 @@ export const MODELS: Record<ModelKey, { path: string; bytes: number; licence: st
   upscale: { path: 'xinntao/Real-ESRGAN/resolve/main/realesr-general-x4v3.onnx', bytes: 4_900_000, licence: 'BSD-3-Clause' },
   // Whisper base, quantised (a directory of files). Verified in Task 7.
   whisper: { path: 'onnx-community/whisper-base/resolve/main', bytes: 80_000_000, licence: 'MIT' },
-  // tessdata_fast `eng` (tesseract.js reads `<path>/eng.traineddata.gz`). Verified in Task 4.
-  tessdata: { path: 'tessdata', bytes: 4_000_000, licence: 'Apache-2.0' },
+  // tessdata_fast `eng` 4.1.0, gzipped (the file in tests/fixtures/models/tessdata/; its sha256 is on /licenses/). Verified in Task 4.
+  tessdata: { path: 'tessdata/eng.traineddata.gz', bytes: 1_967_599, licence: 'Apache-2.0' },
 };
 
 export const modelUrl = (key: ModelKey): string => `${MODEL_BASE}/${MODELS[key].path}`;

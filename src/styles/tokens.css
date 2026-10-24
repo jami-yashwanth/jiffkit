@@ -295,6 +295,10 @@ pre[data-results]:empty { display: none; }
 .ai-panel progress { display: block; width: 100%; height: 8px; accent-color: var(--accent); }
 .ai-alert .error { font-size: 1rem; }
 .ai-done { margin-top: var(--s4); display: grid; gap: var(--s4); }
+[data-ai-result] { display: grid; gap: var(--s3); justify-items: start; }
+[data-ai-result] .field, [data-ai-result] .actions { width: 100%; margin: 0; }
+[data-ai-result] .note { margin: 0; }
+[data-ai-result] [data-low-confidence] { color: var(--ink); }
 .pdf-rows { margin-bottom: var(--s3); }
 .pdf-rows .row { grid-template-columns: minmax(0, 1fr) auto; }
 .row-tools { display: flex; gap: var(--s1); }

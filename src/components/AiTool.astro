@@ -42,6 +42,7 @@ const MODEL_SIZE_SMALL = tool.model === 'bg' ? megabytes(MODELS.bgSmall.bytes) :
   // Each tool's island registers here as it lands. Until then, the E2E build (PUBLIC_AI_STUB=1) mounts a stand-in on
   // Remove background so the shared states can be tested. The env check comes first so production drops the branch.
   const el = document.querySelector<HTMLElement>('[data-kind="ai"]');
+  if (el?.dataset.model === 'ocr') void import('../ui/ocr').then(({ ocrDef }) => mountAi(el, ocrDef()));
   if (import.meta.env.PUBLIC_AI_STUB === '1' && el?.dataset.model === 'bg') {
     void import('../ai/stub').then(({ stubBgDef }) => mountAi(el, stubBgDef()));
   }

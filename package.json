@@ -27,7 +27,8 @@
     "libheif-js": "^1.23.5",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.4.299",
-    "qrcode-generator": "^2.0.4"
+    "qrcode-generator": "^2.0.4",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",

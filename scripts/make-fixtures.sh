@@ -86,4 +86,16 @@ qpdf --encrypt user owner 256 -- "$OUT/pdf/three-pages.pdf" "$OUT/pdf/encrypted.
 printf 'This is plain text, not a PDF.\n' > "$OUT/pdf/not-a.pdf"
 head -c 400 "$OUT/pdf/three-pages.pdf" > "$OUT/pdf/truncated.pdf"
 
+# --- OCR (tests/fixtures/ocr). Gaussian noise is random: low-confidence.png is committed, and a regenerated one may
+# read slightly differently (it must stay non-empty with a mean confidence below 70; check with tests/e2e/ocr.spec.ts).
+mkdir -p "$OUT/ocr"
+FONT=/System/Library/Fonts/Supplemental/Arial.ttf
+magick -size 900x160 xc:white -font "$FONT" -pointsize 56 -fill black -gravity center -annotate 0 'The quick brown fox 12345' "$OUT/ocr/hello.png"
+magick -size 900x160 xc:white "$OUT/ocr/blank.png"
+# Stored turned a quarter anticlockwise, with EXIF Orientation 6 saying "turn it back": reads only if orientation is applied.
+magick "$OUT/ocr/hello.png" -rotate -90 -quality 92 "$OUT/ocr/hello-rotated-6.jpg"
+exiftool -q -overwrite_original -Orientation#=6 "$OUT/ocr/hello-rotated-6.jpg"
+magick -size 900x160 xc:white -font "$FONT" -pointsize 56 -fill '#999' -gravity center -annotate 0 'The quick brown fox 12345' \
+  -blur 0x2.5 -attenuate 1 +noise Gaussian "$OUT/ocr/low-confidence.png"
+
 echo "Fixtures written to $OUT"
