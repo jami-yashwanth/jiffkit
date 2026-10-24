@@ -1,5 +1,5 @@
 import { CodecLoadError } from '../../engine/codecs';
-import { DecodeError, decode } from '../../engine/decode';
+import { DecodeError, decode, type Pixels } from '../../engine/decode';
 import { applyOrientation } from '../../engine/pixels';
 import { sniff } from '../../engine/sniff';
 import type { AiWorkerRequest, AiWorkerResponse } from '../client';
@@ -68,14 +68,31 @@ async function infer(input: Float32Array, r: Rect): Promise<Float32Array> {
 }
 
 async function upscale({ image, scale }: UpscaleRequest, progress: Progress): Promise<UpscaleResult> {
-  const { type } = await sniff(new Blob([image]));
-  if (type === 'unknown') throw new AiError('wrong-type');
-  // Decode and check the size before any download: a damaged or too-large image fails at once.
-  const pixels = applyOrientation(await decode(image, type));
+  const header = await sniff(new Blob([image]));
+  if (header.type === 'unknown') throw new AiError('wrong-type');
+  // The size from the file's header first: an image too large to upscale fails before it is decoded at all.
+  if (header.width && header.height && !fitsOutput(header.width, header.height, scale)) throw new AiError('too-large');
+  // Decode and check before any download: a damaged image fails at once, not after the model arrives.
+  let pixels: Pixels;
+  try {
+    pixels = applyOrientation(await decode(image, header.type));
+  } catch (err) {
+    // Too large to even hold in memory decoded: far over the cap whatever its header said.
+    throw isOutOfMemory(err) ? new AiError('too-large') : err;
+  }
   const { width: w, height: h } = pixels;
   if (!fitsOutput(w, h, scale)) throw new AiError('too-large');
   await ready(progress);
 
+  // The small preview first, so it is never made while the full-size output is held as well.
+  const preview = await encodePreview(pixels);
+  const png = await upscalePng(pixels, scale, progress);
+  return { png, preview, width: w * scale, height: h * scale, hasAlpha: pixels.hasAlpha };
+}
+
+/** Run the tiles one at a time into one output buffer, and encode it. The buffer is dropped on return. */
+async function upscalePng(pixels: Pixels, scale: Scale, progress: Progress): Promise<ArrayBuffer> {
+  const { width: w, height: h } = pixels;
   const tiles = planTiles(w, h, TILE, OVERLAP);
   const steps = tiles.length + 1; // the tiles, then the PNG
   progress('work', 0, steps);
@@ -86,9 +103,8 @@ async function upscale({ image, scale }: UpscaleRequest, progress: Progress): Pr
     progress('work', i + 1, steps);
   }
   const png = await encodePng(out.data, w * scale, h * scale);
-  const preview = await encodePreview(pixels);
   progress('work', steps, steps);
-  return { png, preview, width: w * scale, height: h * scale, hasAlpha: pixels.hasAlpha };
+  return png;
 }
 
 /** The AiError a failure stands for: decode failures are a damaged image, memory exhaustion is the device. */

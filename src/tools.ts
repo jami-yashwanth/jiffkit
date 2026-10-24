@@ -526,7 +526,7 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
     accepts: IMAGE_ACCEPT,
     howTo: [
       'Drop a JPG, PNG or WebP image onto the page, or choose one from your device.',
-      'Choose 2× or 4×. The first time, the AI model downloads and is cached for next time.',
+      'Choose how much larger: 2×, or 4× on devices that support it. The first time, the AI model downloads and is cached for next time.',
       'Compare before and after, then download the PNG.',
     ],
     faq: [

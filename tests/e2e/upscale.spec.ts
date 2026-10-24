@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { crc32 } from 'node:zlib';
 import { PNG } from 'pngjs';
 import { expect, test, type Page } from '@playwright/test';
 import { stubPlausible } from './plausible';
@@ -51,6 +52,37 @@ async function downloadPng(page: Page) {
   const download = await downloading;
   return { name: download.suggestedFilename(), png: PNG.sync.read(readFileSync(await download.path())) };
 }
+
+/** A PNG whose header says `w` × `h` but which holds no image data: only its header can be read. */
+function pngHeaderOnly(w: number, h: number): Buffer {
+  const chunk = (type: string, data: Buffer) => {
+    const body = Buffer.concat([Buffer.from(type, 'latin1'), data]);
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([len, body, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0);
+  ihdr.writeUInt32BE(h, 4);
+  ihdr.set([8, 6, 0, 0, 0], 8); // 8-bit RGBA
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IEND', Buffer.alloc(0))]);
+}
+
+/** Record every note the working panel shows (it can pass quickly). */
+async function recordNotes(page: Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as { notes: string[] };
+    w.notes = [];
+    new MutationObserver(() => {
+      for (const n of document.querySelectorAll<HTMLElement>('[data-ai-panel] .note'))
+        if (!n.hidden && n.textContent && !w.notes.includes(n.textContent)) w.notes.push(n.textContent);
+    }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
+  });
+}
+const notes = (page: Page) => page.evaluate(() => (window as unknown as { notes: string[] }).notes);
+const SLOW = 'This can take a few minutes on this device.';
 
 const pixel = (png: PNG, x: number, y: number) => [...png.data.subarray((y * png.width + x) * 4, (y * png.width + x) * 4 + 4)];
 
@@ -110,6 +142,33 @@ test('too large at 2× says the image is too large to upscale', async ({ page })
   await page.locator('[data-kind="ai"] input[type=file]').setInputFiles(BIG);
   await expect(page.getByRole('alert').locator('.error')).toHaveText('This image is too large to upscale.');
   expect(models.requests).toBe(0);
+});
+
+test('an image whose header is too large is rejected from the header alone (never decoded, no download)', async ({ page }) => {
+  const models = await open(page);
+  // 5000 × 4000 = 20 MP: too large even at 2×. With no pixel data, decoding it would fail as a damaged file.
+  await page.locator('[data-kind="ai"] input[type=file]').setInputFiles({ name: 'huge.png', mimeType: 'image/png', buffer: pngHeaderOnly(5000, 4000) });
+  await expect(page.getByRole('alert').locator('.error')).toHaveText('This image is too large to upscale.');
+  expect(models.requests).toBe(0);
+});
+
+test('where only 2× is offered, an image over 1 MP says it can take a few minutes; not on a computer with 4×', async ({ page, context }) => {
+  await open(page, 8);
+  await recordNotes(page);
+  await run(page, PHOTO); // 1.9 MP
+  expect(await notes(page)).not.toContain(SLOW);
+
+  const phone = await context.newPage();
+  await device(phone, { memory: 8, phone: true });
+  await phone.goto('/upscale-image/');
+  await routeModels(phone, await modelBytes(phone));
+  await expect(phone.locator('[data-scale]')).toHaveAttribute('data-scales', '2');
+  await recordNotes(phone);
+  await run(phone, ROTATED); // 0.12 MP: no note
+  expect(await notes(phone)).not.toContain(SLOW);
+  await phone.getByRole('button', { name: 'Start over' }).click();
+  await run(phone, PHOTO);
+  expect(await notes(phone)).toContain(SLOW);
 });
 
 test('an orientation-6 photo comes out upright at 4×: rotated-6-4x.png, 1200×1600', async ({ page }) => {

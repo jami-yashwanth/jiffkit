@@ -15,6 +15,10 @@ interface UpscaleOut extends UpscaleResult {
   scale: Scale;
 }
 
+/** Shown while working when only 2× is offered (a phone, or little memory) and the image is over 1 MP. */
+const SLOW = 'This can take a few minutes on this device.';
+const SLOW_PIXELS = 1_000_000;
+
 /** §4 Too large, by the scale that was asked for. */
 const TOO_LARGE: Record<Scale, string> = {
   4: 'Upscaled image would be too large. Try 2×.',
@@ -44,6 +48,8 @@ export function upscaleDef(el: HTMLElement): AiToolDef<UpscaleOut> {
   const chosen = (): Scale => (el.querySelector<HTMLInputElement>('input[name=scale]:checked')?.value === '4' && !four.hidden ? 4 : 2);
   /** The scale of the run in progress, which decides the too-large copy. */
   let asked: Scale = 2;
+  /** The run in progress will be slow on this device. */
+  let slow = false;
 
   return {
     verb: 'Upscaling',
@@ -52,11 +58,8 @@ export function upscaleDef(el: HTMLElement): AiToolDef<UpscaleOut> {
     withModel: ['ortWasm'],
     inputName: 'JPG, PNG or WebP image',
     elsewhere: { heic: { href: '/heic-to-jpg/', h1: 'HEIC to JPG' } },
-    messages: {
-      get 'too-large'() {
-        return TOO_LARGE[asked];
-      },
-    },
+    messages: { 'too-large': () => TOO_LARGE[asked] },
+    workNote: () => (slow ? SLOW : undefined),
 
     ready(caps) {
       four.hidden = !offers4x(caps);
@@ -64,9 +67,10 @@ export function upscaleDef(el: HTMLElement): AiToolDef<UpscaleOut> {
       four.closest('[data-scale]')!.setAttribute('data-scales', four.hidden ? '2' : '2 4'); // decided
     },
 
-    async check(file) {
-      const { type } = await sniff(file);
+    async check(file, caps) {
+      const { type, width = 0, height = 0 } = await sniff(file);
       if (type !== 'jpg' && type !== 'png' && type !== 'webp') throw new AiError('wrong-type', type === 'unknown' ? {} : { detectedType: type });
+      slow = !offers4x(caps) && width * height > SLOW_PIXELS;
     },
 
     async run(file, _caps, onProgress, { signal }) {

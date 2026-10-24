@@ -30,8 +30,13 @@ export interface AiToolDef<Res> {
   inputName?: string;
   /** Where to send a file of a type this tool can't take: { heic: { href: '/heic-to-jpg/', h1: 'HEIC to JPG' } }. */
   elsewhere?: Record<string, { href: string; h1: string }>;
-  /** Copy for this tool's own failures (too-long, too-large, unsupported…), over the shared defaults. */
-  messages?: Partial<Record<AiFail, string>>;
+  /**
+   * Copy for this tool's own failures (too-long, too-large, unsupported…), over the shared defaults. A function is
+   * asked when the failure is shown (copy that depends on what the run was asked to do).
+   */
+  messages?: Partial<Record<AiFail, string | (() => string)>>;
+  /** A note shown under the progress while the tool works (e.g. that it will be slow), if any. */
+  workNote?(): string | undefined;
   /** Cheap checks before any download (type, length, size). Throw an AiError to stop. */
   check?(file: File, caps: Caps): Promise<void>;
   /** Do the work. Report download and work progress; reject with an AiError. */
@@ -91,8 +96,9 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
   const panelText = h('p');
   const cellularNote = h('p', { class: 'note' }, CELLULAR);
   const bar = h('progress');
+  const workNote = h('p', { class: 'note' });
   const panelBtn = h('button', { type: 'button', class: 'btn' });
-  const panel = h('div', { class: 'ai-panel', 'data-ai-panel': '' }, panelText, cellularNote, bar, panelBtn);
+  const panel = h('div', { class: 'ai-panel', 'data-ai-panel': '' }, panelText, cellularNote, bar, workNote, panelBtn);
   const alertText = h('p', { class: 'error' });
   const alertLink = h('a', { class: 'link' });
   const retryBtn = h('button', { type: 'button', class: 'btn' }, 'Try again');
@@ -141,6 +147,7 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
   function showPanel(text: string, button: { label: string; action: () => void } | null, progress?: { value: number; max: number }) {
     panelText.textContent = text;
     cellularNote.hidden = true;
+    workNote.hidden = true;
     bar.hidden = !progress;
     if (progress) {
       bar.max = progress.max;
@@ -169,11 +176,15 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
   }
   function showWorking(pct: number): void {
     showPanel(`${def.verb}… ${pct}%`, null, { value: pct, max: 100 });
+    const note = def.workNote?.();
+    workNote.textContent = note ?? '';
+    workNote.hidden = !note;
   }
 
   function fail(reason: AiFail, detectedType?: string, retry?: () => void): void {
     failed(reason);
-    let text = def.messages?.[reason] ?? COPY[reason];
+    const custom = def.messages?.[reason];
+    let text = typeof custom === 'function' ? custom() : (custom ?? COPY[reason]);
     alertLink.hidden = true;
     if (reason === 'wrong-type' && def.inputName) {
       const shown = detectedType && (TYPE_NAMES[detectedType] ?? detectedType.toUpperCase());
