@@ -242,6 +242,15 @@ describe('site', () => {
     expect(h).toContain('Permission to use, copy, modify, and/or distribute'); // tslib 0BSD
   });
 
+  it('licences page lists pdf.js with its version-tagged source and licence text', () => {
+    const h = html('licenses/');
+    const v = JSON.parse(readFileSync('node_modules/pdfjs-dist/package.json', 'utf8')).version;
+    expect(h).toMatch(/<strong[^>]*>pdf\.js \(pdfjs-dist\)<\/strong>/);
+    expect(h).toContain(`mozilla/pdf.js/tree/v${v}`);
+    expect(h).toContain('Apache License'); // its LICENSE text
+    expect(h).toContain('Liberation font licence'); // the bundled font licences are listed too
+  });
+
   it('licences page description covers all the tools', () => {
     expect(html('licenses/')).not.toContain('these image tools');
   });
@@ -270,6 +279,14 @@ describe('site', () => {
     expect(worker, 'PDF worker chunk importing pdf-lib').toBeDefined();
     const bytes = [lib!, worker!].reduce((n, f) => n + gzipSync(readFileSync(`dist/_astro/${f}`)).length, 0);
     const shown = `${(bytes / 1e6).toFixed(1)} MB`;
-    for (const slug of ['merge-pdf', 'split-pdf']) expect(html(`${slug}/`)).toContain(`data-codec-size="${shown}"`);
+    for (const slug of ['merge-pdf', 'split-pdf', 'jpg-to-pdf']) expect(html(`${slug}/`)).toContain(`data-codec-size="${shown}"`);
+  });
+
+  it('PDF to JPG shows the measured gzip size of its worker and the two pdf.js modules', () => {
+    const astro = readdirSync('dist/_astro');
+    const parts = astro.filter((f) => /^raster-worker-[^/]*\.js$/.test(f) || (/^pdf(\.worker)?-[\w-]+\.js$/.test(f) && !f.startsWith('pdf-lib-')));
+    expect(parts, 'raster worker, pdf.js and pdf.js parser chunks').toHaveLength(3);
+    const bytes = parts.reduce((n, f) => n + gzipSync(readFileSync(`dist/_astro/${f}`)).length, 0);
+    expect(html('pdf-to-jpg/')).toContain(`data-codec-size="${(bytes / 1e6).toFixed(1)} MB"`);
   });
 });

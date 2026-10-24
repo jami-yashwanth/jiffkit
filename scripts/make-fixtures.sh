@@ -51,6 +51,10 @@ base 1600 1200 "$TMP/photo.png"
 magick "$TMP/photo.png" -quality 85 "$OUT/photo.jpg"
 exiftool -q -overwrite_original "${GPS[@]}" "$OUT/photo.jpg"
 
+# A 400 x 300 JPEG whose EXIF Orientation says "rotate 90": it should read as 300 x 400 once upright.
+magick -size 400x300 gradient:'#ff7a18-#2b5876' -quality 85 "$OUT/rotated-6.jpg"
+exiftool -q -overwrite_original -n -Orientation=6 "$OUT/rotated-6.jpg"
+
 magick -size 9000x7000 gradient:'#ff7a18-#2b5876' -quality 60 "$OUT/huge-63mp.jpg"
 
 # --- WebP ---

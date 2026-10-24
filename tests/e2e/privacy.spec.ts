@@ -216,6 +216,51 @@ test.describe('PDF tools', () => {
   });
 });
 
+test.describe('PDF image tools', () => {
+  const needles = [Buffer.from('three-pages'), Buffer.from(pdfHead('three-pages.pdf'))];
+
+  test('pdf to jpg: one convert_success {pdf-to-jpg, count: 3}, nothing else leaves the device', async ({ page }, info) => {
+    const { events, requests } = await watch(page);
+    await page.goto('/pdf-to-jpg/');
+    await page.locator('[data-kind="pdf"] input[type=file]').setInputFiles(pdf('three-pages.pdf'));
+    await expect(page.getByText('3 pages', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Convert', exact: true }).click();
+    await expect(page.getByText('3 files', { exact: true })).toBeVisible();
+    await expect.poll(() => events.length).toBe(1);
+    await settle(page);
+    expect(events.map((e) => [e.n, e.p])).toEqual([['convert_success', { tool: 'pdf-to-jpg', count: 3 }]]);
+    expect(requests.some((r) => /pdf\.worker/.test(r.url))).toBe(true); // pdf.js really loaded: the check isn't vacuous
+    expectOnlyAllowedProps(events);
+    expectClean(requests, needles, info.project.use.baseURL);
+  });
+
+  test('jpg to pdf: one convert_success {jpg-to-pdf, count: 1}, nothing else leaves the device', async ({ page }, info) => {
+    const { events, requests } = await watch(page);
+    await page.goto('/jpg-to-pdf/');
+    await page.locator('[data-kind="pdf"] input[type=file]').setInputFiles(['tests/fixtures/photo.jpg', 'tests/fixtures/alpha.png']);
+    await expect(page.locator('[data-rows] > li').last()).toContainText('200 × 150 px');
+    await page.getByRole('button', { name: 'Create PDF', exact: true }).click();
+    await expect(page.getByText('images.pdf', { exact: true })).toBeVisible();
+    await expect.poll(() => events.length).toBe(1);
+    await settle(page);
+    expect(events.map((e) => [e.n, e.p])).toEqual([['convert_success', { tool: 'jpg-to-pdf', count: 1 }]]);
+    expectOnlyAllowedProps(events);
+    expectClean(requests, [Buffer.from('photo.jpg'), Buffer.from('alpha.png')], info.project.use.baseURL);
+  });
+
+  test('an encrypted PDF in PDF to JPG: convert_error {pdf-to-jpg, encrypted}', async ({ page }, info) => {
+    const { events, requests } = await watch(page);
+    await page.goto('/pdf-to-jpg/');
+    await page.locator('[data-kind="pdf"] input[type=file]').setInputFiles(pdf('encrypted.pdf'));
+    await expect(page.getByText('This PDF is password-protected. Remove the password and try again.')).toBeVisible();
+    await expect.poll(() => events.length).toBe(1);
+    await settle(page);
+    expect(events.map((e) => [e.n, e.p])).toEqual([['convert_error', { tool: 'pdf-to-jpg', reason: 'encrypted' }]]);
+    expectOnlyAllowedProps(events);
+    expectClean(requests, [...needles, Buffer.from('encrypted.pdf')], info.project.use.baseURL);
+  });
+});
+
 test.describe('text and QR tools: tool_used once, on the first Copy or Download', () => {
   test.beforeEach(({ context, browserName }) => {
     if (browserName === 'chromium') return context.grantPermissions(['clipboard-read', 'clipboard-write']);

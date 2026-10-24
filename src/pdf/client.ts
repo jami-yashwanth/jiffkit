@@ -1,5 +1,5 @@
 import { PdfError } from './ops';
-import type { PdfOut, PdfRequest, PdfResponse, SplitMode } from './types';
+import type { ImageFormat, ImageIn, PageSize, PdfOut, PdfRequest, PdfResponse, RasterOut, SplitMode } from './types';
 
 export interface PdfEngine {
   /** Load pdf-lib in the worker ahead of the first real job. Rejects with codec-load if it can't. */
@@ -7,6 +7,10 @@ export interface PdfEngine {
   count(id: string, file: File): Promise<number>;
   merge(files: File[]): Promise<PdfOut>;
   split(file: File, mode: SplitMode): Promise<PdfOut[]>;
+  /** PDF to JPG/PNG (the raster worker only): one image per page. */
+  rasterize(file: File, format: ImageFormat, dpi: 150 | 300): Promise<RasterOut>;
+  /** JPG to PDF (the PDF worker only): one page per image, in order. */
+  images(images: ImageIn[], size: PageSize): Promise<PdfOut>;
 }
 
 const defaultWorkerFactory = (): Worker => new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
@@ -20,7 +24,9 @@ interface Pending {
 
 const read = (file: File) => file.arrayBuffer();
 
-/** Main-thread wrapper around the PDF worker. Runs jobs strictly one at a time, in order; rejections are PdfError. */
+export const rasterWorkerFactory = (): Worker => new Worker(new URL('./raster-worker.ts', import.meta.url), { type: 'module' });
+
+/** Main-thread wrapper around a PDF worker (worker.ts, or raster-worker.ts for PDF to JPG). Runs jobs strictly one at a time, in order; rejections are PdfError. */
 export function createPdfEngine(workerFactory: () => Worker = defaultWorkerFactory): PdfEngine {
   const queue: Pending[] = [];
   let inFlight: Pending | null = null;
@@ -131,6 +137,21 @@ export function createPdfEngine(workerFactory: () => Worker = defaultWorkerFacto
         const bytes = await read(file);
         return { message: { kind: 'job', id, op: 'split', bytes, base, mode }, transfer: [bytes] };
       });
+    },
+    rasterize(file, format, dpi) {
+      const id = jobId('raster');
+      const base = file.name.replace(/\.pdf$/i, '') || 'document';
+      return enqueue(id, async () => {
+        const bytes = await read(file);
+        return { message: { kind: 'job', id, op: 'rasterize', bytes, base, format, dpi }, transfer: [bytes] };
+      });
+    },
+    images(images, size) {
+      const id = jobId('images');
+      return enqueue(id, async () => ({
+        message: { kind: 'job', id, op: 'images', images, size },
+        transfer: images.map((i) => i.bytes),
+      }));
     },
   };
 }
