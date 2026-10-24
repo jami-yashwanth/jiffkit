@@ -67,7 +67,7 @@ for (const vp of VIEWPORTS) {
       await page.locator('#filter').fill('pdf');
       await expect(page.locator('.category:not([hidden])')).toHaveCount(1);
       await shot(page, 'home-filtered');
-      await page.locator('#filter').fill('gif');
+      await page.locator('#filter').fill('zzzz');
       await expect(page.locator('#no-match')).toBeVisible();
       await shot(page, 'home-no-match');
     });

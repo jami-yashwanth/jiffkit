@@ -1,0 +1,34 @@
+---
+import type { AiTool } from '../tools';
+
+interface Props { tool: AiTool }
+const { tool } = Astro.props;
+// Spec §4 empty states. The island (src/ui/ai.ts) takes over in a later task.
+const COPY = {
+  bg: { title: 'Drop a photo here', choose: 'Choose photo', noun: 'photos' },
+  ocr: { title: 'Drop an image with text', choose: 'Choose image', noun: 'images' },
+  upscale: { title: 'Drop an image', choose: 'Choose image', noun: 'images' },
+  whisper: { title: 'Drop an audio or video file', choose: 'Choose file', noun: 'files' },
+}[tool.model];
+// Approximate first-use download. Remove background uses a ~5 MB model on phones and low-memory devices.
+const MODEL_SIZE = { bg: '45 MB', ocr: '4 MB', upscale: '5 MB', whisper: '80 MB' }[tool.model];
+const MODEL_SIZE_SMALL = tool.model === 'bg' ? '5 MB' : undefined;
+---
+<div
+  data-kind="ai"
+  data-tool={tool.slug}
+  data-model={tool.model}
+  data-model-size={MODEL_SIZE}
+  {...(MODEL_SIZE_SMALL ? { 'data-model-size-small': MODEL_SIZE_SMALL } : {})}
+>
+  <div class="drop">
+    <p class="drop-title">{COPY.title}</p>
+    <label class="btn">
+      {COPY.choose}
+      <input type="file" accept={tool.accepts} />
+    </label>
+    <p class="privacy">Runs on your device with on-device AI. Your {COPY.noun} are never uploaded.</p>
+  </div>
+  <p class="status" role="status" aria-live="polite" data-status></p>
+  <div data-results></div>
+</div>

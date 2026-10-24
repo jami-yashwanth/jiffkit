@@ -20,6 +20,26 @@ beforeAll(() => {
 const COPY = {
   'merge-pdf': ['Drop PDF files here', 'Choose PDFs', 'Merged on your device. Your files are never uploaded.'],
   'split-pdf': ['Drop a PDF here', 'Choose PDF', 'Split on your device. Your files are never uploaded.'],
+  'remove-background': [
+    'Drop a photo here',
+    'Choose photo',
+    'Runs on your device with on-device AI. Your photos are never uploaded.',
+  ],
+  'image-to-text': [
+    'Drop an image with text',
+    'Choose image',
+    'Runs on your device with on-device AI. Your images are never uploaded.',
+  ],
+  'upscale-image': ['Drop an image', 'Choose image', 'Runs on your device with on-device AI. Your images are never uploaded.'],
+  'transcribe-audio': [
+    'Drop an audio or video file',
+    'Choose file',
+    'Runs on your device with on-device AI. Your files are never uploaded.',
+  ],
+  'pdf-to-jpg': ['Drop a PDF here', 'Choose PDF', 'Converted on your device. Your PDFs are never uploaded.'],
+  'jpg-to-pdf': ['Drop images here', 'Choose images', 'Converted on your device. Your images are never uploaded.'],
+  'compress-video': ['Drop a video here', 'Choose video', 'Converted on your device. Your videos are never uploaded.'],
+  'video-to-gif': ['Drop a video here', 'Choose video', 'Converted on your device. Your videos are never uploaded.'],
   'json-formatter': ['placeholder="Paste JSON here"', '>Format<', '>Minify<', '>Copy<', 'Options', '2 spaces', '4 spaces', 'Tab'],
   'base64-encode-decode': ['>Text<', '>Base64<', 'URL-safe'],
   'jwt-decoder': [
@@ -80,13 +100,30 @@ describe.each(TOOLS)('tool page $slug', (tool) => {
     }
     expect(h).toMatch(new RegExp(`<div[^>]*data-kind="${tool.kind}"[^>]*data-tool="${tool.slug}"`));
     for (const copy of COPY[tool.slug as keyof typeof COPY]) expect(h, copy).toContain(copy);
+    const statusAndResults = () => {
+      expect(h).toMatch(/<[^>]*role="status"[^>]*aria-live="polite"[^>]*data-status|<[^>]*data-status[^>]*role="status"/);
+      expect(h).toContain('data-results');
+    };
     if (tool.kind === 'pdf') {
       expect(h).toContain(`data-op="${tool.op}"`);
-      expect(h).toMatch(/<input[^>]*type="file"[^>]*accept="application\/pdf,\.pdf"/);
-      expect(/<input[^>]*type="file"[^>]*multiple/.test(h)).toBe(tool.op === 'merge');
-      expect(h).toContain('data-results');
-      expect(h).toContain('data-status');
+      const accept = tool.op === 'from-images' ? /accept="[^"]*image\/jpeg[^"]*image\/heic[^"]*"/ : /accept="application\/pdf,\.pdf"/;
+      expect(h).toMatch(new RegExp(`<input[^>]*type="file"[^>]*${accept.source}`));
+      expect(/<input[^>]*type="file"[^>]*multiple/.test(h)).toBe(tool.op === 'merge' || tool.op === 'from-images');
+      statusAndResults();
     }
+    if (tool.kind === 'ai') {
+      expect(h).toMatch(new RegExp(`data-kind="ai"[^>]*data-model="${tool.model}"[^>]*data-model-size="[^"]+"`));
+      expect(h).toContain(`accept="${tool.accepts}"`);
+      expect(/<input[^>]*type="file"[^>]*multiple/.test(h)).toBe(false);
+      statusAndResults();
+    }
+    if (tool.kind === 'video') {
+      expect(h).toContain(`data-op="${tool.op}"`);
+      expect(h).toMatch(/<input[^>]*type="file"[^>]*accept="[^"]*video\/mp4[^"]*"/);
+      expect(/<input[^>]*type="file"[^>]*multiple/.test(h)).toBe(false);
+      statusAndResults();
+    }
+    expect(h).not.toMatch(/\b(multiple|disabled|hidden|checked)="(false|undefined)"/);
     if (tool.kind === 'text') expect(h).toContain(`data-transform="${tool.transform}"`);
   });
 
@@ -118,9 +155,9 @@ describe('site', () => {
     expect(h).toContain('type="search"');
   });
 
-  it('homepage groups tools under 4 category headings in order', () => {
+  it('homepage groups tools under 6 category headings in order', () => {
     const h = html('');
-    const order: Category[] = ['image', 'pdf', 'developer', 'qr'];
+    const order: Category[] = ['image', 'pdf', 'ai', 'video', 'developer', 'qr'];
     const heads = [...h.matchAll(/<h2[^>]*>([^<]*)<\/h2>/g)].map((m) => m[1]);
     expect(heads).toEqual(order.map((c) => CATEGORY_LABEL[c]));
     const pos = (needle: string) => h.indexOf(needle);
@@ -199,7 +236,7 @@ describe('site', () => {
   it('sitemap lists all 9 tool pages', () => {
     const xml = readFileSync('dist/sitemap-0.xml', 'utf8');
     for (const t of TOOLS) expect(xml).toContain(`<loc>${SITE}/${t.slug}/</loc>`);
-    expect(TOOLS).toHaveLength(9);
+    expect(TOOLS).toHaveLength(17);
   });
 
   it('has sitemap index and robots.txt', () => {

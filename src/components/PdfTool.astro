@@ -4,25 +4,41 @@ import type { PdfTool } from '../tools';
 interface Props { tool: PdfTool }
 const { tool } = Astro.props;
 const merge = tool.op === 'merge';
-// Spec §4 empty states. The island (src/ui/pdf.ts) takes over as files arrive.
-const title = merge ? 'Drop PDF files here' : 'Drop a PDF here';
-const choose = merge ? 'Choose PDFs' : 'Choose PDF';
-const privacy = merge
-  ? 'Merged on your device. Your files are never uploaded.'
-  : 'Split on your device. Your files are never uploaded.';
+// Merge and split are driven by src/ui/pdf.ts. The two image ops (to-images, from-images) are static shells until
+// their island (src/ui/pdf-images.ts) lands.
+const imageOp = tool.op === 'to-images' || tool.op === 'from-images';
+const fromImages = tool.op === 'from-images';
+// Spec §4 empty states.
+const title = { merge: 'Drop PDF files here', split: 'Drop a PDF here', 'to-images': 'Drop a PDF here', 'from-images': 'Drop images here' }[tool.op];
+const choose = { merge: 'Choose PDFs', split: 'Choose PDF', 'to-images': 'Choose PDF', 'from-images': 'Choose images' }[tool.op];
+const privacy = {
+  merge: 'Merged on your device. Your files are never uploaded.',
+  split: 'Split on your device. Your files are never uploaded.',
+  'to-images': 'Converted on your device. Your PDFs are never uploaded.',
+  'from-images': 'Converted on your device. Your images are never uploaded.',
+}[tool.op];
+const accept = fromImages
+  ? '.jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif'
+  : 'application/pdf,.pdf';
 // Gzipped size of the PDF worker and the pdf-lib chunk it loads on first use: measured from the build
 // (tests/unit/build-output.test.ts checks it still matches).
 const ENGINE_SIZE = '0.2 MB';
 ---
-<div data-kind="pdf" data-tool={tool.slug} data-op={tool.op} data-codec-size={ENGINE_SIZE}>
+<div data-kind="pdf" data-tool={tool.slug} data-op={tool.op} {...(imageOp ? {} : { 'data-codec-size': ENGINE_SIZE })}>
   <div class="drop">
     <p class="drop-title">{title}</p>
     <label class="btn">
       {choose}
-      <input type="file" accept="application/pdf,.pdf" {...(merge ? { multiple: true } : {})} />
+      <input type="file" accept={accept} {...(merge || fromImages ? { multiple: true } : {})} />
     </label>
     <p class="privacy">{privacy}</p>
   </div>
+  {imageOp ? (
+    <>
+      <p class="status" role="status" aria-live="polite" data-status></p>
+      <div data-results></div>
+    </>
+  ) : (<>
   <div class="loading" data-loading hidden>
     <p>Getting the PDF tools ready… {ENGINE_SIZE}, one time only</p>
     <progress aria-label="Getting the PDF tools ready"></progress>
@@ -72,12 +88,13 @@ const ENGINE_SIZE = '0.2 MB';
       </div>
     </div>
   </div>
+  </>)}
 </div>
 
 <script>
   import { mount } from '../ui/pdf';
   const el = document.querySelector<HTMLElement>('[data-kind="pdf"]');
-  if (el) {
+  if (el && (el.dataset.op === 'merge' || el.dataset.op === 'split')) {
     mount(el);
   }
 </script>
