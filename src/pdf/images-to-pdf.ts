@@ -1,4 +1,5 @@
 import { loadLib, PdfError } from './ops';
+import { stripJpegMetadata } from './strip-jpeg';
 import type { PageSize } from './types';
 
 export interface PdfImage {
@@ -37,7 +38,10 @@ export function layout(imageWidth: number, imageHeight: number, size: PageSize):
   return { pageWidth, pageHeight, x: (pageWidth - width) / 2, y: (pageHeight - height) / 2, width, height };
 }
 
-/** One page per image, in the order given. JPEG and PNG bytes are embedded as they are, not re-encoded. */
+/**
+ * One page per image, in the order given. JPEG and PNG bytes are embedded as they are, not re-encoded; a JPEG loses
+ * its metadata segments first (EXIF with its GPS, XMP, IPTC: see strip-jpeg.ts), losslessly.
+ */
 export async function imagesToPdf(images: PdfImage[], size: PageSize): Promise<{ bytes: Uint8Array; pages: number }> {
   if (!images.length) throw new PdfError('corrupt'); // never produce an empty PDF
   const L = await loadLib();
@@ -46,7 +50,7 @@ export async function imagesToPdf(images: PdfImage[], size: PageSize): Promise<{
     for (const [i, img] of images.entries()) {
       let embedded;
       try {
-        embedded = img.kind === 'jpg' ? await doc.embedJpg(img.bytes) : await doc.embedPng(img.bytes);
+        embedded = img.kind === 'jpg' ? await doc.embedJpg(stripJpegMetadata(img.bytes)) : await doc.embedPng(img.bytes);
       } catch {
         throw new PdfError('corrupt', i);
       }
