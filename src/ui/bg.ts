@@ -1,7 +1,6 @@
-import { AiError } from '../ai/errors';
 import { bgEngine, type BgResult } from '../ai/bg/engine';
 import type { Background } from '../ai/bg/compose';
-import { sniff } from '../engine/sniff';
+import { checkImageInput, IMAGE_ELSEWHERE, IMAGE_INPUT_NAME } from './image-input';
 import type { AiToolDef } from './ai';
 import { createCompare } from './compare';
 
@@ -92,12 +91,11 @@ export function bgDef(): AiToolDef<BgOut> {
     modelKey: 'bg',
     // The runtime's 14 MB .wasm downloads with the model on first use; it counts towards the size shown.
     withModel: ['ortWasm'],
-    inputName: 'JPG, PNG or WebP image',
-    elsewhere: { heic: { href: '/heic-to-jpg/', h1: 'HEIC to JPG' } },
+    inputName: IMAGE_INPUT_NAME,
+    elsewhere: IMAGE_ELSEWHERE,
 
     async check(file) {
-      const { type } = await sniff(file);
-      if (type !== 'jpg' && type !== 'png' && type !== 'webp') throw new AiError('wrong-type', type === 'unknown' ? {} : { detectedType: type });
+      await checkImageInput(file);
     },
 
     async run(file, _caps, onProgress, { signal }) {

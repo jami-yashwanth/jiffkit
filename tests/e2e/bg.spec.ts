@@ -117,3 +117,12 @@ test('Start over revokes the result’s object URLs', async ({ page }) => {
   const revoked = await page.evaluate(() => (window as unknown as { revoked: string[] }).revoked);
   for (const u of urls) expect(revoked).toContain(u);
 });
+
+test('a PDF is a wrong type, with a way to PDF to JPG; nothing downloads', async ({ page }) => {
+  const models = await open(page);
+  await page.locator('[data-kind="ai"] input[type=file]').setInputFiles('tests/fixtures/pdf/two-pages.pdf');
+  const alert = page.getByRole('alert');
+  await expect(alert.getByText('This is a PDF, not a JPG, PNG or WebP image.', { exact: true })).toBeVisible();
+  await expect(alert.getByRole('link', { name: 'Try PDF to JPG →' })).toHaveAttribute('href', '/pdf-to-jpg/');
+  expect(models.requests).toBe(0);
+});

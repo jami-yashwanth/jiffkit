@@ -426,7 +426,7 @@ test.describe('AI tools: analytics', () => {
     const { events, requests } = await watch(page);
     await page.goto('/remove-background/');
     await aiInput(page).setInputFiles(pdf('two-pages.pdf'));
-    await expect(page.getByText("This isn't a JPG, PNG or WebP image.", { exact: true })).toBeVisible();
+    await expect(page.getByText('This is a PDF, not a JPG, PNG or WebP image.', { exact: true })).toBeVisible();
     await expect.poll(() => events.length).toBe(1);
     await settle(page);
     expect(only(events)).toEqual([['convert_error', { tool: 'remove-background', reason: 'wrong-type' }]]);

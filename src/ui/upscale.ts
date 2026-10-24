@@ -1,8 +1,7 @@
 import type { Caps } from '../ai/capability';
-import { AiError } from '../ai/errors';
 import { upscaleEngine, type UpscaleResult } from '../ai/upscale/engine';
 import type { Scale } from '../ai/upscale/tiles';
-import { sniff } from '../engine/sniff';
+import { checkImageInput, IMAGE_ELSEWHERE, IMAGE_INPUT_NAME } from './image-input';
 import type { AiToolDef } from './ai';
 import { createCompare } from './compare';
 
@@ -57,8 +56,8 @@ export function upscaleDef(el: HTMLElement): AiToolDef<UpscaleOut> {
     // The runtime's 14 MB .wasm downloads with the model on first use; it counts towards the size shown.
     withModel: ['ortWasm'],
     cancelWork: true, // a big image can take minutes
-    inputName: 'JPG, PNG or WebP image',
-    elsewhere: { heic: { href: '/heic-to-jpg/', h1: 'HEIC to JPG' } },
+    inputName: IMAGE_INPUT_NAME,
+    elsewhere: IMAGE_ELSEWHERE,
     messages: { 'too-large': () => TOO_LARGE[asked] },
     workNote: () => (slow ? SLOW : undefined),
 
@@ -69,8 +68,7 @@ export function upscaleDef(el: HTMLElement): AiToolDef<UpscaleOut> {
     },
 
     async check(file, caps) {
-      const { type, width = 0, height = 0 } = await sniff(file);
-      if (type !== 'jpg' && type !== 'png' && type !== 'webp') throw new AiError('wrong-type', type === 'unknown' ? {} : { detectedType: type });
+      const { width = 0, height = 0 } = await checkImageInput(file);
       slow = !offers4x(caps) && width * height > SLOW_PIXELS;
     },
 

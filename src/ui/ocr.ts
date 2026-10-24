@@ -1,6 +1,5 @@
-import { AiError } from '../ai/errors';
 import { recognise } from '../ai/ocr/engine';
-import { sniff } from '../engine/sniff';
+import { checkImageInput, IMAGE_ELSEWHERE, IMAGE_INPUT_NAME } from './image-input';
 import { copyText } from './clipboard';
 import type { AiToolDef } from './ai';
 
@@ -20,11 +19,6 @@ interface OcrOut {
 
 const baseName = (name: string): string => name.replace(/\.[^./\\]*$/, '').trim() || 'text';
 
-/** A PDF is the one wrong type worth recognising by name: sniff() only knows images. */
-async function isPdf(file: Blob): Promise<boolean> {
-  return new TextDecoder().decode(await file.slice(0, 5).arrayBuffer()) === '%PDF-';
-}
-
 function h<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, string> = {}, ...kids: (Node | string)[]) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(props)) el.setAttribute(k, v);
@@ -37,17 +31,12 @@ export function ocrDef(): AiToolDef<OcrOut> {
     verb: 'Reading text',
     modelKey: 'tessdata',
     cancelWork: true, // a large page can take a while on a slow device
-    inputName: 'JPG, PNG or WebP image',
-    elsewhere: {
-      heic: { href: '/heic-to-jpg/', h1: 'HEIC to JPG' },
-      pdf: { href: '/pdf-to-jpg/', h1: 'PDF to JPG' },
-    },
+    inputName: IMAGE_INPUT_NAME,
+    elsewhere: IMAGE_ELSEWHERE,
     messages: { corrupt: "We couldn't read this image. It may be damaged or incomplete." },
 
     async check(file) {
-      if (await isPdf(file)) throw new AiError('wrong-type', { detectedType: 'pdf' });
-      const { type } = await sniff(file);
-      if (type !== 'jpg' && type !== 'png' && type !== 'webp') throw new AiError('wrong-type', type === 'unknown' ? {} : { detectedType: type });
+      await checkImageInput(file);
     },
 
     async run(file, _caps, onProgress, { signal }) {
