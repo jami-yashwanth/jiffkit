@@ -1,7 +1,9 @@
 name: CI
 
 on:
+  # main on push; every other branch through its PR, so a PR branch runs once, not twice.
   push:
+    branches: [main]
   pull_request:
 
 permissions:
