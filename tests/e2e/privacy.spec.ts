@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page, type Request } from '@playwright/test';
 import { stubPlausible, PLAUSIBLE_STUB, type PlausibleEvent } from './plausible';
 import { modelBytes, routeModels } from './models';
+import { WHISPER_FILES, WHISPER_GPU_FILES } from '../../src/ai/whisper/files';
 
 // The privacy promise, checked on the wire: during a real 3-file conversion plus a ZIP download, nothing
 // leaves the device except same-origin GETs for our own assets and Plausible's tiny event beacons.
@@ -362,5 +363,30 @@ test.describe('AI tools', () => {
     expect(model).toHaveLength(1); // the check isn't vacuous
     expect(model[0]!.url).not.toContain('?'); // no query string at all
     expectClean(requests, [Buffer.from('photo.jpg'), Buffer.from(head64('photo.jpg'))], info.project.use.baseURL);
+  });
+
+  test('transcribe audio (stub inference): only the model files leave the page, as bare GETs; no transcript anywhere', async ({ page }, info) => {
+    const { requests, events } = await watch(page);
+    const sizes = { ...WHISPER_FILES, ...WHISPER_GPU_FILES };
+    await page.addInitScript(() => Object.defineProperty(navigator, 'gpu', { value: undefined })); // the WebAssembly set
+    await page.goto('/transcribe-audio/');
+    const models = await routeModels(page, (url) => {
+      const name = Object.keys(sizes).find((f) => url.endsWith(`/${f}`));
+      return name ? sizes[name]!.bytes : 0;
+    });
+    await page.locator('[data-kind="ai"] input[type=file]').setInputFiles('tests/fixtures/audio/hello.wav');
+    await page.getByRole('button', { name: 'Download and start' }).click();
+    await expect(page.getByRole('textbox', { name: 'Transcript' })).toHaveValue('This is a test transcript.');
+    await settle(page);
+    const model = requests.filter((r) => isModel(r.url));
+    expect(model).toHaveLength(Object.keys(WHISPER_FILES).length); // the check isn't vacuous
+    expect(models.requests).toBe(model.length);
+    for (const r of model) expect(r.url, r.url).not.toContain('?'); // no query string at all
+    expectClean(
+      requests,
+      [Buffer.from('hello.wav'), Buffer.from(head64('audio/hello.wav').subarray(44)), Buffer.from('test transcript')],
+      info.project.use.baseURL,
+    );
+    expectOnlyAllowedProps(events);
   });
 });

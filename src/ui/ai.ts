@@ -1,6 +1,6 @@
 import { detect, type Caps } from '../ai/capability';
 import type { AiProgress } from '../ai/client';
-import { CONSENT_BYTES, MODELS, megabytes, modelUrl, type ModelKey } from '../ai/config';
+import { CONSENT_BYTES, megabytes, modelFiles, type ModelKey } from '../ai/config';
 import { AiError, reasonOf, type AiFail } from '../ai/errors';
 import { evictModel, isCached } from '../ai/loader';
 
@@ -14,6 +14,8 @@ export interface AiRunContext {
   signal: AbortSignal;
   /** The model this run uses (from `modelKey`), if any. */
   modelKey?: ModelKey;
+  /** Shown under the progress while the tool works, for output that comes as it goes (Transcribe: the transcript). */
+  live: HTMLElement;
 }
 
 export interface AiToolDef<Res> {
@@ -25,7 +27,11 @@ export interface AiToolDef<Res> {
    * Files downloaded and cached with the model on first use (a runtime). Their sizes count towards the size shown,
    * and towards the consent threshold; the tool reports their download as part of the model's.
    */
-  withModel?: ModelKey[];
+  withModel?: ModelKey[] | ((caps: Caps) => ModelKey[]);
+  /** False when this file needs no model at all (silence has no words): no consent screen, no download. */
+  needsModel?(file: File): boolean;
+  /** Offer Cancel while working too (long jobs), not only while the model downloads. */
+  cancelWork?: boolean;
   /** Wrong-type copy: "This is a HEIC, not a <inputName>." */
   inputName?: string;
   /** Where to send a file of a type this tool can't take: { heic: { href: '/heic-to-jpg/', h1: 'HEIC to JPG' } }. */
@@ -97,8 +103,9 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
   const cellularNote = h('p', { class: 'note' }, CELLULAR);
   const bar = h('progress');
   const workNote = h('p', { class: 'note' });
+  const live = h('div', { class: 'ai-live', 'data-ai-live': '' });
   const panelBtn = h('button', { type: 'button', class: 'btn' });
-  const panel = h('div', { class: 'ai-panel', 'data-ai-panel': '' }, panelText, cellularNote, bar, workNote, panelBtn);
+  const panel = h('div', { class: 'ai-panel', 'data-ai-panel': '' }, panelText, cellularNote, bar, workNote, live, panelBtn);
   const alertText = h('p', { class: 'error' });
   const alertLink = h('a', { class: 'link' });
   const retryBtn = h('button', { type: 'button', class: 'btn' }, 'Try again');
@@ -148,6 +155,7 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
     panelText.textContent = text;
     cellularNote.hidden = true;
     workNote.hidden = true;
+    live.hidden = true;
     bar.hidden = !progress;
     if (progress) {
       bar.max = progress.max;
@@ -174,11 +182,12 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
     const text = `Downloading the AI model… ${Math.floor(done / 1e6)} of ${megabytes(total)}, one time only`;
     showPanel(text, { label: 'Cancel', action: cancel }, { value: done, max: total });
   }
-  function showWorking(pct: number): void {
-    showPanel(`${def.verb}… ${pct}%`, null, { value: pct, max: 100 });
+  function showWorking(pct: number, cancel: () => void): void {
+    showPanel(`${def.verb}… ${pct}%`, def.cancelWork ? { label: 'Cancel', action: cancel } : null, { value: pct, max: 100 });
     const note = def.workNote?.();
     workNote.textContent = note ?? '';
     workNote.hidden = !note;
+    live.hidden = false;
   }
 
   function fail(reason: AiFail, detectedType?: string, retry?: () => void): void {
@@ -188,7 +197,8 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
     alertLink.hidden = true;
     if (reason === 'wrong-type' && def.inputName) {
       const shown = detectedType && (TYPE_NAMES[detectedType] ?? detectedType.toUpperCase());
-      text = shown ? `This is a ${shown}, not a ${def.inputName}.` : `This isn't a ${def.inputName}.`;
+      const a = /^[aeiou]/i.test(def.inputName) ? 'an' : 'a';
+      text = shown ? `This is a ${shown}, not ${a} ${def.inputName}.` : `This isn't ${a} ${def.inputName}.`;
       const target = detectedType ? def.elsewhere?.[detectedType] : undefined;
       if (target) {
         alertLink.href = target.href;
@@ -216,12 +226,13 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
   });
 
   const keyFor = (c: Caps): ModelKey | undefined => (typeof def.modelKey === 'function' ? def.modelKey(c) : def.modelKey);
-  /** Bytes still to download for this model: it and the files that come with it, less what is cached. */
-  async function pendingBytes(key: ModelKey | undefined): Promise<number> {
+  /** Bytes still to download for this model: its files and the files that come with it, less what is cached. */
+  async function pendingBytes(key: ModelKey | undefined, c: Caps): Promise<number> {
     if (!key) return 0;
-    const files = [key, ...(def.withModel ?? [])];
-    const cached = await Promise.all(files.map((k) => isCached(modelUrl(k))));
-    return files.reduce((sum, k, i) => sum + (cached[i] ? 0 : MODELS[k].bytes), 0);
+    const extra = typeof def.withModel === 'function' ? def.withModel(c) : (def.withModel ?? []);
+    const files = [key, ...extra].flatMap(modelFiles);
+    const cached = await Promise.all(files.map((f) => isCached(f.url)));
+    return files.reduce((sum, f, i) => sum + (cached[i] ? 0 : f.bytes), 0);
   }
 
   /** A file was chosen or dropped: check it, then ask for consent or start. */
@@ -234,8 +245,8 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
       if (file.size === 0) throw new AiError('corrupt');
       const c = await caps();
       await def.check?.(file, c);
-      const key = keyFor(c);
-      const pending = await pendingBytes(key);
+      const key = def.needsModel?.(file) === false ? undefined : keyFor(c);
+      const pending = await pendingBytes(key, c);
       if (g !== gen) return;
       if (pending > CONSENT_BYTES) showConsent(file, key!, pending, c, true);
       else await start(file, c, key, false);
@@ -253,25 +264,28 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
     const ctrl = new AbortController();
     controller = ctrl;
     running = true;
-    const total = await pendingBytes(key);
+    const total = await pendingBytes(key, c);
     if (g !== gen) return;
+    let downloading = total > 0;
     const cancel = () => {
       if (g !== gen) return;
       abortRun();
       gen++;
       failed('cancelled');
-      if (consented && key) showConsent(file, key, total, c, true);
+      // Cancelled while downloading: back to the consent screen. Once working, the model is in: back to the start.
+      if (consented && key && downloading) showConsent(file, key, total, c, true);
       else {
         view('drop');
         say('');
         input.focus();
       }
     };
+    live.replaceChildren();
     if (total > 0) {
       showDownloading(0, total, cancel);
       say('Downloading the AI model');
     } else {
-      showWorking(0);
+      showWorking(0, cancel);
       say(`${def.verb}…`);
     }
     if (consented) panelBtn.focus(); // the consent button became Cancel: keep focus on it
@@ -282,19 +296,23 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
         // A cached model reports one (n, n): only a real download in progress shows the download state.
         if (p.done < p.total) showDownloading(p.done, p.total, cancel);
       } else {
+        downloading = false;
         const pct = p.total > 0 ? Math.min(100, Math.floor((p.done / p.total) * 100)) : 0;
         if (panelText.textContent?.startsWith(def.verb)) {
           panelText.textContent = `${def.verb}… ${pct}%`;
           bar.value = pct;
+          const note = def.workNote?.();
+          workNote.textContent = note ?? '';
+          workNote.hidden = !note;
         } else {
-          showWorking(pct);
+          showWorking(pct, cancel);
           say(`${def.verb}…`);
         }
       }
     };
 
     try {
-      const res = await def.run(file, c, onProgress, { signal: ctrl.signal, ...(key ? { modelKey: key } : {}) });
+      const res = await def.run(file, c, onProgress, { signal: ctrl.signal, live, ...(key ? { modelKey: key } : {}) });
       if (g !== gen) return;
       running = false;
       controller = null;
@@ -310,7 +328,7 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
       if (err instanceof AiError && err.badModel) {
         // The model's bytes didn't parse: drop the cached copy and treat it as a failed download, so Try again
         // fetches it afresh.
-        if (key) await evictModel(modelUrl(key));
+        if (key) await Promise.all(modelFiles(key).map((f) => evictModel(f.url)));
         if (g !== gen) return;
         return fail('network', undefined, () => void start(file, c, key, consented));
       }

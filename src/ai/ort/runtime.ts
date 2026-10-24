@@ -1,6 +1,6 @@
-import { MODELS, modelUrl, type ModelKey } from '../config';
+import { modelUrl, type ModelKey } from '../config';
 import { AiError } from '../errors';
-import { evictModel, isCached, loadModel } from '../loader';
+import { evictModel, loadModelFiles } from '../loader';
 import { createSession } from './session';
 
 // onnxruntime-web in a tool's worker (Remove background, Upscale image): download its .wasm and the tool's model
@@ -17,23 +17,8 @@ const scope = self as unknown as { location: { href: string }; crossOriginIsolat
  * one: done and total count only the files not yet cached, as the page does.
  */
 export async function loadFiles(model: ModelKey, progress: Progress): Promise<{ wasm: ArrayBuffer; model: ArrayBuffer }> {
-  const keys: ModelKey[] = ['ortWasm', model];
-  const cached = await Promise.all(keys.map((k) => isCached(modelUrl(k))));
-  const total = keys.reduce((n, k, i) => n + (cached[i] ? 0 : MODELS[k].bytes), 0);
-  let before = 0;
-  const load1 = async (i: number) => {
-    const k = keys[i]!;
-    const bytes = await loadModel(modelUrl(k), {
-      bytes: MODELS[k].bytes,
-      onProgress: (done) => {
-        if (!cached[i]) progress('download', Math.min(total, before + done), total);
-      },
-    });
-    if (!cached[i]) before += MODELS[k].bytes;
-    return bytes;
-  };
-  const wasm = await load1(0);
-  return { wasm, model: await load1(1) };
+  const files = await loadModelFiles(['ortWasm', model], (done, total) => progress('download', done, total));
+  return { wasm: files.get(modelUrl('ortWasm'))!, model: files.get(modelUrl(model))! };
 }
 
 /** Start onnxruntime on its WebAssembly backend. Its script ships with the site; the .wasm comes from loadFiles. */

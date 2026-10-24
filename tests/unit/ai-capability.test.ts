@@ -24,6 +24,7 @@ describe('detect', () => {
     stub({});
     expect(await detect()).toEqual({
       webgpu: false,
+      webgpuF16: false,
       mobile: false,
       cellular: false,
       webcodecs: { decode: false, h264Encode: false },
@@ -39,6 +40,17 @@ describe('detect', () => {
     expect((await detect()).webgpu).toBe(false);
     stub({ gpu: { requestAdapter: async () => Promise.reject(new Error('blocked')) } });
     expect((await detect()).webgpu).toBe(false);
+  });
+
+  it('a software (fallback) adapter is no WebGPU; shader-f16 is reported', async () => {
+    stub({ gpu: { requestAdapter: async () => ({ info: { isFallbackAdapter: true }, features: new Set(['shader-f16']) }) } });
+    expect(await detect()).toMatchObject({ webgpu: false, webgpuF16: false });
+    stub({ gpu: { requestAdapter: async () => ({ isFallbackAdapter: true }) } });
+    expect((await detect()).webgpu).toBe(false);
+    stub({ gpu: { requestAdapter: async () => ({ info: { isFallbackAdapter: false }, features: new Set(['shader-f16']) }) } });
+    expect(await detect()).toMatchObject({ webgpu: true, webgpuF16: true });
+    stub({ gpu: { requestAdapter: async () => ({ features: new Set() }) } });
+    expect(await detect()).toMatchObject({ webgpu: true, webgpuF16: false });
   });
 
   it('reports navigator.deviceMemory as deviceMemoryGB', async () => {

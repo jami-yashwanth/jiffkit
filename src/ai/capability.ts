@@ -2,7 +2,10 @@
 // throws reports "not available" rather than failing the tool.
 
 export interface Caps {
+  /** A hardware WebGPU adapter (a software one, such as SwiftShader, is far slower than WebAssembly: not counted). */
   webgpu: boolean;
+  /** That adapter runs 16-bit float shaders (shader-f16). */
+  webgpuF16: boolean;
   deviceMemoryGB?: number;
   mobile: boolean;
   /** On mobile data (only Chromium on Android reports this). */
@@ -10,8 +13,14 @@ export interface Caps {
   webcodecs: { decode: boolean; h264Encode: boolean };
 }
 
+interface Adapter {
+  features?: { has(name: string): boolean };
+  info?: { isFallbackAdapter?: boolean };
+  isFallbackAdapter?: boolean; // before GPUAdapterInfo had it
+}
+
 interface NavigatorExtras {
-  gpu?: { requestAdapter(): Promise<unknown> };
+  gpu?: { requestAdapter(): Promise<Adapter | null> };
   deviceMemory?: number;
   connection?: { type?: string };
   userAgentData?: { mobile?: boolean };
@@ -20,14 +29,17 @@ interface NavigatorExtras {
 /** Some drivers take seconds (or never answer) to hand out an adapter: past this, count WebGPU as absent. */
 const ADAPTER_TIMEOUT_MS = 1500;
 
-async function hasWebGpu(nav: NavigatorExtras): Promise<boolean> {
-  if (!nav.gpu) return false;
+async function webGpu(nav: NavigatorExtras): Promise<{ webgpu: boolean; webgpuF16: boolean }> {
+  const none = { webgpu: false, webgpuF16: false };
+  if (!nav.gpu) return none;
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const timeout = new Promise<null>((resolve) => (timer = setTimeout(() => resolve(null), ADAPTER_TIMEOUT_MS)));
-    return !!(await Promise.race([nav.gpu.requestAdapter(), timeout]));
+    const adapter = await Promise.race([nav.gpu.requestAdapter(), timeout]);
+    if (!adapter || adapter.info?.isFallbackAdapter || adapter.isFallbackAdapter) return none;
+    return { webgpu: true, webgpuF16: adapter.features?.has('shader-f16') === true };
   } catch {
-    return false;
+    return none;
   } finally {
     clearTimeout(timer);
   }
@@ -57,9 +69,9 @@ function isMobile(nav: Navigator & NavigatorExtras): boolean {
 
 export async function detect(): Promise<Caps> {
   const nav = navigator as Navigator & NavigatorExtras;
-  const [webgpu, h264Encode] = await Promise.all([hasWebGpu(nav), canEncodeH264()]);
+  const [gpu, h264Encode] = await Promise.all([webGpu(nav), canEncodeH264()]);
   const caps: Caps = {
-    webgpu,
+    ...gpu,
     mobile: isMobile(nav),
     cellular: nav.connection?.type === 'cellular',
     webcodecs: { decode: typeof VideoDecoder === 'function', h264Encode },

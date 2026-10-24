@@ -34,3 +34,11 @@ export function stubUpscale(input: Float32Array, w: number, h: number, scale: nu
       for (let x = 0; x < ow; x++) out[c * ow * oh + y * ow + x] = input[c * w * h + Math.floor(y / scale) * w + Math.floor(x / scale)]!;
   return out;
 }
+
+/**
+ * Transcribe audio: what the model reads in a window that has sound, over the part of it that is its own (from
+ * `start` to `end` s). (Windows of silence are not run.) Windowing, timings and the captions are the real code.
+ */
+export function stubTranscribe(start: number, end: number): { start: number; end: number; text: string } {
+  return { start, end, text: 'This is a test transcript.' };
+}

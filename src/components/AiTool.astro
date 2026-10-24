@@ -50,4 +50,5 @@ const MODEL_SIZE = megabytes(MODEL_BYTES);
   if (el?.dataset.model === 'ocr') void import('../ui/ocr').then(({ ocrDef }) => mountAi(el, ocrDef()));
   if (el?.dataset.model === 'bg') void import('../ui/bg').then(({ bgDef }) => mountAi(el, bgDef()));
   if (el?.dataset.model === 'upscale') void import('../ui/upscale').then(({ upscaleDef }) => mountAi(el, upscaleDef(el)));
+  if (el?.dataset.model === 'whisper') void import('../ui/transcribe').then(({ transcribeDef }) => mountAi(el, transcribeDef()));
 </script>

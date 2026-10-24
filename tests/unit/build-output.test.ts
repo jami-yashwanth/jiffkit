@@ -4,6 +4,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import config from '../../astro.config.mjs';
 import { MODELS } from '../../src/ai/config';
+import { WHISPER_SHA256 } from '../../src/ai/whisper/files';
 import { CATEGORY_LABEL, TOOLS, type Category } from '../../src/tools';
 
 // The same value the build used: SITE_URL or the default in astro.config.mjs.
@@ -190,6 +191,26 @@ describe('site', () => {
     expect(h).toContain('vlad-grig/realesr-general-x4v3-onnx/blob/0e95d93e454cf6b5de9bdf5a1c9e7ec340d38231/onnx/model.onnx');
     expect(h).toContain('7b10e80021ec3e0ff35017ae5022791879d93a799b2e201e1010a37510202266');
     expect(h).toContain('Copyright (c) 2021, Xintao Wang');
+  });
+
+  it('licences page lists Whisper base pinned, every file with its sha256, and Transformers.js', () => {
+    const h = html('licenses/');
+    expect(h).toContain('https://huggingface.co/Xenova/whisper-base/tree/64da57285918e20ea79ea5c88eed7197933abaa8');
+    for (const [name, sha] of Object.entries(WHISPER_SHA256)) {
+      expect(h).toContain(name);
+      expect(h).toContain(sha);
+    }
+    expect(h).toContain('Copyright (c) 2022 OpenAI');
+    expect(h).toContain('https://github.com/huggingface/transformers.js/tree/4.3.1');
+    expect(h).toContain('@huggingface/tokenizers');
+    expect(h).toContain('@huggingface/jinja');
+  });
+
+  it('ships no model and no file over the 25 MB cap: the WebGPU runtime comes from the model host', () => {
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? walk(`${dir}/${d.name}`) : [`${dir}/${d.name}`]));
+    for (const f of walk('dist')) expect(statSync(f).size, f).toBeLessThan(25 * 1024 * 1024);
+    expect(walk('dist').some((f) => /\.onnx$|asyncify[^/]*\.wasm$/.test(f))).toBe(false);
   });
 
   it('homepage links to all tools and the filter', () => {

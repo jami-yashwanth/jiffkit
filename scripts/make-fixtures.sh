@@ -101,4 +101,7 @@ exiftool -q -overwrite_original -Orientation#=6 "$OUT/ocr/hello-rotated-6.jpg"
 magick -size 900x160 xc:white -font "$FONT" -pointsize 56 -fill '#999' -gravity center -annotate 0 'The quick brown fox 12345' \
   -blur 0x2.5 -attenuate 1 +noise Gaussian "$OUT/ocr/low-confidence.png"
 
+# --- Transcribe audio (tests/fixtures/audio) ---
+node "$ROOT/scripts/make-audio-fixtures.ts" "$OUT/audio"
+
 echo "Fixtures written to $OUT"

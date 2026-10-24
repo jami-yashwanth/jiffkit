@@ -1,4 +1,4 @@
-import { MODELS, modelUrl, type ModelKey } from './config';
+import { MODELS, modelFiles, modelUrl, type ModelKey } from './config';
 import { AiError } from './errors';
 
 // Models download once and live in Cache Storage. The cache write streams alongside the download (a clone of the
@@ -150,4 +150,32 @@ export async function loadModel(url: string, { bytes, onProgress, signal }: Load
 async function settleAndDrop(put: Promise<unknown>, url: string): Promise<void> {
   await put.catch(() => {});
   await evictModel(url);
+}
+
+/**
+ * Every file of these models, in order, through loadModel (Cache Storage, progress). Their download is reported as
+ * one: done and total count only the files not yet cached, as the page counts them. Returns each file's bytes by URL.
+ */
+export async function loadModelFiles(
+  keys: ModelKey[],
+  onProgress: (done: number, total: number) => void,
+  signal?: AbortSignal,
+): Promise<Map<string, ArrayBuffer>> {
+  const files = keys.flatMap(modelFiles);
+  const cached = await Promise.all(files.map((f) => isCached(f.url)));
+  const total = files.reduce((n, f, i) => n + (cached[i] ? 0 : f.bytes), 0);
+  const out = new Map<string, ArrayBuffer>();
+  let before = 0;
+  for (const [i, f] of files.entries()) {
+    const bytes = await loadModel(f.url, {
+      bytes: f.bytes,
+      ...(signal ? { signal } : {}),
+      onProgress: (done) => {
+        if (!cached[i]) onProgress(Math.min(total, before + done), total);
+      },
+    });
+    if (!cached[i]) before += f.bytes;
+    out.set(f.url, bytes);
+  }
+  return out;
 }

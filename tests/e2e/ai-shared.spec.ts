@@ -7,8 +7,8 @@ import { clearPanelSeen, panelSeen, recordPanel } from './panel';
 
 // The shared on-device AI states (spec §4), driven on Remove background. In the E2E build (PUBLIC_AI_STUB=1) the model
 // really downloads through the shared loader (from routed bytes); only the inference is faked. Its first download (model
-// and runtime, 19 MB) is under the 20 MB consent threshold, so it starts straight away. The consent screen (models over 20 MB) is
-// tested once a tool with such a model is mounted (Transcribe, Task 7).
+// and runtime, 19 MB) is under the 20 MB consent threshold, so it starts straight away. The consent screen and the
+// mobile-data line (models over 20 MB) are tested on Transcribe audio, in whisper.spec.ts.
 
 const PHOTO = 'tests/fixtures/photo.jpg';
 const FAILED = "Couldn't download the AI model. Check your connection.";

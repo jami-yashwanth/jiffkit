@@ -8,6 +8,8 @@ export interface AiProgress {
   stage: AiStage;
   done: number;
   total: number;
+  /** Work done so far that the page can show before the job ends (Transcribe audio: the latest segments). */
+  partial?: unknown;
 }
 export type AiWorkerResponse<Res> =
   | ({ kind: 'progress'; id: string } & AiProgress)
@@ -91,7 +93,7 @@ export function createAiEngine<Req, Res>(workerFactory: () => Worker): AiEngine<
     if (!job || m.id !== job.id) return;
     if (m.kind === 'progress') {
       try {
-        job.onProgress?.({ stage: m.stage, done: m.done, total: m.total });
+        job.onProgress?.({ stage: m.stage, done: m.done, total: m.total, ...(m.partial !== undefined ? { partial: m.partial } : {}) });
       } catch (err) {
         console.error('ai: progress listener failed', err); // must never stop the queue
       }
