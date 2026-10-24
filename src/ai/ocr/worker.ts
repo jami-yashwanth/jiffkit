@@ -34,17 +34,22 @@ async function tesseractFiles(): Promise<{ workerPath: string; corePath: string 
   return { workerPath: absolute(worker.default), corePath: absolute(core.default) };
 }
 
+/** URLs whose bytes already passed assertTraineddata in this worker: a repeat job reads them without unpacking again. */
+const validated = new Set<string>();
+
 async function run(req: OcrRequest, progress: (stage: 'download' | 'work', done: number, total: number) => void): Promise<OcrResult> {
   const url = modelUrl('tessdata');
   const model = new Uint8Array(
     await loadModel(url, { bytes: MODELS.tessdata.bytes, onProgress: (done, total) => progress('download', done, total) }),
   );
   try {
-    await assertTraineddata(model);
+    if (!validated.has(url)) await assertTraineddata(model);
+    validated.add(url);
   } catch (err) {
     await evictModel(url); // a bad cache entry must not be served again
     throw err;
   }
+  progress('work', 0, 100); // core and language data take a moment to start: show 0%, not a bare verb
   // tesseract fetches `<langPath>/eng.traineddata.gz`; the fragment keeps that suffix off the blob's own name.
   const blobUrl = URL.createObjectURL(new Blob([model as BlobPart]));
   try {

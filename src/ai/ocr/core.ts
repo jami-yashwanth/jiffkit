@@ -86,11 +86,17 @@ export async function recogniseBytes(
   failed.catch(() => {});
   let coreLoaded = false;
 
+  let reported = 0;
+  const report = (pct: number) => {
+    reported = Math.max(reported, pct); // never backwards
+    onProgress?.(reported, 100);
+  };
+
   const { createWorker } = await import('tesseract.js');
   let worker: Awaited<ReturnType<typeof createWorker>> | undefined;
+  let creating: ReturnType<typeof createWorker> | undefined;
   try {
-    worker = await Promise.race([
-      createWorker('eng', 1, {
+    creating = createWorker('eng', 1, {
         ...(source.workerPath ? { workerPath: source.workerPath } : {}),
         ...(source.corePath ? { corePath: source.corePath } : {}),
         langPath: source.langPath,
@@ -98,13 +104,14 @@ export async function recogniseBytes(
         cacheMethod: 'none', // our loader is the one cache
         logger: (m) => {
           if (m.status === 'loading tesseract core' && m.progress === 1) coreLoaded = true;
-          if (m.status === 'recognizing text') onProgress?.(Math.round(m.progress * 100), 100);
+          if (m.status === 'recognizing text') report(Math.round(m.progress * 100));
         },
         errorHandler: fail,
-      }),
-      failed,
-    ]);
+      });
+    worker = await Promise.race([creating, failed]);
   } catch {
+    // If it comes up after we gave up on it, stop it: nothing else holds a reference.
+    void creating?.then((late) => late.terminate()).catch(() => {});
     // Past the core, what failed is the language data (a bad download or cache entry); before it, tesseract's own files.
     throw coreLoaded ? new AiError('network', { badModel: true }) : new AiError('network');
   }
@@ -112,7 +119,7 @@ export async function recogniseBytes(
   try {
     // tesseract's types say Buffer (Node); at run time any Uint8Array is read, in the browser and in Node.
     const { data } = await Promise.race([worker.recognize(png as Parameters<typeof worker.recognize>[0]), failed]);
-    onProgress?.(100, 100);
+    report(100);
     return { text: data.text, confidence: data.confidence };
   } catch (err) {
     if (err instanceof AiError) throw err;

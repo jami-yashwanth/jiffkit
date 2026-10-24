@@ -10,7 +10,7 @@ export type ModelKey = 'bg' | 'bgSmall' | 'upscale' | 'whisper' | 'tessdata';
  * Each model's path under MODEL_BASE, its download size in bytes (shown before the first download) and its licence.
  * Paths and sizes are provisional until the task that ships each model checks the exact file and its licence.
  */
-export const MODELS: Record<ModelKey, { path: string; bytes: number; licence: string }> = {
+export const MODELS: Record<ModelKey, { path: string; bytes: number; licence: string; sameOrigin?: true }> = {
   // U²-Net general. Verified in Task 5.
   bg: { path: 'tomjackson2023/rembg/resolve/main/u2net.onnx', bytes: 45_000_000, licence: 'Apache-2.0' },
   // u2netp, for phones and low-memory devices. Verified in Task 5.
@@ -19,11 +19,16 @@ export const MODELS: Record<ModelKey, { path: string; bytes: number; licence: st
   upscale: { path: 'xinntao/Real-ESRGAN/resolve/main/realesr-general-x4v3.onnx', bytes: 4_900_000, licence: 'BSD-3-Clause' },
   // Whisper base, quantised (a directory of files). Verified in Task 7.
   whisper: { path: 'onnx-community/whisper-base/resolve/main', bytes: 80_000_000, licence: 'MIT' },
-  // tessdata_fast `eng` 4.1.0, gzipped (the file in tests/fixtures/models/tessdata/; its sha256 is on /licenses/). Verified in Task 4.
-  tessdata: { path: 'tessdata/eng.traineddata.gz', bytes: 1_967_599, licence: 'Apache-2.0' },
+  // tessdata_fast `eng` 4.1.0, gzipped (its sha256 is on /licenses/). At 2 MB it ships with the site, from
+  // public/models/tessdata/ (a .bin name, so no server adds Content-Encoding: gzip and unpacks it in transit), so it is the one model not read from MODEL_BASE. Verified in Task 4.
+  tessdata: { path: 'models/tessdata/eng-fast.traineddata.gz.bin', bytes: 1_967_599, licence: 'Apache-2.0', sameOrigin: true },
 };
 
-export const modelUrl = (key: ModelKey): string => `${MODEL_BASE}/${MODELS[key].path}`;
+export const modelUrl = (key: ModelKey): string => {
+  const { path, sameOrigin } = MODELS[key];
+  // Absolute, because Cache Storage keys are. (No location outside a browser: unit tests, where the path stands.)
+  return sameOrigin ? `${globalThis.location?.origin ?? ''}/${path}` : `${MODEL_BASE}/${path}`;
+};
 
 /** Models above this size ask before their first download (spec §4). */
 export const CONSENT_BYTES = 20_000_000;

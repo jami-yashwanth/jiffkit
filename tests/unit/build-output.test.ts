@@ -1,8 +1,9 @@
 import { execSync } from 'node:child_process';
 import { gzipSync } from 'node:zlib';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import config from '../../astro.config.mjs';
+import { MODELS } from '../../src/ai/config';
 import { CATEGORY_LABEL, TOOLS, type Category } from '../../src/tools';
 
 // The same value the build used: SITE_URL or the default in astro.config.mjs.
@@ -159,6 +160,13 @@ describe('site', () => {
     for (const f of walk('dist').filter((f) => /\.(js|mjs|html)$/.test(f))) {
       expect(readFileSync(f, 'utf8').includes('__AI_STUB__'), f).toBe(false);
     }
+  });
+
+  it('ships the OCR language data from dist, at the size the model list says', () => {
+    expect(MODELS.tessdata.sameOrigin).toBe(true);
+    const file = `dist/${MODELS.tessdata.path}`;
+    expect(existsSync(file)).toBe(true);
+    expect(statSync(file).size).toBe(MODELS.tessdata.bytes);
   });
 
   it('AI pages show model sizes from the model list', () => {

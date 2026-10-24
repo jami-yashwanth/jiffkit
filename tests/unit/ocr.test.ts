@@ -31,6 +31,7 @@ describe('recogniseBytes (real tesseract.js, eng fast model)', () => {
     expect(text).toContain('12345');
     expect(confidence).toBeGreaterThan(70);
     expect(progress.at(-1)).toBe(1);
+    expect(progress.every((p, i) => i === 0 || p >= progress[i - 1]!)).toBe(true); // never backwards
   }, 60_000);
 
   it('applies the EXIF orientation first: a JPG stored sideways reaches tesseract upright, and still reads', async () => {

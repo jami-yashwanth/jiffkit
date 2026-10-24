@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { stubPlausible } from './plausible';
-import { modelBytes, routeModels } from './models';
 
 // Image to text, with the real tesseract.js and the real tessdata_fast `eng` model (the committed fixture, served
 // from the routed model host). Only the host is routed: the OCR itself is not stubbed.
@@ -21,8 +20,14 @@ async function open(page: Page) {
       }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
     });
   });
+  // The language data ships with the site (same origin), so no model host is routed. Count its requests.
+  const models = { requests: 0, body: undefined as Buffer | undefined };
+  await page.route('**/models/tessdata/eng-fast.traineddata.gz.bin', (route) => {
+    models.requests++;
+    return models.body ? route.fulfill({ status: 200, contentType: 'application/octet-stream', body: models.body }) : route.continue();
+  });
   await page.goto('/image-to-text/');
-  return routeModels(page, await modelBytes(page), { body: MODEL });
+  return models;
 }
 const choose = (page: Page, file: string | { name: string; mimeType: string; buffer: Buffer }) =>
   page.locator('[data-kind="ai"] input[type=file]').setInputFiles(file);
@@ -91,7 +96,7 @@ test('a damaged language file is a failed download that Try again fixes', async 
   models.body = Buffer.from('<html>Not found</html>');
   await choose(page, HELLO);
   await expect(page.getByRole('alert').getByText("Couldn't download the AI model. Check your connection.", { exact: true })).toBeVisible();
-  models.body = MODEL;
+  models.body = undefined; // the real file from the site again
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(box(page)).toHaveValue(/quick brown fox/i);
 });

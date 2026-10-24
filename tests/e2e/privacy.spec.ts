@@ -337,6 +337,19 @@ test.describe('text and QR tools: tool_used once, on the first Copy or Download'
 });
 
 test.describe('AI tools', () => {
+  test('image to text (real tesseract): the language data is our own file, nothing leaves the origin, no model host', async ({ page }, info) => {
+    const { requests } = await watch(page);
+    await page.goto('/image-to-text/');
+    await page.locator('[data-kind="ai"] input[type=file]').setInputFiles('tests/fixtures/ocr/hello.png');
+    await expect(page.getByRole('textbox', { name: 'Text' })).toHaveValue(/quick brown fox/i);
+    await settle(page);
+    const data = requests.filter((r) => r.url.endsWith('/models/tessdata/eng-fast.traineddata.gz.bin'));
+    expect(data).toHaveLength(1);
+    expect(data[0]!.origin).toBe(new URL(info.project.use.baseURL ?? 'http://localhost:4399').origin);
+    expect(requests.some((r) => isModel(r.url))).toBe(false);
+    expectClean(requests, [Buffer.from('hello.png'), Buffer.from('quick brown fox'), Buffer.from(head64('ocr/hello.png'))], info.project.use.baseURL);
+  });
+
   test('remove background (stub inference): only the model download leaves the page, as a bare GET', async ({ page }, info) => {
     const { requests } = await watch(page);
     await page.goto('/remove-background/');
