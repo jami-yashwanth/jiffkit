@@ -163,6 +163,33 @@ describe('site', () => {
     expect(h).toContain('Permission is hereby granted'); // MIT: fflate, Astro
   });
 
+  it('licences page covers pdf-lib, what its chunk bundles, and qrcode-generator', () => {
+    const h = html('licenses/');
+    const version = (n: string) => JSON.parse(readFileSync(`node_modules/${n}/package.json`, 'utf8')).version;
+    const nested = (n: string) =>
+      JSON.parse(readFileSync(`node_modules/pdf-lib/node_modules/${n}/package.json`, 'utf8')).version;
+    for (const n of ['pdf-lib', 'pako', '@pdf-lib/standard-fonts', '@pdf-lib/upng', 'tslib', 'qrcode-generator']) {
+      expect(h).toMatch(new RegExp(`<strong[^>]*>${n}</strong>`));
+    }
+    expect(h).toContain('MIT AND Zlib'); // pako
+    expect(h).toContain('0BSD'); // tslib
+    expect(h).toContain(`Hopding/pdf-lib/tree/v${version('pdf-lib')}`);
+    expect(h).toContain(`nodeca/pako/tree/${version('pako')}`);
+    expect(h).toContain(`microsoft/tslib/tree/v${nested('tslib')}`);
+    expect(h).toContain(`kazuhikoarase/qrcode-generator/tree/js${version('qrcode-generator')}`);
+    expect(h).toContain(`@pdf-lib/standard-fonts/v/${version('@pdf-lib/standard-fonts')}`);
+    expect(h).toContain(`@pdf-lib/upng/v/${version('@pdf-lib/upng')}`);
+    expect(h).toContain('Copyright (c) 2019 Andrew Dillon'); // pdf-lib
+    expect(h).toContain('Copyright (c) 2009 Kazuhiko Arase'); // qrcode-generator
+    expect(h).toContain('Copyright (c) 2017 Photopea'); // upng
+    expect(h).toContain('Jean-loup Gailly and Mark Adler'); // pako's zlib half
+    expect(h).toContain('Permission to use, copy, modify, and/or distribute'); // tslib 0BSD
+  });
+
+  it('licences page description covers all the tools', () => {
+    expect(html('licenses/')).not.toContain('these image tools');
+  });
+
   it('ships _headers caching hashed assets as immutable', () => {
     expect(readFileSync('dist/_headers', 'utf8')).toMatch(
       /^\/_astro\/\*\n\s+Cache-Control: public, max-age=31536000, immutable$/m,
