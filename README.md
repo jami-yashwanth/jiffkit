@@ -63,13 +63,13 @@ The models are not in `dist/` (Cloudflare Pages caps a file at 25 MB). Every mod
 
 Without `PUBLIC_MODEL_BASE_URL` the default host is Hugging Face, which works for development but has no WebGPU runtime: Transcribe audio then runs on WebAssembly only. For launch, host the files yourself:
 
-1. Create a Cloudflare R2 bucket and make it publicly readable (a custom domain on the bucket, or the r2.dev URL for testing). Add a CORS rule allowing `GET` from the site's origin (the pages fetch the files with `fetch`).
+1. Create a Cloudflare R2 bucket and make it publicly readable (a custom domain on the bucket, or the r2.dev URL for testing). Add a CORS rule allowing `GET` from the site's origin (the pages fetch the files with `fetch`), with `"ExposeHeaders": ["Content-Length", "Content-Encoding"]`: the loader reads `Content-Encoding` to know whether `Content-Length` is the size it will receive, and a cross-origin page can't see it unless the bucket exposes it. For example: `[{"AllowedOrigins": ["https://example.com"], "AllowedMethods": ["GET"], "ExposeHeaders": ["Content-Length", "Content-Encoding"], "MaxAgeSeconds": 86400}]`.
 2. Upload each file at the exact path below, under the bucket root. Paths are pinned to commits, so the files must be those exact revisions (their sha256 are on `/licenses/`):
    - `BritishWerewolf/U-2-Netp/resolve/7112208dbac3a3642496c8d54e2f0f9bb3dc1dc8/onnx/model.onnx` (Remove background, 4.6 MB)
    - `vlad-grig/realesr-general-x4v3-onnx/resolve/0e95d93e454cf6b5de9bdf5a1c9e7ec340d38231/onnx/model.onnx` (Upscale image, 4.9 MB)
    - `onnxruntime-web/1.30.0/ort-wasm-simd-threaded.asyncify.wasm`: a copy of `node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm` at version 1.30.0, the WebGPU runtime (27 MB, over the Pages cap)
    - `Xenova/whisper-base/resolve/64da57285918e20ea79ea5c88eed7197933abaa8/` plus each file of `src/ai/whisper/files.ts`: `config.json`, `generation_config.json`, `preprocessor_config.json`, `tokenizer.json`, `tokenizer_config.json`, and the encoder and decoder in both sets, `onnx/encoder_model_q4f16.onnx` and `onnx/decoder_model_merged_q4f16.onnx` (WebGPU) and `onnx/encoder_model_quantized.onnx` and `onnx/decoder_model_merged_quantized.onnx` (WebAssembly, for browsers without WebGPU)
-3. Set `PUBLIC_MODEL_BASE_URL` (no trailing slash) in the Cloudflare Pages environment. Setting it is also what turns on WebGPU for Transcribe audio, because only your bucket has the WebGPU runtime.
+3. Set `PUBLIC_MODEL_BASE_URL` in the Cloudflare Pages environment to an absolute `https://` URL (for example `https://models.example.com`, no trailing slash). A relative path or an `http://` URL is not supported: model URLs are built as `${PUBLIC_MODEL_BASE_URL}/<path>` and fetched from the tools' workers, and an https page can't fetch over plain http. Setting it is also what turns on WebGPU for Transcribe audio, because only your bucket has the WebGPU runtime.
 4. Run `npm run test:models` against it (below).
 
 ### Tests and the stub build
@@ -83,6 +83,8 @@ Playwright builds with `PUBLIC_AI_STUB=1` and `PUBLIC_MODEL_BASE_URL=http://loca
 - Remove background on 3 photos: writes the PNGs to `review/model-quality/` (gitignored) for you to look at. There is no automatic pass mark; open them and check the subject is kept and the edges are clean.
 - Image to text on a receipt-like image the script draws itself: word accuracy of at least 90%.
 - Transcribe audio on a clip of about 10 s of English speech: word error rate of at most 15%.
+
+`test:models` runs Whisper on WebAssembly only: Playwright's Chromium is headless and has no WebGPU adapter, so the WebGPU path (the q4f16 files and the WebGPU runtime from your bucket) is never exercised by it. Check that path by hand in a headed browser with WebGPU (desktop Chrome or Edge): transcribe a real clip on the deployed site, and confirm in DevTools (Network) that `encoder_model_q4f16.onnx` and `ort-wasm-simd-threaded.asyncify.wasm` were downloaded and that no "slow on this device" note was shown.
 
 Inputs: `MODEL_QUALITY_PHOTOS=<folder with 3+ real .jpg or .png photos>` (without it the synthetic repo fixtures are used, which only prove the pipeline runs); `MODEL_QUALITY_AUDIO=<16-bit WAV>` with `MODEL_QUALITY_AUDIO_TEXT="<its words>"` (without them, on macOS, `say` reads a fixed sentence). Example: `PUBLIC_MODEL_BASE_URL=https://models.example.com MODEL_QUALITY_PHOTOS=~/photos npm run test:models`.
 
