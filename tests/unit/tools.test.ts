@@ -83,6 +83,17 @@ describe('tool registry', () => {
     for (const s of ['compress-video', 'video-to-gif'] as const) expect(cat(s)).toBe('video');
   });
 
+  it('Transcribe FAQ states both limits: 30 minutes and 300 MB', () => {
+    const a = getTool('transcribe-audio').faq.find((f) => f.q === 'How long can the audio be?')!.a;
+    expect(a).toContain('30 minutes');
+    expect(a).toContain('300 MB');
+  });
+
+  it('Video to GIF FAQ names no limit on the video’s length (only the GIF’s 15 seconds)', () => {
+    const faq = getTool('video-to-gif').faq.map((f) => f.a).join(' ');
+    expect(faq).not.toMatch(/2 minutes|minute/);
+  });
+
   it('every AI tool FAQ states the first-use download and that it is cached', () => {
     const sizes = { bg: '5 MB', ocr: '4 MB', upscale: '5 MB', whisper: '80 MB' };
     for (const t of TOOLS) {

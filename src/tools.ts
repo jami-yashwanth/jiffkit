@@ -580,7 +580,7 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
       },
       {
         q: 'How long can the audio be?',
-        a: 'Up to 30 minutes for now. Your device does the work, so it can take about as long as the audio on slower devices. The transcript appears as it goes.',
+        a: 'Up to 30 minutes, in a file of up to 300 MB, for now. Your device does the work, so it can take about as long as the audio on slower devices. The transcript appears as it goes.',
       },
       {
         q: 'Which files and languages work?',
