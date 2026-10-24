@@ -269,6 +269,19 @@ describe('site', () => {
     expect(scripts('video-to-gif')).not.toContain('VideoCompressScript');
   });
 
+  it('each AI page loads only its own island, statically (so the page-load budget counts it)', () => {
+    const scripts = (slug: string) => [...html(`${slug}/`).matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]).join(' ');
+    const islands = { 'remove-background': 'AiBgScript', 'image-to-text': 'AiOcrScript', 'upscale-image': 'AiUpscaleScript', 'transcribe-audio': 'AiTranscribeScript' };
+    for (const [slug, own] of Object.entries(islands)) {
+      expect(scripts(slug), slug).toContain(own);
+      for (const other of Object.values(islands)) if (other !== own) expect(scripts(slug), slug).not.toContain(other);
+      // No dynamic import of a tool definition at page load: what loads is what the budget counts.
+      for (const src of scripts(slug).split(' ').filter((u) => u.includes(own))) {
+        expect(readFileSync(`dist${src}`, 'utf8'), src).not.toMatch(/import\(/);
+      }
+    }
+  });
+
   it('Compress video and Video to GIF take MP4 and MOV, not WebM, and say so', () => {
     for (const slug of ['compress-video', 'video-to-gif']) {
       const h = html(`${slug}/`);

@@ -1,6 +1,10 @@
 ---
 import type { AiTool } from '../tools';
 import { MODELS, megabytes, type ModelKey } from '../ai/config';
+import AiBgScript from './AiBgScript.astro';
+import AiOcrScript from './AiOcrScript.astro';
+import AiTranscribeScript from './AiTranscribeScript.astro';
+import AiUpscaleScript from './AiUpscaleScript.astro';
 
 interface Props { tool: AiTool }
 const { tool } = Astro.props;
@@ -43,13 +47,8 @@ const MODEL_SIZE = megabytes(MODEL_BYTES);
   <div data-results></div>
 </div>
 
-<script>
-  import { mountAi } from '../ui/ai';
-  import { trackHooks } from '../ui/track';
-  // Each tool's definition is its own chunk, imported only on that tool's page.
-  const el = document.querySelector<HTMLElement>('[data-kind="ai"]');
-  if (el?.dataset.model === 'ocr') void import('../ui/ocr').then(({ ocrDef }) => trackHooks(el.dataset.tool!, mountAi(el, ocrDef())));
-  if (el?.dataset.model === 'bg') void import('../ui/bg').then(({ bgDef }) => trackHooks(el.dataset.tool!, mountAi(el, bgDef())));
-  if (el?.dataset.model === 'upscale') void import('../ui/upscale').then(({ upscaleDef }) => trackHooks(el.dataset.tool!, mountAi(el, upscaleDef(el))));
-  if (el?.dataset.model === 'whisper') void import('../ui/transcribe').then(({ transcribeDef }) => trackHooks(el.dataset.tool!, mountAi(el, transcribeDef())));
-</script>
+{/* Each tool's island, statically imported: only that tool's script is on its page, and the budget counts it. */}
+{tool.model === 'bg' && <AiBgScript />}
+{tool.model === 'ocr' && <AiOcrScript />}
+{tool.model === 'upscale' && <AiUpscaleScript />}
+{tool.model === 'whisper' && <AiTranscribeScript />}
