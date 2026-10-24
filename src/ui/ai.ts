@@ -78,6 +78,8 @@ const COPY: Record<AiFail, string> = {
 };
 const TYPE_NAMES: Record<string, string> = { heic: 'HEIC', jpg: 'JPG', png: 'PNG', webp: 'WebP', pdf: 'PDF', gif: 'GIF' };
 const CELLULAR = 'You seem to be on mobile data.';
+/** The way back from a screen about one file (consent, a failed download, reading it): to the drop zone. */
+const OTHER_FILE = 'Choose another file';
 
 /** A failure that isn't an AiError is a bug or an unexpected browser error: shown as a damaged file, but logged. */
 function logUnexpected(err: unknown): void {
@@ -109,11 +111,28 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
   const workNote = h('p', { class: 'note' });
   const live = h('div', { class: 'ai-live', 'data-ai-live': '' });
   const panelBtn = h('button', { type: 'button', class: 'btn' });
-  const panel = h('div', { class: 'ai-panel', 'data-ai-panel': '' }, panelText, cellularNote, bar, workNote, live, panelBtn);
+  const panelOther = h('button', { type: 'button', class: 'btn btn-quiet', 'data-other-file': '' }, OTHER_FILE);
+  const panel = h(
+    'div',
+    { class: 'ai-panel', 'data-ai-panel': '' },
+    panelText,
+    cellularNote,
+    bar,
+    workNote,
+    live,
+    h('div', { class: 'actions' }, panelBtn, panelOther),
+  );
   const alertText = h('p', { class: 'error' });
   const alertLink = h('a', { class: 'link' });
   const retryBtn = h('button', { type: 'button', class: 'btn' }, 'Try again');
-  const alert = h('div', { class: 'ai-alert', role: 'alert', 'data-ai-alert': '' }, alertText, alertLink, retryBtn);
+  const alertOther = h('button', { type: 'button', class: 'btn btn-quiet', 'data-other-file': '' }, OTHER_FILE);
+  const alert = h(
+    'div',
+    { class: 'ai-alert', role: 'alert', 'data-ai-alert': '' },
+    alertText,
+    alertLink,
+    h('div', { class: 'actions' }, retryBtn, alertOther),
+  );
   const resultRoot = h('div', { 'data-ai-result': '' });
   const resetBtn = h('button', { type: 'button', class: 'btn btn-quiet' }, 'Start over');
   const done = h('div', { class: 'ai-done' }, resultRoot, h('div', { class: 'actions' }, resetBtn));
@@ -127,6 +146,8 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
   let cleanup: (() => void) | void;
   let onPanelBtn: () => void = () => {};
   let onRetry: (() => void) | null = null;
+  /** The file a consent, failed-download or reading screen is about: let go of by Choose another file. */
+  let held: File | null = null;
   let capsPromise: Promise<Caps> | undefined;
   const caps = () => (capsPromise ??= detect());
   if (def.ready) void caps().then((c) => def.ready!(c));
@@ -174,6 +195,7 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
       bar.setAttribute('aria-label', text.split('…')[0]!);
     }
     panelBtn.hidden = !button;
+    panelOther.hidden = true;
     if (button) {
       panelBtn.textContent = button.label;
       onPanelBtn = button.action;
@@ -182,9 +204,29 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
   }
   panelBtn.addEventListener('click', () => onPanelBtn());
 
+  /** Show Choose another file on the panel for `file`. */
+  function offerOther(file: File): void {
+    held = file;
+    panelOther.hidden = false;
+  }
+  /** Choose another file: stop whatever this file was waiting on, let go of it, and go back to the drop zone. */
+  function chooseAnother(): void {
+    abortRun();
+    gen++;
+    if (held) def.forget?.(held);
+    held = null;
+    alert.hidden = true;
+    view('drop');
+    say('');
+    input.focus();
+  }
+  panelOther.addEventListener('click', chooseAnother);
+  alertOther.addEventListener('click', chooseAnother);
+
   function showConsent(file: File, key: ModelKey, bytes: number, c: Caps, focus = false): void {
     const text = `This tool downloads a ${megabytes(bytes)} AI model the first time. It's cached for next time.`;
     showPanel(text, { label: 'Download and start', action: () => void start(file, c, key, true) });
+    offerOther(file);
     cellularNote.hidden = !c.cellular;
     say(c.cellular ? `${text} ${CELLULAR}` : text);
     if (focus) panelBtn.focus();
@@ -201,7 +243,7 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
     live.hidden = false;
   }
 
-  function fail(reason: AiFail, detectedType?: string, retry?: () => void): void {
+  function fail(reason: AiFail, detectedType?: string, retry?: { file: File; again: () => void }): void {
     failed(reason);
     const custom = def.messages?.[reason];
     let text = typeof custom === 'function' ? custom() : (custom ?? COPY[reason]);
@@ -218,8 +260,9 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
       }
     }
     alertText.textContent = text;
-    onRetry = retry ?? null;
-    retryBtn.hidden = !retry;
+    onRetry = retry?.again ?? null;
+    held = retry?.file ?? null;
+    retryBtn.hidden = alertOther.hidden = !retry;
     // A download that failed keeps its file: Try again is the one thing to do. A bad file needs another file.
     if (retry) {
       view('alert');
@@ -259,6 +302,7 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
       const c = await caps();
       if (def.checking && g === gen) {
         showPanel(def.checking, null, 'indeterminate');
+        offerOther(file);
         say(def.checking);
       }
       await def.check?.(file, c, ctrl.signal);
@@ -349,11 +393,12 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
         // fetches it afresh.
         if (key) await Promise.all(modelFiles(key).map((f) => evictModel(f.url)));
         if (g !== gen) return;
-        return fail('network', undefined, () => void start(file, c, key, consented));
+        return fail('network', undefined, { file, again: () => void start(file, c, key, consented) });
       }
       const reason = reasonOf(err);
       if (reason === 'cancelled') return cancel();
-      fail(reason, err instanceof AiError ? err.detectedType : undefined, reason === 'network' ? () => void start(file, c, key, consented) : undefined);
+      const again = () => void start(file, c, key, consented);
+      fail(reason, err instanceof AiError ? err.detectedType : undefined, reason === 'network' ? { file, again } : undefined);
     }
   }
 

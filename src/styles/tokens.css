@@ -299,8 +299,11 @@ pre[data-results]:empty { display: none; }
 .ai-panel progress, .video-panel progress { display: block; width: 100%; height: 8px; accent-color: var(--accent); }
 /* While a bar runs, Cancel is a way out, not the next step: quiet, as on Compress video. The consent screen (no bar)
    keeps Download and start as its primary action. */
-.ai-panel:has(> progress:not([hidden])) > .btn { background: transparent; color: var(--accent); border-color: var(--edge); }
-.ai-panel:has(> progress:not([hidden])) > .btn:hover { background: var(--paper); color: var(--accent-strong); }
+.ai-panel:has(> progress:not([hidden])) > .actions > .btn { background: transparent; color: var(--accent); border-color: var(--edge); }
+.ai-panel:has(> progress:not([hidden])) > .actions > .btn:hover { background: var(--paper); color: var(--accent-strong); }
+.ai-panel > .actions, .ai-alert > .actions { margin: 0; }
+.ai-panel > .actions:not(:has(> :not([hidden]))), .ai-alert > .actions:not(:has(> :not([hidden]))) { display: none; }
+.btn-quiet:is(.ai-panel *, .ai-alert *):hover { background: var(--paper); }
 /* The mobile data line is a warning to read before downloading: ink, with the alert mark. */
 .ai-panel > p.note:nth-child(2) { color: var(--ink); }
 .ai-alert .error, .video-alert .error { font-size: 1rem; }

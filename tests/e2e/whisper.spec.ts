@@ -120,6 +120,50 @@ test('a failed download says so, and Try again downloads and transcribes', async
   await expect(transcript(page)).toHaveValue(STUB_TEXT);
 });
 
+const otherFile = (page: Page) => page.getByRole('button', { name: 'Choose another file' });
+const dropZone = (page: Page) => page.locator('[data-kind="ai"] .drop');
+
+test('the consent screen offers Choose another file: back to the drop zone, nothing downloaded', async ({ page }) => {
+  const models = await open(page);
+  await choose(page);
+  await expect(consent(page)).toBeFocused();
+  await otherFile(page).click();
+  await expect(dropZone(page)).toBeVisible();
+  await expect(panel(page)).toBeHidden();
+  await expect(page.locator('[data-kind="ai"] input[type=file]')).toBeFocused();
+  expect(models.requests).toBe(0);
+  // The same file again: read afresh, and asked about again.
+  await choose(page);
+  await expect(consent(page)).toBeFocused();
+});
+
+test('a failed download offers Choose another file as well as Try again', async ({ page }) => {
+  const models = await open(page);
+  models.mode = 'abort';
+  await choose(page);
+  await consent(page).click();
+  await expect(page.getByRole('alert').getByText(FAILED, { exact: true })).toBeVisible();
+  await page.getByRole('alert').getByRole('button', { name: 'Choose another file' }).click();
+  await expect(dropZone(page)).toBeVisible();
+  await expect(page.getByRole('alert')).toBeHidden();
+  await expect(panel(page)).toBeHidden();
+  models.mode = 'serve';
+  await choose(page);
+  await consent(page).click();
+  await expect(transcript(page)).toHaveValue(STUB_TEXT);
+});
+
+test('Reading audio… offers Choose another file, which stops the reading', async ({ page }) => {
+  await open(page);
+  await choose(page, toneWav('long.wav', 25 * 60)); // 25 min: a moment to decode
+  await expect(panel(page).locator('p').first()).toHaveText('Reading audio…');
+  await otherFile(page).click();
+  await expect(dropZone(page)).toBeVisible();
+  await expect(panel(page)).toBeHidden();
+  await page.waitForTimeout(1_000); // the reading it stopped never comes back with a consent screen
+  await expect(panel(page)).toBeHidden();
+});
+
 test('a model that fails to parse is dropped from the cache and shown as a failed download', async ({ page }) => {
   const models = await open(page);
   models.mode = 'bad';
