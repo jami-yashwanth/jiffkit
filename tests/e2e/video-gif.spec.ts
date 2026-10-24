@@ -11,13 +11,12 @@ import { holdResults, installResultHold } from './pdf-hold';
 const V = 'tests/fixtures/video';
 const CLIP = `${V}/clip.mp4`; // 3 s, H.264 High + AAC, 640 × 360, 30 fps
 const ROTATED = `${V}/rotated.mp4`; // stored 640 × 360, turned a quarter clockwise: plays as 360 × 640, 1 s
-const LONG = `${V}/too-long.mp4`; // 2 min 1 s
+const LONG = `${V}/long-130s.mp4`; // 2 min 10 s, 160 × 90 at 10 fps: over Compress's limit, not GIF's
 const WEBM = `${V}/clip.webm`;
 
 const SPAN = 'GIFs can be up to 15 seconds.';
 const RANGE = 'End must be after start and within the video.';
 const NO_DECODE = "Your browser can't read video. Try Chrome, Edge, Safari 17+ or Firefox 130+.";
-const LIMITS = 'Videos up to 2 minutes and 200 MB for now.';
 const LARGE = 'Large GIF. Try 320 px or a shorter clip for a smaller file.';
 const UNSUPPORTED = "This video format isn't supported yet. Try an MP4 or MOV.";
 
@@ -241,10 +240,28 @@ test('no VideoEncoder: a GIF needs no encoder, so it still works', async ({ page
   expect(gifInfo((await download(page)).bytes).frames).toBe(5);
 });
 
-test('longer than 2 minutes: the limits', async ({ page }) => {
+test('a video over 2 minutes: no length cap for GIFs, 0–2 s makes a 20-frame GIF', async ({ page }) => {
   await open(page);
-  await fileInput(page).setInputFiles(LONG);
-  await expect(alertText(page)).toHaveText(LIMITS);
+  await choose(page, LONG);
+  await expect(page.locator('[data-video-alert]')).toBeHidden();
+  await expect(page.locator('[data-video-file]')).toContainText('160 × 90 · 2:10');
+  await trim(page, '0', '2');
+  await make(page);
+  const { name, bytes } = await download(page);
+  expect(name).toBe('long-130s.gif');
+  expect(gifInfo(bytes)).toMatchObject({ width: 320, height: 180, frames: 20 });
+});
+
+test('larger than 200 MB: the size limit (GIFs have no length limit), before the file is read', async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>('[data-kind="video"] input[type=file]')!;
+    const file = new File([new Uint8Array(16)], 'big.mp4', { type: 'video/mp4' });
+    Object.defineProperty(file, 'size', { value: 200_000_001 }); // the metadata says so; no 200 MB in the test
+    Object.defineProperty(input, 'files', { value: { 0: file, length: 1, item: () => file }, configurable: true });
+    input.dispatchEvent(new Event('change'));
+  });
+  await expect(alertText(page)).toHaveText('Videos up to 200 MB for now.');
 });
 
 test('WebM: not supported yet', async ({ page }) => {

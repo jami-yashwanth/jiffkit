@@ -1,6 +1,6 @@
 import type { AiProgress } from '../ai/client';
 import { AiError, reasonOf, type AiFail } from '../ai/errors';
-import { MAX_BYTES, UNDECODABLE } from '../video/limits';
+import { MAX_BYTES, UNDECODABLE, type VideoOp } from '../video/limits';
 import type { Probed } from '../video/client';
 import { formatBytes, middleTruncate } from './format';
 
@@ -19,6 +19,8 @@ export interface VideoHooks {
 type Client = typeof import('../video/client');
 
 export interface ShellOptions {
+  /** Which op: its limits are checked as the file is read. */
+  op: VideoOp;
   /** Can this browser do the op at all? Checked once, as the page loads. */
   supported: boolean;
   /** What a `device` failure, or a browser that can't do the op at all, says. */
@@ -33,11 +35,13 @@ export interface ShellOptions {
   onResultCleared?(): void;
 }
 
-const LIMITS = 'Videos up to 2 minutes and 200 MB for now.';
+/** Compress caps length and size; Video to GIF only the size (its span is capped on its own). */
+const LIMITS: Record<VideoOp, string> = {
+  compress: 'Videos up to 2 minutes and 200 MB for now.',
+  gif: 'Videos up to 200 MB for now.',
+};
 const DAMAGED = "We couldn't read this file. It may be damaged or incomplete.";
-const COPY: Record<Exclude<AiFail, 'device'>, string> = {
-  'too-long': LIMITS,
-  'too-large': LIMITS,
+const COPY: Record<Exclude<AiFail, 'device' | 'too-long' | 'too-large'>, string> = {
   unsupported: "This video format isn't supported yet. Try an MP4 or MOV.",
   corrupt: DAMAGED,
   network: "Couldn't load the video tools. Check your connection.",
@@ -131,7 +135,13 @@ export function createVideoShell(el: HTMLElement, opts: ShellOptions) {
     failed(reason);
     const type = err instanceof AiError ? err.detectedType : undefined;
     let text =
-      reason === 'device' ? opts.deviceCopy : reason === 'unsupported' && type === UNDECODABLE ? UNDECODABLE_COPY : COPY[reason];
+      reason === 'device'
+        ? opts.deviceCopy
+        : reason === 'too-long' || reason === 'too-large'
+          ? LIMITS[opts.op]
+          : reason === 'unsupported' && type === UNDECODABLE
+            ? UNDECODABLE_COPY
+            : COPY[reason];
     tryLink.hidden = true;
     if (reason === 'wrong-type' && type && TYPE_NAMES[type]) {
       text = `This is a ${TYPE_NAMES[type]}, not a video.`;
@@ -171,7 +181,7 @@ export function createVideoShell(el: HTMLElement, opts: ShellOptions) {
     controller = ctrl;
     try {
       const { probeVideo } = await loadClient();
-      const info = await probeVideo(file, ctrl.signal);
+      const info = await probeVideo(file, opts.op, ctrl.signal);
       if (g !== gen) return;
       controller = null;
       current = { file, info };

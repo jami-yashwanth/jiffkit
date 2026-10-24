@@ -36,10 +36,10 @@ async function until(ready: () => boolean, failure: () => AiError | null): Promi
   }
 }
 
-/** Throws AiError: too-long / too-large (the video's limits), unsupported (format), device (no decoder), corrupt. */
+/** Throws AiError: too-large (the video's size: its length isn't capped, only the span), unsupported (format), device (no decoder), corrupt. */
 export async function makeGif(file: File, opts: GifOptions, onProgress: (done: number, total: number) => void): Promise<Blob> {
   const d = await demux(file);
-  const limit = checkLimits({ durationS: d.durationS, bytes: file.size });
+  const limit = checkLimits({ durationS: d.durationS, bytes: file.size }, 'gif');
   if (limit !== 'ok') throw new AiError(limit);
   const { video } = d;
   const config = await checkDecodable(video);

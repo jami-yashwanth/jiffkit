@@ -65,7 +65,7 @@ export async function compressVideo(
   onProgress: (done: number, total: number) => void,
 ): Promise<Compressed> {
   const d = await demux(file);
-  const limit = checkLimits({ durationS: d.durationS, bytes: file.size });
+  const limit = checkLimits({ durationS: d.durationS, bytes: file.size }, 'compress');
   if (limit !== 'ok') throw new AiError(limit);
   const { video } = d;
 

@@ -4,19 +4,27 @@ import { checkLimits, encoderCodecs, MAX_BYTES, MAX_SECONDS, outputSize, targetB
 describe('Compress video: limits', () => {
   it('takes videos up to 2 minutes, and no longer', () => {
     expect(MAX_SECONDS).toBe(120);
-    expect(checkLimits({ durationS: 3, bytes: 1_000_000 })).toBe('ok');
-    expect(checkLimits({ durationS: 120, bytes: 1_000_000 })).toBe('ok');
-    expect(checkLimits({ durationS: 120.1, bytes: 1_000_000 })).toBe('too-long');
+    expect(checkLimits({ durationS: 3, bytes: 1_000_000 }, 'compress')).toBe('ok');
+    expect(checkLimits({ durationS: 120, bytes: 1_000_000 }, 'compress')).toBe('ok');
+    expect(checkLimits({ durationS: 120.1, bytes: 1_000_000 }, 'compress')).toBe('too-long');
   });
 
   it('takes files up to 200 MB, and no larger', () => {
     expect(MAX_BYTES).toBe(200_000_000);
-    expect(checkLimits({ durationS: 3, bytes: 200_000_000 })).toBe('ok');
-    expect(checkLimits({ durationS: 3, bytes: 200_000_001 })).toBe('too-large');
+    expect(checkLimits({ durationS: 3, bytes: 200_000_000 }, 'compress')).toBe('ok');
+    expect(checkLimits({ durationS: 3, bytes: 200_000_001 }, 'compress')).toBe('too-large');
   });
 
   it('says too large before too long (the size is known before the file is read)', () => {
-    expect(checkLimits({ durationS: 600, bytes: 300_000_000 })).toBe('too-large');
+    expect(checkLimits({ durationS: 600, bytes: 300_000_000 }, 'compress')).toBe('too-large');
+  });
+});
+
+describe('Video to GIF: limits', () => {
+  it('has no length cap (it decodes only its span), and the same 200 MB cap', () => {
+    expect(checkLimits({ durationS: 130, bytes: 1_000_000 }, 'gif')).toBe('ok');
+    expect(checkLimits({ durationS: 3 * 3600, bytes: 200_000_000 }, 'gif')).toBe('ok');
+    expect(checkLimits({ durationS: 3, bytes: 200_000_001 }, 'gif')).toBe('too-large');
   });
 });
 

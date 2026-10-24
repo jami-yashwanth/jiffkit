@@ -17,7 +17,7 @@ const canEncode = (): boolean => typeof VideoEncoder !== 'undefined' && typeof V
 
 export function mountCompress(el: HTMLElement): VideoHooks {
   // No H.264 encoder for this video (or none at all): the browser can't do this.
-  const shell = createVideoShell(el, { supported: canEncode(), deviceCopy: NO_ENCODE, verb: 'Compressing' });
+  const shell = createVideoShell(el, { op: 'compress', supported: canEncode(), deviceCopy: NO_ENCODE, verb: 'Compressing' });
   const q = <T extends HTMLElement = HTMLElement>(sel: string) => el.querySelector<T>(sel)!;
   const sizes = q('[data-video-sizes]');
   const notes = q('[data-video-notes]');

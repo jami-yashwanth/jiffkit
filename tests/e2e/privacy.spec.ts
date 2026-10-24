@@ -562,11 +562,15 @@ test.describe('video tools: analytics', () => {
     expectClean(requests, needles, info.project.use.baseURL);
   });
 
-  test('video to gif: a video over 2 minutes fires convert_error {video-to-gif, too-long}', async ({ page }) => {
+  test('video to gif: a span over 15 s fires convert_error {video-to-gif, too-long}', async ({ page }) => {
     const { events } = await watch(page);
     await page.goto('/video-to-gif/');
-    await videoInput(page).setInputFiles(`${V}/too-long.mp4`);
-    await expect(page.getByText('Videos up to 2 minutes and 200 MB for now.')).toBeVisible();
+    await videoInput(page).setInputFiles(`${V}/long-130s.mp4`); // over 2 minutes: GIFs take it, only the span is capped
+    const make = page.getByRole('button', { name: 'Make GIF', exact: true });
+    await expect(make).toBeEnabled();
+    await page.getByRole('spinbutton', { name: 'End' }).fill('20');
+    await make.click();
+    await expect(page.getByText('GIFs can be up to 15 seconds.')).toBeVisible();
     await expect.poll(() => events.length).toBe(1);
     await settle(page);
     expect(only(events)).toEqual([['convert_error', { tool: 'video-to-gif', reason: 'too-long' }]]);

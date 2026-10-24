@@ -1,6 +1,7 @@
 import { createAiEngine, type AiProgress } from '../ai/client';
 import type { Compressed, CompressOptions } from './compress';
 import type { GifOptions } from './gif';
+import type { VideoOp } from './limits';
 import type { Probed, VideoRequest, VideoResult } from './worker';
 
 export type { CompressOptions, GifOptions, Probed };
@@ -14,8 +15,9 @@ export interface CompressedVideo extends Omit<Compressed, 'mp4'> {
 // that dies is replaced for the next job, and Cancel (the signal) terminates it mid-job. Rejects with AiError.
 const engine = createAiEngine<VideoRequest, VideoResult>(() => new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' }));
 
-export const probeVideo = (file: File, signal?: AbortSignal): Promise<Probed> =>
-  engine.run({ op: 'probe', file }, [], undefined, signal) as Promise<Probed>;
+/** Read a file and check it against `op`'s limits. */
+export const probeVideo = (file: File, op: VideoOp, signal?: AbortSignal): Promise<Probed> =>
+  engine.run({ op: 'probe', file, for: op }, [], undefined, signal) as Promise<Probed>;
 
 export const compressVideo = (
   file: File,

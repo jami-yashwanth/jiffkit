@@ -33,6 +33,7 @@ export function mountGif(el: HTMLElement): VideoHooks {
   }
 
   const shell = createVideoShell(el, {
+    op: 'gif',
     supported: typeof VideoDecoder !== 'undefined',
     deviceCopy: NO_DECODE,
     verb: 'Making GIF',

@@ -1,9 +1,15 @@
 // Compress video: the pure rules. What the tool takes, what bitrate each quality preset asks of the encoder, and the
 // size of the compressed picture.
 
-/** Videos up to 2 minutes and 200 MB for now (spec §3): longer clips are slow, and could run a device out of memory. */
+/**
+ * Compress video takes videos up to 2 minutes and 200 MB for now (spec §3): longer clips are slow, and could run a
+ * device out of memory. Video to GIF has only the 200 MB cap: it decodes no more than its ≤ 15 s span.
+ */
 export const MAX_SECONDS = 120;
 export const MAX_BYTES = 200_000_000;
+
+/** The video tools: each op's limits. */
+export type VideoOp = 'compress' | 'gif';
 
 export type Preset = 'small' | 'balanced' | 'better';
 /** Original, or a short side of at most 1080 or 720 pixels ("1080p", "720p"). */
@@ -16,10 +22,13 @@ export type Resolution = null | 1080 | 720;
  */
 export const UNDECODABLE = 'codec';
 
-/** The size is known before the file is read, so a file too large is said to be that, whatever its length. */
-export function checkLimits(meta: { durationS: number; bytes: number }): 'ok' | 'too-long' | 'too-large' {
+/**
+ * The size is known before the file is read, so a file too large is said to be that, whatever its length. Only
+ * Compress caps the length.
+ */
+export function checkLimits(meta: { durationS: number; bytes: number }, op: VideoOp): 'ok' | 'too-long' | 'too-large' {
   if (meta.bytes > MAX_BYTES) return 'too-large';
-  if (meta.durationS > MAX_SECONDS) return 'too-long';
+  if (op === 'compress' && meta.durationS > MAX_SECONDS) return 'too-long';
   return 'ok';
 }
 

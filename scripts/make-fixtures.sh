@@ -130,6 +130,9 @@ if command -v ffmpeg >/dev/null 2>&1; then
   # 2 min 1 s (over the 2 minute limit) but only a few KB: 32 x 32 at 1 fps.
   "${FF[@]}" -f lavfi -i "color=c=0x3a7a5c:size=32x32:rate=1" -t 121 -c:v libx264 -pix_fmt yuv420p -crf 45 -an \
     "$OUT/video/too-long.mp4"
+  # 2 min 10 s, low-res: over Compress's 2 minute limit, but Video to GIF takes it (it decodes only the span).
+  "${FF[@]}" -f lavfi -i "testsrc2=size=160x90:rate=10" -t 130 -c:v libx264 -pix_fmt yuv420p -crf 40 -g 50 -an \
+    "$OUT/video/long-130s.mp4"
   head -c 30000 "$OUT/video/clip.mp4" > "$OUT/video/truncated.mp4"
 else
   echo "ffmpeg not found: skipping tests/fixtures/video (brew install ffmpeg)" >&2
