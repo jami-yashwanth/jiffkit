@@ -3,17 +3,20 @@ import Base from '../layouts/Base.astro';
 import { CATEGORY_LABEL, TOOLS, type Category } from '../tools';
 
 const order: Category[] = ['image', 'pdf', 'ai', 'video', 'developer', 'qr'];
+// The site name search engines show next to the result, in place of a brand suffix on every title.
+const website = { '@context': 'https://schema.org', '@type': 'WebSite', name: 'jiffkit', url: new URL('/', Astro.site).href };
 ---
 <Base
-  title="Private Online Tools - Image, PDF and Developer Tools"
-  description="Free tools that run on your device: convert images, merge and split PDFs, format JSON, decode JWTs and make QR codes. Nothing is uploaded."
+  title="jiffkit - Private Image, PDF, Video and AI Tools"
+  description="Free tools that run on your device: remove backgrounds, transcribe audio, compress video, merge PDFs and convert photos. Nothing is uploaded."
   path="/"
+  jsonLd={website}
 >
   <h1>Tools that never upload your files</h1>
-  <p class="subhead">Convert images, merge PDFs, format JSON and make QR codes right in your browser. Free, no sign-up.</p>
+  <p class="subhead">Remove backgrounds, transcribe audio, compress video, merge PDFs and convert photos right in your browser. Free,&nbsp;no&nbsp;sign-up.</p>
 
   <label for="filter" class="subhead">Find a tool</label>
-  <input id="filter" class="filter" type="search" placeholder="Try HEIC, PDF, JSON or QR" autocomplete="off" />
+  <input id="filter" class="filter" type="search" placeholder="Try PDF, video, background or HEIC" autocomplete="off" />
 
   <div id="tools">
     {order.map((c) => (
@@ -29,7 +32,7 @@ const order: Category[] = ['image', 'pdf', 'ai', 'video', 'developer', 'qr'];
       </section>
     ))}
   </div>
-  <p id="no-match" hidden>No tool matches that. Try "HEIC", "PDF", "JSON" or "QR".</p>
+  <p id="no-match" hidden>No tool matches that. Try "PDF", "video", "background" or "HEIC".</p>
 
   <script is:inline>
     (function () {

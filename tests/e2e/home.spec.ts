@@ -8,7 +8,7 @@ test('homepage filter: empty shows all, a match narrows, no match says so', asyn
   const tools = page.locator('#tools li');
   const headings = page.locator('#tools h2');
   const visible = page.locator('#tools li:visible');
-  const noMatch = page.getByText('No tool matches that. Try "HEIC", "PDF", "JSON" or "QR".');
+  const noMatch = page.getByText('No tool matches that. Try "PDF", "video", "background" or "HEIC".');
 
   await expect(visible).toHaveCount(await tools.count());
   await expect(noMatch).toBeHidden();
