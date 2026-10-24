@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test, type Locator, type Page, type Route } from '@playwright/test';
 import { holdResults, installResultHold, releaseOne, releaseResults, waitHeld } from './pdf-hold';
 import { WHISPER_FILES } from '../../src/ai/whisper/files';
 import { modelBytes, routeModels } from './models';
@@ -101,6 +101,21 @@ const unfreeze = (page: Page) =>
     w.__freeze = null;
   });
 const frozen = (page: Page) => page.waitForFunction(() => (window as unknown as { __frozen: boolean }).__frozen);
+/** Seek the preview to its first frame and wait until that frame is decoded and on screen (no loading spinner). */
+const framePainted = (video: Locator) =>
+  video.evaluate(
+    (v: HTMLVideoElement) =>
+      new Promise<void>((resolve) => {
+        const go = () => {
+          const painted = new Promise<void>((r) => (v.requestVideoFrameCallback ? v.requestVideoFrameCallback(() => r()) : r()));
+          const seeked = new Promise<void>((r) => v.addEventListener('seeked', () => r(), { once: true }));
+          v.currentTime = 0;
+          void Promise.all([painted, seeked]).then(() => resolve());
+        };
+        if (v.readyState >= 1) go();
+        else v.addEventListener('loadedmetadata', go, { once: true });
+      }),
+  );
 const aiInput = (page: Page) => page.locator('[data-kind="ai"] input[type=file]');
 const videoInput = (page: Page) => page.locator('[data-kind="video"] input[type=file]');
 const aiPanelText = (page: Page) => page.locator('[data-ai-panel] > p').first();
@@ -408,13 +423,17 @@ for (const vp of VIEWPORTS) {
       await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled({ timeout: 60_000 });
       await expect(page.getByRole('slider', { name: 'Compare before and after' })).toBeVisible();
       await shot(page, 'remove-background-done', true);
+      // Keyboard focus on the handle, over the photo (transparent background: the subject is behind the grip).
+      const slider = page.getByRole('slider', { name: 'Compare before and after' });
+      await slider.focus();
+      await page.keyboard.press('ArrowLeft');
+      await expect(slider).toHaveAttribute('aria-valuenow', '45');
+      await shot(page, 'remove-background-slider-focus');
+      await slider.blur();
       await page.getByRole('radio', { name: 'White' }).check();
       await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled();
       await page.getByRole('radio', { name: 'White' }).blur();
       await shot(page, 'remove-background-done-white', true);
-      await page.getByRole('slider', { name: 'Compare before and after' }).focus();
-      await page.keyboard.press('ArrowLeft');
-      await shot(page, 'remove-background-slider-focus');
       await page.getByRole('button', { name: 'Start over' }).click();
       await aiInput(page).setInputFiles(fixture('bg-26mp.png'));
       await expect(page.getByText('Large photo: processed at 25 MP.', { exact: true })).toBeVisible({ timeout: 60_000 });
@@ -645,7 +664,7 @@ for (const vp of VIEWPORTS) {
       const make = page.getByRole('button', { name: 'Make GIF', exact: true });
       await expect(make).toBeEnabled();
       const preview = page.locator('[data-video-file] video');
-      await expect.poll(() => preview.evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThanOrEqual(2);
+      await framePainted(preview);
       await shot(page, 'video-to-gif-loaded', true);
       await page.getByRole('spinbutton', { name: 'End' }).fill('20');
       await make.click();
@@ -660,7 +679,7 @@ for (const vp of VIEWPORTS) {
       await page.getByRole('button', { name: 'Start over' }).click();
       await videoInput(page).setInputFiles(fixture('video/clip.mp4'));
       await expect(make).toBeEnabled();
-      await expect.poll(() => preview.evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThanOrEqual(2);
+      await framePainted(preview);
       await freezeAt(page, 'work', 0.55);
       await make.click();
       await frozen(page);
