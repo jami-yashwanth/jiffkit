@@ -30,7 +30,6 @@ async function open(page: Page) {
 
 async function run(page: Page, file = PHOTO) {
   await page.locator('[data-kind="ai"] input[type=file]').setInputFiles(file);
-  await page.getByRole('button', { name: 'Download and start' }).click();
   await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled({ timeout: 60_000 });
 }
 
@@ -44,7 +43,7 @@ async function downloadPng(page: Page) {
 
 const pixel = (png: PNG, x: number, y: number) => [...png.data.subarray((y * png.width + x) * 4, (y * png.width + x) * 4 + 4)];
 
-test('consent → download → "Removing background… n%" → a checkerboard result with a keyboard before/after slider', async ({ page }) => {
+test('download (no consent: 5 MB) → "Removing background… n%" → a checkerboard result with a keyboard before/after slider', async ({ page }) => {
   const models = await open(page);
   await run(page);
   expect(models.requests).toBe(1);

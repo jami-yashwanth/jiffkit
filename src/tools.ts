@@ -456,7 +456,7 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
       },
       {
         q: 'Why does it download a model the first time?',
-        a: 'The AI model is about 176 MB (about 5 MB on phones and low-memory devices). It is downloaded once and cached in your browser, so later visits start straight away. The download contains none of your data.',
+        a: 'The AI model is about 5 MB. It is downloaded once and cached in your browser, so later visits start straight away. The download contains none of your data.',
       },
       {
         q: 'What do I get?',
@@ -464,7 +464,7 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
       },
       {
         q: 'How good are the cut-outs?',
-        a: 'Good for clear subjects such as people, products and pets. Fine detail like hair, fur and glass can be rough, and busy backgrounds can confuse the model. Check the result before you use it.',
+        a: 'Results are best on photos with one clear subject, such as a person, a product or a pet, against a plain background. Fine detail like hair, fur and glass can be rough, and busy backgrounds can confuse the model. Check the result before you use it.',
       },
       {
         q: 'Is there a limit on photo size?',

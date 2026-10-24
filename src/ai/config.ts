@@ -4,24 +4,19 @@ const DEFAULT_MODEL_BASE = 'https://huggingface.co';
 
 export const MODEL_BASE: string = (import.meta.env.PUBLIC_MODEL_BASE_URL || DEFAULT_MODEL_BASE).replace(/\/+$/, '');
 
-export type ModelKey = 'bg' | 'bgSmall' | 'ortWebgpu' | 'upscale' | 'whisper' | 'tessdata';
+export type ModelKey = 'bg' | 'ortWebgpu' | 'upscale' | 'whisper' | 'tessdata';
 
 /**
  * Each model's path under MODEL_BASE, its download size in bytes (shown before the first download) and its licence.
  * Paths and sizes are provisional until the task that ships each model checks the exact file and its licence.
  */
 export const MODELS: Record<ModelKey, { path: string; bytes: number; licence: string; sameOrigin?: true }> = {
-  // U²-Net general (Qin et al., Apache-2.0): rembg's ONNX export of the authors' u2net.pth, byte for byte (md5
-  // 60024c5c889badc19c04ad937298a77b, the checksum rembg pins), as redistributed by BritishWerewolf/U-2-Net (Apache-2.0),
-  // pinned to commit c08042b. sha256 8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491. Verified in Task 5.
+  // u2netp, U²-Net's small model (Qin et al., Apache-2.0), for everyone: rembg's ONNX export of the authors' weights,
+  // byte for byte (md5 8e83ca70e441ab06c318d82300c84806, the checksum rembg pins), as redistributed by
+  // BritishWerewolf/U-2-Netp (Apache-2.0), pinned to commit 7112208.
+  // sha256 309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8. Verified in Task 5. (Full U²-Net is
+  // 176 MB: too large a first download for this tool; ruled out in Task 5.)
   bg: {
-    path: 'BritishWerewolf/U-2-Net/resolve/c08042b462485d8597c89d3ce831d00be8582c5c/onnx/model.onnx',
-    bytes: 175_997_641,
-    licence: 'Apache-2.0',
-  },
-  // u2netp, for phones and low-memory devices: rembg's export (md5 8e83ca70e441ab06c318d82300c84806), from
-  // BritishWerewolf/U-2-Netp (Apache-2.0) at commit 7112208. sha256 309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8.
-  bgSmall: {
     path: 'BritishWerewolf/U-2-Netp/resolve/7112208dbac3a3642496c8d54e2f0f9bb3dc1dc8/onnx/model.onnx',
     bytes: 4_574_861,
     licence: 'Apache-2.0',

@@ -1,4 +1,3 @@
-import type { Caps } from '../ai/capability';
 import { AiError } from '../ai/errors';
 import { bgEngine, type BgResult } from '../ai/bg/engine';
 import type { Background } from '../ai/bg/compose';
@@ -17,15 +16,10 @@ interface BgOut extends BgResult {
   base: string;
 }
 
-/** Below this much memory (GB), or on a phone, the small model (u2netp) is used. */
-const LOW_MEMORY_GB = 4;
 /** While a colour is being picked, wait this long after the last change before blending a PNG. */
 const COLOUR_SETTLE_MS = 250;
 
 const baseName = (name: string): string => name.replace(/\.[^./\\]*$/, '').trim() || 'photo';
-
-export const pickModel = (caps: Caps): 'bg' | 'bgSmall' =>
-  caps.mobile || (caps.deviceMemoryGB ?? Infinity) < LOW_MEMORY_GB ? 'bgSmall' : 'bg';
 
 function h<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, string> = {}, ...kids: (Node | string)[]) {
   const el = document.createElement(tag);
@@ -42,7 +36,7 @@ const hexToRgb = (hex: string) => {
 export function bgDef(): AiToolDef<BgOut> {
   return {
     verb: 'Removing background',
-    modelKey: pickModel,
+    modelKey: 'bg',
     inputName: 'JPG, PNG or WebP image',
     elsewhere: { heic: { href: '/heic-to-jpg/', h1: 'HEIC to JPG' } },
 
@@ -51,10 +45,10 @@ export function bgDef(): AiToolDef<BgOut> {
       if (type !== 'jpg' && type !== 'png' && type !== 'webp') throw new AiError('wrong-type', type === 'unknown' ? {} : { detectedType: type });
     },
 
-    async run(file, caps, onProgress, { signal, modelKey }) {
+    async run(file, caps, onProgress, { signal }) {
       const image = await file.arrayBuffer();
       const res = await bgEngine.run(
-        { op: 'remove', image, modelKey: modelKey === 'bgSmall' ? 'bgSmall' : 'bg', webgpu: caps.webgpu },
+        { op: 'remove', image, webgpu: caps.webgpu },
         [image],
         onProgress,
         signal,

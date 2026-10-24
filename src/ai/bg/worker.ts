@@ -7,12 +7,12 @@ import { AiError, reasonOf } from '../errors';
 import { loadModel } from '../loader';
 import { MODEL_SIZE, composeRGBA, normaliseMask, prepareInput, toModelInput, upsampleMask, type Background } from './compose';
 
-// The Remove background worker. A `remove` job decodes the photo (upright, at most 25 MP), runs U²-Net on it with
+// The Remove background worker. A `remove` job decodes the photo (upright, at most 25 MP), runs u2netp on it with
 // onnxruntime-web, and answers with a transparent PNG. The photo and its mask stay here, so a `compose` job can put
 // the cut-out on another background without running the model again. Protocol: ../client.ts.
 
 export type BgRequest =
-  | { op: 'remove'; image: ArrayBuffer; modelKey: 'bg' | 'bgSmall'; webgpu: boolean }
+  | { op: 'remove'; image: ArrayBuffer; webgpu: boolean }
   | { op: 'compose'; bg: Background };
 
 export interface BgResult {
@@ -116,11 +116,11 @@ async function createSession(model: ArrayBuffer, webgpu: boolean): Promise<{ ort
 
 /** The model's mask for this input (MODEL_SIZE², 0..1 after normalising). Downloads the model on first use. */
 async function predict(input: Float32Array, req: Extract<BgRequest, { op: 'remove' }>, progress: Progress): Promise<Float32Array> {
-  const url = modelUrl(req.modelKey);
+  const url = modelUrl('bg');
   if (session?.key !== url) {
     session = null;
     const model = await loadModel(url, {
-      bytes: MODELS[req.modelKey].bytes,
+      bytes: MODELS.bg.bytes,
       onProgress: (done, total) => progress('download', done, total),
     });
     if (import.meta.env.PUBLIC_AI_STUB === '1') {

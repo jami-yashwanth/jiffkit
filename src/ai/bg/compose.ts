@@ -4,7 +4,7 @@ import { applyOrientation, downscaleTo } from '../../engine/pixels';
 // Remove background, the pixel work around the model: turn the photo upright and cap its size, make the model's
 // input, and turn the model's mask into the result. Pure functions, run in the bg worker and in unit tests.
 
-/** The model's input is MODEL_SIZE × MODEL_SIZE (U²-Net and u2netp alike). */
+/** The model's input is MODEL_SIZE × MODEL_SIZE (u2netp). */
 export const MODEL_SIZE = 320;
 /** Photos above this are downscaled to it first (spec §3), with a note. */
 export const MAX_MEGAPIXELS = 25;

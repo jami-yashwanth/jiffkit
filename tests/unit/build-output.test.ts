@@ -170,9 +170,8 @@ describe('site', () => {
   });
 
   it('AI pages show model sizes from the model list', () => {
-    expect(html('remove-background/')).toContain('data-model-size="176 MB"');
-    expect(html('remove-background/')).toContain('data-model-bytes="175997641"');
-    expect(html('remove-background/')).toContain('data-model-size-small="5 MB"');
+    expect(html('remove-background/')).toContain('data-model-size="5 MB"');
+    expect(html('remove-background/')).toContain('data-model-bytes="4574861"');
     expect(html('transcribe-audio/')).toContain('data-model-size="80 MB"');
   });
 

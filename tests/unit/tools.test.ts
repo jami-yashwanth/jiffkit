@@ -84,7 +84,7 @@ describe('tool registry', () => {
   });
 
   it('every AI tool FAQ states the first-use download and that it is cached', () => {
-    const sizes = { bg: '176 MB', ocr: '4 MB', upscale: '5 MB', whisper: '80 MB' };
+    const sizes = { bg: '5 MB', ocr: '4 MB', upscale: '5 MB', whisper: '80 MB' };
     for (const t of TOOLS) {
       if (t.kind !== 'ai') continue;
       const faq = t.faq.map((f) => f.a).join(' ');
