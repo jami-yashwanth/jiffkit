@@ -7,6 +7,8 @@ export default defineConfig({
   testDir: 'tests/e2e',
   timeout: 60_000,
   expect: { timeout: 20_000 },
+  // The macOS runner has 3 cores, and Playwright's default (half of them) ran all 780 tests on 1 worker.
+  workers: process.env.CI ? 3 : undefined,
   use: { baseURL: `http://localhost:${PORT}` },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
