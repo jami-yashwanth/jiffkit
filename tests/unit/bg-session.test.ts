@@ -1,7 +1,7 @@
 import { readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
-import { createSession, looksLikeOnnx, sessionFailure } from '../../src/ai/ort/session';
+import { createSession, isOutOfMemory, looksLikeOnnx, runtimeMayBeDamaged, sessionFailure } from '../../src/ai/ort/session';
 import { MODELS } from '../../src/ai/config';
 import { AiError } from '../../src/ai/errors';
 
@@ -77,5 +77,32 @@ describe('the WebAssembly runtime entry', () => {
     expect(MODELS.ortWasm.bytes).toBe(statSync(file).size);
     expect(MODELS.ortWasm.sameOrigin).toBe(true);
     expect(readFileSync(file).subarray(0, 4)).toEqual(Buffer.from([0, 0x61, 0x73, 0x6d]));
+  });
+});
+
+describe('runtimeMayBeDamaged: whether a failed start drops the cached runtime .wasm', () => {
+  it('a runtime that would not start (not memory) may be a damaged cached .wasm: dropped', async () => {
+    const raw = new Error('no available backend found. ERR: [wasm] RuntimeError: Aborted(CompileError)');
+    const e = (await createSession(failingOrt(raw), onnxish()).catch((x: unknown) => x)) as AiError;
+    expect(e.reason).toBe('device');
+    expect(runtimeMayBeDamaged(e)).toBe(true);
+  });
+
+  it('memory running out is the device, not the file: the cached .wasm is kept', async () => {
+    for (const raw of [
+      new RangeError('Array buffer allocation failed'),
+      new WebAssembly.RuntimeError('Aborted(Cannot enlarge memory arrays to size 2147483648 bytes (OOM).)'),
+      new Error('session failed', { cause: new RangeError('WebAssembly.Memory(): could not allocate memory') }),
+    ]) {
+      const e = sessionFailure(raw);
+      expect(e.reason, raw.message).toBe('device');
+      expect(isOutOfMemory(e), raw.message).toBe(true);
+      expect(runtimeMayBeDamaged(e), raw.message).toBe(false);
+    }
+  });
+
+  it('a bad model or any other reason never drops the runtime', () => {
+    expect(runtimeMayBeDamaged(new AiError('network', { badModel: true }))).toBe(false);
+    expect(runtimeMayBeDamaged(new AiError('corrupt'))).toBe(false);
   });
 });

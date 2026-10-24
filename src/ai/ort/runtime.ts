@@ -1,7 +1,9 @@
 import { modelUrl, type ModelKey } from '../config';
 import { AiError } from '../errors';
 import { evictModel, loadModelFiles } from '../loader';
-import { createSession } from './session';
+import { createSession, runtimeMayBeDamaged } from './session';
+
+export { isOutOfMemory } from './session';
 
 // onnxruntime-web in a tool's worker (Remove background, Upscale image): download its .wasm and the tool's model
 // through our loader, then start a session on the WebAssembly backend. Worker-only.
@@ -42,19 +44,9 @@ export async function startRuntime(wasm: ArrayBuffer, model: ArrayBuffer): Promi
   try {
     return { ort, session: await createSession(ort, model) };
   } catch (err) {
-    // A runtime that won't start may be a damaged cached .wasm: drop it, so the next try downloads it afresh.
-    if (err instanceof AiError && err.reason === 'device') await evictModel(modelUrl('ortWasm'));
+    // A runtime that won't start may be a damaged cached .wasm: drop it, so the next try downloads it afresh. Not
+    // when memory ran out: the .wasm is fine, and downloading it again would not help.
+    if (err instanceof AiError && runtimeMayBeDamaged(err)) await evictModel(modelUrl('ortWasm'));
     throw err;
   }
-}
-
-const OOM = /alloc|\boom\b|enlarge memory|out ?of ?memory|maximum memory size exceeded|array buffer allocation/i;
-
-/** Is this failure (or one it wraps) memory running out? */
-export function isOutOfMemory(err: unknown): boolean {
-  for (let e: unknown = err, depth = 0; e instanceof Error && depth < 5; e = e.cause, depth++) {
-    const wasm = typeof WebAssembly !== 'undefined' && e instanceof WebAssembly.RuntimeError;
-    if ((e instanceof RangeError || wasm) && OOM.test(e.message)) return true;
-  }
-  return false;
 }

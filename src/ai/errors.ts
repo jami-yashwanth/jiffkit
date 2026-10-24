@@ -9,6 +9,8 @@ export interface AiErrorDetail {
    * and shows the download-failed copy, so Try again downloads it afresh. Use with reason 'network'.
    */
   badModel?: boolean;
+  /** The failure this one stands for (kept so it can be asked about, e.g. whether memory ran out). */
+  cause?: unknown;
 }
 
 export class AiError extends Error {
@@ -18,7 +20,7 @@ export class AiError extends Error {
     readonly reason: AiFail,
     detail: AiErrorDetail = {},
   ) {
-    super(reason);
+    super(reason, detail.cause === undefined ? undefined : { cause: detail.cause });
     this.name = 'AiError';
     if (detail.detectedType) this.detectedType = detail.detectedType;
     this.badModel = detail.badModel === true;

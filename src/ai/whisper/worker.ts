@@ -2,8 +2,8 @@ import type { AiWorkerRequest, AiWorkerResponse } from '../client';
 import { MODELS, modelFiles, modelUrl, type ModelKey } from '../config';
 import { AiError, reasonOf } from '../errors';
 import { evictModel, isCached, loadModelFiles } from '../loader';
-import { isOutOfMemory, type Progress } from '../ort/runtime';
-import { looksLikeOnnx, sessionFailure } from '../ort/session';
+import type { Progress } from '../ort/runtime';
+import { isOutOfMemory, looksLikeOnnx, runtimeMayBeDamaged, sessionFailure } from '../ort/session';
 import { SAMPLE_RATE, hasSound } from './audio';
 import { ORT_KEY } from './ort-key';
 import type { Segment } from './subtitles';
@@ -191,9 +191,12 @@ async function startPipeline(
   }
 }
 
-/** A runtime that won't start may be a damaged cached .wasm: drop it, so the next try downloads it afresh. */
+/**
+ * A runtime that won't start may be a damaged cached .wasm: drop it, so the next try downloads it afresh (not when
+ * memory ran out: see runtimeMayBeDamaged).
+ */
 async function dropRuntime(err: AiError, webgpu: boolean): Promise<AiError> {
-  if (err.reason === 'device') await evictModel(modelUrl(runtimeKey(webgpu)));
+  if (runtimeMayBeDamaged(err)) await evictModel(modelUrl(runtimeKey(webgpu)));
   return err;
 }
 

@@ -25,7 +25,26 @@ export function sessionFailure(err: unknown): AiError {
   if (err instanceof AiError) return err;
   const message = err instanceof Error ? err.message : String(err);
   if (MODEL_UNREADABLE.test(message)) return new AiError('network', { badModel: true });
-  return new AiError('device');
+  return new AiError('device', { cause: err });
+}
+
+const OOM = /alloc|\boom\b|enlarge memory|out ?of ?memory|maximum memory size exceeded|array buffer allocation/i;
+
+/** Is this failure (or one it wraps, as an AiError from sessionFailure does) memory running out? */
+export function isOutOfMemory(err: unknown): boolean {
+  for (let e: unknown = err, depth = 0; e instanceof Error && depth < 5; e = e.cause, depth++) {
+    const wasm = typeof WebAssembly !== 'undefined' && e instanceof WebAssembly.RuntimeError;
+    if ((e instanceof RangeError || wasm) && OOM.test(e.message)) return true;
+  }
+  return false;
+}
+
+/**
+ * Should the cached runtime .wasm be dropped after this failure to start? A runtime that won't start may be a damaged
+ * download; but memory running out says nothing about the file, and downloading it again would not help.
+ */
+export function runtimeMayBeDamaged(err: AiError): boolean {
+  return err.reason === 'device' && !isOutOfMemory(err);
 }
 
 /** A session on the WebAssembly backend. Rejects with AiError: network + badModel, or device. */
