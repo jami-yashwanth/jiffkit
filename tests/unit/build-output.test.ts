@@ -10,9 +10,11 @@ const SITE = config.site as string;
 const html = (p: string) => readFileSync(`dist/${p}index.html`, 'utf8');
 
 beforeAll(() => {
-  // Hermetic: the default build has no analytics, whatever the shell exports.
+  // Hermetic: the default build has no analytics and no AI stubs, whatever the shell exports.
   const env = { ...process.env };
   delete env.PUBLIC_PLAUSIBLE_DOMAIN;
+  delete env.PUBLIC_AI_STUB;
+  delete env.PUBLIC_MODEL_BASE_URL;
   execSync('npx astro build', { stdio: 'pipe', env });
 }, 180_000);
 
@@ -147,6 +149,22 @@ describe('site', () => {
     for (const f of files.filter((f) => /\.(js|mjs|css|xml|txt)$/.test(f))) {
       expect(/plausible\.io/i.test(readFileSync(f, 'utf8')), f).toBe(false);
     }
+  });
+
+  it('a production build carries no AI stub code', () => {
+    // The marker lives in src/ai/stub.ts, which only the PUBLIC_AI_STUB=1 (Playwright) build may include.
+    expect(readFileSync('src/ai/stub.ts', 'utf8')).toContain('__AI_STUB__'); // the scan below is not vacuous
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? walk(`${dir}/${d.name}`) : [`${dir}/${d.name}`]));
+    for (const f of walk('dist').filter((f) => /\.(js|mjs|html)$/.test(f))) {
+      expect(readFileSync(f, 'utf8').includes('__AI_STUB__'), f).toBe(false);
+    }
+  });
+
+  it('AI pages show model sizes from the model list', () => {
+    expect(html('remove-background/')).toContain('data-model-size="45 MB"');
+    expect(html('remove-background/')).toContain('data-model-size-small="5 MB"');
+    expect(html('transcribe-audio/')).toContain('data-model-size="80 MB"');
   });
 
   it('homepage links to all tools and the filter', () => {

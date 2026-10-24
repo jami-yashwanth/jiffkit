@@ -288,6 +288,13 @@ pre[data-results]:empty { display: none; }
 .pdf-alert { display: grid; justify-items: start; gap: var(--s3); background: var(--tint); border-radius: var(--radius); padding: var(--s3); }
 .pdf-alert .error { margin: 0; font-size: 1rem; }
 [data-list], .pdf-done { margin-top: var(--s4); }
+/* AI tools: consent, downloading and working share one tinted panel; failures use the same shape as the PDF alert. */
+.ai-panel, .ai-alert { display: grid; justify-items: start; gap: var(--s3); background: var(--tint); border-radius: var(--radius); padding: var(--s3); margin-top: var(--s4); }
+.ai-panel p, .ai-alert p { margin: 0; }
+.ai-panel > p:first-child { color: var(--ink); font-size: 1rem; font-variant-numeric: tabular-nums; }
+.ai-panel progress { display: block; width: 100%; height: 8px; accent-color: var(--accent); }
+.ai-alert .error { font-size: 1rem; }
+.ai-done { margin-top: var(--s4); display: grid; gap: var(--s4); }
 .pdf-rows { margin-bottom: var(--s3); }
 .pdf-rows .row { grid-template-columns: minmax(0, 1fr) auto; }
 .row-tools { display: flex; gap: var(--s1); }
@@ -350,6 +357,6 @@ pre[data-results]:empty { display: none; }
   .qr-preview { width: 100%; }
   .actions .gps { flex: 1 1 100%; text-align: center; }
   .drop-compact { padding: 0; }
-  .pdf-alert { justify-items: stretch; }
+  .pdf-alert, .ai-panel, .ai-alert { justify-items: stretch; }
   .pdf-extract .text-input { max-width: none; }
 }

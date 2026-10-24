@@ -17,5 +17,8 @@ export default defineConfig({
     // The engine worker is a module worker. 'es' lets it code-split, so each codec stays its own
     // dynamically imported chunk; the default 'iife' inlines every codec (2+ MB) into the worker file.
     worker: { format: 'es' },
+    // Always a string, so `import.meta.env.PUBLIC_AI_STUB === '1'` folds to a constant and a production build drops
+    // the test-only AI stubs (src/ai/stub.ts) entirely. Set to 1 only by the Playwright build.
+    define: { 'import.meta.env.PUBLIC_AI_STUB': JSON.stringify(process.env.PUBLIC_AI_STUB ?? '') },
   },
 });

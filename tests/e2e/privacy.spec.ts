@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page, type Request } from '@playwright/test';
 import { stubPlausible, PLAUSIBLE_STUB, type PlausibleEvent } from './plausible';
+import { modelBytes, routeModels } from './models';
 
 // The privacy promise, checked on the wire: during a real 3-file conversion plus a ZIP download, nothing
 // leaves the device except same-origin GETs for our own assets and Plausible's tiny event beacons.
@@ -120,7 +121,10 @@ async function watch(page: Page) {
   return { events, requests };
 }
 
-/** Nothing but same-origin GETs and plausible.io; no URL or body carries any needle. */
+// The model host (PUBLIC_MODEL_BASE_URL in playwright.config.ts). In the E2E build it is this server's /test-models/.
+const isModel = (url: string) => new URL(url).pathname.startsWith('/test-models/');
+
+/** Nothing but same-origin GETs, model-host GETs and plausible.io; no URL or body carries any needle. */
 function expectClean(requests: Seen[], needles: Buffer[], baseURL: string | undefined) {
   const base = new URL(baseURL ?? 'http://localhost:4399');
   expect(requests.length).toBeGreaterThan(0);
@@ -128,7 +132,8 @@ function expectClean(requests: Seen[], needles: Buffer[], baseURL: string | unde
     if (r.url.startsWith('blob:') || r.url.startsWith('data:')) continue; // never leaves the browser
     if (r.origin !== 'https://plausible.io') {
       expect(r.origin, r.url).toBe(base.origin);
-      expect(r.method, r.url).toBe('GET');
+      expect(r.method, r.url).toBe('GET'); // the model host too: GET only, never a body
+      if (isModel(r.url)) expect(r.body, r.url).toBeNull();
     }
     const url = Buffer.from(decodeURIComponent(r.url));
     for (const needle of needles) {
@@ -283,5 +288,22 @@ test.describe('text and QR tools: tool_used once, on the first Copy or Download'
     expect(events.map((e) => [e.n, e.p])).toEqual([['tool_used', { tool: 'qr-code-generator' }]]);
     expectOnlyAllowedProps(events);
     expectClean(requests, [Buffer.from(QR_TEXT)], info.project.use.baseURL); // the code is drawn locally
+  });
+});
+
+test.describe('AI tools', () => {
+  test('remove background (stub inference): only the model download leaves the page, as a bare GET', async ({ page }, info) => {
+    const { requests } = await watch(page);
+    await page.goto('/remove-background/');
+    const models = await routeModels(page, await modelBytes(page));
+    await page.locator('[data-kind="ai"] input[type=file]').setInputFiles('tests/fixtures/photo.jpg');
+    await page.getByRole('button', { name: 'Download and start' }).click();
+    await expect(page.getByText(/__AI_STUB__ result/)).toBeVisible();
+    await settle(page);
+    expect(models.requests).toBe(1);
+    const model = requests.filter((r) => isModel(r.url));
+    expect(model).toHaveLength(1); // the check isn't vacuous
+    expect(model[0]!.url).not.toContain('?'); // no query string at all
+    expectClean(requests, [Buffer.from('photo.jpg'), Buffer.from(head64('photo.jpg'))], info.project.use.baseURL);
   });
 });
