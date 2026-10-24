@@ -4,6 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { stubPlausible } from './plausible';
 import { panelSeen, recordPanel } from './panel';
 import { holdResults, installResultHold } from './pdf-hold';
+import { rotationOf } from '../../src/video/demux';
 
 // Compress video, end to end with the browser's own WebCodecs: mp4box.js reads the MP4, VideoDecoder decodes it,
 // VideoEncoder makes H.264 of it and mp4-muxer writes the MP4 that is downloaded. Nothing is stubbed.
@@ -16,10 +17,12 @@ const TINY = `${V}/well-compressed.mp4`; // grain at 80 kbit/s
 const LONG = `${V}/too-long.mp4`; // 2 min 1 s
 const WEBM = `${V}/clip.webm`;
 const TRUNCATED = `${V}/truncated.mp4`;
+const ROTATED = `${V}/rotated.mp4`; // stored 640 × 360, turned a quarter clockwise: plays as 360 × 640
 
 const NO_ENCODE = "Your browser can't encode video. Try Chrome, Edge, Safari 17+ or Firefox 130+.";
 const LIMITS = 'Videos up to 2 minutes and 200 MB for now.';
 const UNSUPPORTED = "This video format isn't supported yet. Try an MP4 or MOV.";
+const UNDECODABLE = "This browser can't play this video's format. Try Chrome, Edge or Safari.";
 const DAMAGED = "We couldn't read this file. It may be damaged or incomplete.";
 
 Log.setLogLevel(Log.error);
@@ -164,6 +167,33 @@ test('larger than 200 MB: the limits, before the file is read', async ({ page })
     input.dispatchEvent(new Event('change'));
   });
   await expect(alertText(page)).toHaveText(LIMITS);
+});
+
+test('a portrait phone video: shown as 360 × 640, and the MP4 keeps its quarter turn', async ({ page }) => {
+  await open(page);
+  await choose(page, ROTATED);
+  await expect(page.locator('[data-video-file]')).toContainText('360 × 640 · 0:01');
+  await compress(page);
+  const info = mp4Info((await download(page)).bytes);
+  const video = info.videoTracks[0]!;
+  expect(video.video).toEqual({ width: 640, height: 360 }); // stored as it was
+  expect(rotationOf(video.matrix as unknown as ArrayLike<number>)).toBe(90); // tkhd: turned a quarter clockwise
+});
+
+test("a codec this browser can't decode: try another browser (not the unsupported-format copy)", async ({ page }) => {
+  // The decoder check runs in the worker, where init scripts don't: patch the worker script as it is served.
+  await page.context().route('**/_astro/worker-*.js', async (route) => {
+    const res = await route.fetch();
+    const body = await res.text();
+    const patch = body.includes('VideoDecoder') && body.includes('isConfigSupported');
+    await route.fulfill({
+      response: res,
+      body: patch ? `self.VideoDecoder.isConfigSupported = async () => ({ supported: false });\n${body}` : body,
+    });
+  });
+  await open(page);
+  await fileInput(page).setInputFiles(CLIP);
+  await expect(alertText(page)).toHaveText(UNDECODABLE);
 });
 
 test('WebM: not supported yet', async ({ page }) => {

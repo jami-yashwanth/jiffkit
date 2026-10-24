@@ -68,7 +68,9 @@ const ACCEPT = 'video/mp4,video/quicktime,.mp4,.mov,.m4v';
 </div>
 
 <script>
+  // Imported statically, so the page-load budget counts the island (its worker and libraries load with the first file).
   // Only Compress video has its island so far; Video to GIF keeps the empty state until its own.
+  import { mountCompress } from '../ui/video';
   const el = document.querySelector<HTMLElement>('[data-kind="video"][data-op="compress"]');
-  if (el) void import('../ui/video').then(({ mountCompress }) => mountCompress(el));
+  if (el) mountCompress(el);
 </script>

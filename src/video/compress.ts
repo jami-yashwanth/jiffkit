@@ -1,6 +1,6 @@
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import { AiError } from '../ai/errors';
-import { demux, isAac, type SampleRef } from './demux';
+import { checkDecodable, demux, isAac, type SampleRef } from './demux';
 import { checkLimits, encoderCodecs, outputSize, targetBitrate, type Preset, type Resolution } from './limits';
 
 // Compress video, in the worker: mp4box.js demux → VideoDecoder → scale (OffscreenCanvas, when the size changes) →
@@ -14,7 +14,11 @@ export interface CompressOptions {
 }
 
 export interface Compressed {
-  blob: Blob;
+  /**
+   * The MP4. A bare buffer, not a Blob: the worker transfers it to the page, which wraps it in a Blob and lets it go,
+   * so no third copy of the output is ever held (the muxer's chunks and this buffer are the worker's two).
+   */
+  mp4: ArrayBuffer;
   inBytes: number;
   outBytes: number;
   /** The video had sound that isn't AAC, which was left out. */
@@ -65,15 +69,7 @@ export async function compressVideo(
   if (limit !== 'ok') throw new AiError(limit);
   const { video } = d;
 
-  if (typeof VideoDecoder === 'undefined') throw new AiError('device');
-  const decoderConfig: VideoDecoderConfig = {
-    codec: video.codec,
-    codedWidth: video.width,
-    codedHeight: video.height,
-    ...(video.description ? { description: video.description } : {}),
-  };
-  const decodable = await VideoDecoder.isConfigSupported(decoderConfig).then((s) => s.supported === true, () => false);
-  if (!decodable) throw new AiError('unsupported', { detectedType: video.codec.split('.')[0] });
+  const config = await checkDecodable(video);
 
   const size = outputSize(video.width, video.height, opts.resolution);
   const frameRate = Math.min(120, Math.max(1, video.frameRate));
@@ -164,7 +160,7 @@ export async function compressVideo(
   });
 
   try {
-    decoder.configure(decoderConfig);
+    decoder.configure(config);
     for (const s of video.samples) {
       await until(() => decoder.decodeQueueSize < MAX_QUEUE && encoder.encodeQueueSize < MAX_QUEUE, () => failure);
       const data = await read(file, s);
@@ -186,11 +182,11 @@ export async function compressVideo(
   if (!encoded) throw new AiError('corrupt'); // nothing in it could be decoded
 
   muxer.finalize();
-  const { buffer } = muxer.target;
+  const mp4 = muxer.target.buffer;
   return {
-    blob: new Blob([buffer], { type: 'video/mp4' }),
+    mp4,
     inBytes: file.size,
-    outBytes: buffer.byteLength,
+    outBytes: mp4.byteLength,
     soundDropped: !!d.audio && !sound,
   };
 }

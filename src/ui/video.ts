@@ -1,6 +1,6 @@
 import type { AiProgress } from '../ai/client';
 import { AiError, reasonOf, type AiFail } from '../ai/errors';
-import { MAX_BYTES, type Preset, type Resolution } from '../video/limits';
+import { MAX_BYTES, UNDECODABLE, type Preset, type Resolution } from '../video/limits';
 import { formatBytes, middleTruncate } from './format';
 
 // Compress video (VideoTool.astro): empty → the file, read (its size, length and whether it can be decoded), with
@@ -29,6 +29,8 @@ const COPY: Record<AiFail, string> = {
   'wrong-type': "This file isn't a video.",
   cancelled: '',
 };
+/** The file reads fine, but this browser can't decode its picture (HEVC in Firefox, say): another browser can. */
+const UNDECODABLE_COPY = "This browser can't play this video's format. Try Chrome, Edge or Safari.";
 const SOUND_DROPPED = "This video's sound couldn't be kept.";
 const NOT_SMALLER = 'This video was already well compressed.';
 const TYPE_NAMES: Record<string, string> = { jpg: 'JPG', png: 'PNG', webp: 'WebP', heic: 'HEIC', pdf: 'PDF' };
@@ -113,7 +115,7 @@ export function mountCompress(el: HTMLElement): VideoHooks {
     const reason = reasonOf(err);
     failed(reason);
     const type = err instanceof AiError ? err.detectedType : undefined;
-    let text = COPY[reason];
+    let text = reason === 'unsupported' && type === UNDECODABLE ? UNDECODABLE_COPY : COPY[reason];
     tryLink.hidden = true;
     if (reason === 'wrong-type' && type && TYPE_NAMES[type]) {
       text = `This is a ${TYPE_NAMES[type]}, not a video.`;
@@ -285,10 +287,12 @@ export function mountCompress(el: HTMLElement): VideoHooks {
     if (file && !running && !drop.hidden) void take(file);
   });
 
-  // No WebCodecs at all: say so at once, rather than after a file.
+  // No WebCodecs at all: say so at once, rather than after a file. Reported once listeners can be added (right after
+  // this returns), like every other failure the user sees.
   if (!canEncode()) {
     alertText.textContent = NO_ENCODE;
     show({ alert: true });
+    queueMicrotask(() => failed('device'));
   }
   el.dataset.ready = ''; // the island has taken over
 

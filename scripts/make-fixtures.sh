@@ -120,6 +120,10 @@ if command -v ffmpeg >/dev/null 2>&1; then
     -t 2 -c:v libx264 -pix_fmt yuv420p -b:v 1500k -maxrate 1600k -bufsize 1600k -c:a libopus -b:a 48k "$OUT/video/opus-sound.mp4"
   # 1 s at 1920 x 1080 (no sound): 720p makes it 1280 x 720.
   "${FF[@]}" -f lavfi -i "testsrc2=size=1920x1080:rate=30" -t 1 -c:v libx264 -pix_fmt yuv420p -crf 35 -an "$OUT/video/hd.mp4"
+  # A phone's portrait video: stored 640 x 360, with a display matrix turning it a quarter clockwise (as an iPhone
+  # records it; ffmpeg counts anticlockwise, hence -90). It plays as 360 x 640.
+  "${FF[@]}" -f lavfi -i "testsrc2=size=640x360:rate=30" -t 1 -c:v libx264 -pix_fmt yuv420p -crf 35 -an "$TMP/upright.mp4"
+  "${FF[@]}" -display_rotation:v:0 -90 -i "$TMP/upright.mp4" -c copy "$OUT/video/rotated.mp4"
   # Grain squeezed into 80 kbit/s, no sound: any encoder spends more than that on it, so the result isn't smaller.
   "${FF[@]}" -f lavfi -i "testsrc2=size=640x360:rate=30,noise=alls=20:allf=t" -t 2 -c:v libx264 -pix_fmt yuv420p \
     -b:v 80k -maxrate 80k -bufsize 160k -an "$OUT/video/well-compressed.mp4"

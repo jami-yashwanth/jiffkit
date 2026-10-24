@@ -1,6 +1,7 @@
 import { createFile, DataStream, Endianness, Log, type ISOFile, type Movie, type Track } from 'mp4box';
 import { AiError } from '../ai/errors';
 import { sniff } from '../engine/sniff';
+import { UNDECODABLE } from './limits';
 
 // Reads an MP4 or MOV with mp4box.js: its tracks, and where each sample lies in the file. Only the boxes are read
 // (mp4box skips the media data); the samples are read from the File one at a time as they are decoded, so a
@@ -158,4 +159,27 @@ function audioTrack(mp4: Mp4, track: Track): AudioTrack {
     ...(asc ? { description: new Uint8Array(asc) } : {}),
     samples: samplesOf(mp4, track),
   };
+}
+
+
+/** The VideoDecoder configuration for a track. */
+export function decoderConfig(video: VideoTrack): VideoDecoderConfig {
+  return {
+    codec: video.codec,
+    codedWidth: video.width,
+    codedHeight: video.height,
+    ...(video.description ? { description: video.description } : {}),
+  };
+}
+
+/**
+ * Check this browser decodes the track's picture, and give its decoder configuration. Rejects with AiError: device
+ * (no WebCodecs at all), unsupported with detectedType UNDECODABLE (a codec this browser can't play).
+ */
+export async function checkDecodable(video: VideoTrack): Promise<VideoDecoderConfig> {
+  if (typeof VideoDecoder === 'undefined') throw new AiError('device');
+  const config = decoderConfig(video);
+  const ok = await VideoDecoder.isConfigSupported(config).then((s) => s.supported === true, () => false);
+  if (!ok) throw new AiError('unsupported', { detectedType: UNDECODABLE });
+  return config;
 }

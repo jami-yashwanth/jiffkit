@@ -2,7 +2,12 @@ import { createAiEngine, type AiProgress } from '../ai/client';
 import type { Compressed, CompressOptions } from './compress';
 import type { Probed, VideoRequest, VideoResult } from './worker';
 
-export type { Compressed, CompressOptions, Probed };
+export type { CompressOptions, Probed };
+
+/** A compressed video, as the page holds it. */
+export interface CompressedVideo extends Omit<Compressed, 'mp4'> {
+  blob: Blob;
+}
 
 // One worker for the page, started with the first video. The AI tools' client runs it: one job at a time, a worker
 // that dies is replaced for the next job, and Cancel (the signal) terminates it mid-job. Rejects with AiError.
@@ -16,4 +21,9 @@ export const compressVideo = (
   opts: CompressOptions,
   onProgress: (p: AiProgress) => void,
   signal?: AbortSignal,
-): Promise<Compressed> => engine.run({ op: 'compress', file, ...opts }, [], onProgress, signal) as Promise<Compressed>;
+): Promise<CompressedVideo> =>
+  (engine.run({ op: 'compress', file, ...opts }, [], onProgress, signal) as Promise<Compressed>).then(({ mp4, ...rest }) => ({
+    ...rest,
+    // The worker's buffer, transferred: wrapped here and let go, so the page holds the video once.
+    blob: new Blob([mp4], { type: 'video/mp4' }),
+  }));

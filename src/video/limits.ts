@@ -9,6 +9,13 @@ export type Preset = 'small' | 'balanced' | 'better';
 /** Original, or a short side of at most 1080 or 720 pixels ("1080p", "720p"). */
 export type Resolution = null | 1080 | 720;
 
+/**
+ * Set as `detectedType` on an `unsupported` failure when the file reads fine but this browser can't decode its picture
+ * (HEVC in Firefox, say): a matter of the browser, not of the format. (Here, not in demux.ts, so the page needn't load
+ * mp4box to know it.)
+ */
+export const UNDECODABLE = 'codec';
+
 /** The size is known before the file is read, so a file too large is said to be that, whatever its length. */
 export function checkLimits(meta: { durationS: number; bytes: number }): 'ok' | 'too-long' | 'too-large' {
   if (meta.bytes > MAX_BYTES) return 'too-large';
