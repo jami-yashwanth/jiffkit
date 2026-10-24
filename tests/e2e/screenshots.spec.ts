@@ -107,9 +107,15 @@ const framePainted = (video: Locator) =>
     (v: HTMLVideoElement) =>
       new Promise<void>((resolve) => {
         const go = () => {
-          const painted = new Promise<void>((r) => (v.requestVideoFrameCallback ? v.requestVideoFrameCallback(() => r()) : r()));
+          // A frame callback may never come if the frame is already on screen (seen on CI runners), so cap the wait.
+          const painted = new Promise<void>((r) => {
+            if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(() => r());
+            else r();
+            setTimeout(r, 2000);
+          });
           const seeked = new Promise<void>((r) => v.addEventListener('seeked', () => r(), { once: true }));
-          v.currentTime = 0;
+          // Seeking to the current time may not fire 'seeked', so always seek somewhere new.
+          v.currentTime = v.currentTime === 0.01 ? 0.02 : 0.01;
           void Promise.all([painted, seeked]).then(() => resolve());
         };
         if (v.readyState >= 1) go();
