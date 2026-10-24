@@ -206,3 +206,31 @@ Mobile ≤ 600 px follows the round 2 rules. Before/after sliders are keyboard o
 
 ## 6. Definition of done
 All tests and reviews clean, the owner has approved the screenshots, and the branch is merged. Then deployment: Cloudflare Pages plus an R2 bucket for models (owner setup).
+
+## Amendments (rulings during implementation)
+Decisions taken while building round 3 that change or fill in the text above. Each is recorded in the round's ledger.
+
+- **Remove background model:** u2netp (4.6 MB, shown as 5 MB) for everyone; the large u2net path is dropped (first-use size and iOS storage quota).
+- **tessdata same-origin:** the 2 MB `eng` tessdata_fast 4.1.0 file ships with the site (`public/models/tessdata/eng-fast-4.1.0.traineddata.gz.bin`, versioned name) instead of coming from `PUBLIC_MODEL_BASE_URL`. The one model file in `dist/`.
+- **WebGPU off for Remove background and Upscale:** both run on WebAssembly only (no 27 MB WebGPU runtime). Upscale's 4× is gated by device memory and mobile instead (offered off mobile with `deviceMemory` ≥ 8 GB, or unknown on a desktop).
+- **Whisper on WebGPU** only when `PUBLIC_MODEL_BASE_URL` is set explicitly at build (only the owner's bucket has the WebGPU runtime) and the adapter supports `shader-f16`, using the q4f16 files; otherwise WebAssembly with the slow-device note.
+- **WebM rejected:** Compress video and Video to GIF take MP4 and MOV only, with the unsupported-format copy for WebM.
+- **Transcribe file cap 300 MB** (the whole file is read into memory to decode it), checked before reading.
+- **Repetition guard (Whisper):** a window whose text has a gzip ratio over 2.4, or an n-gram (n ≤ 4) repeated 5 or more times in a row, is dropped; 3 or more identical consecutive segments collapse to one.
+- **Compress video sound:** non-AAC audio is dropped, with a note; the video is still compressed.
+- **JPEG metadata strip:** JPG to PDF removes APP1 (EXIF, XMP) and APP13 (IPTC) segments from a JPEG losslessly before embedding it, so location data never reaches the PDF. No new UI claim.
+- **Video to GIF has no source-duration cap:** only the 200 MB byte cap (it decodes no more than its ≤ 15 s span). Compress video keeps 2 minutes and 200 MB.
+- **Image tools' wrong type:** Remove background, Image to text and Upscale name a PDF ("This is a PDF, not a JPG, PNG or WebP image." with **Try PDF to JPG →**) as well as HEIC (**Try HEIC to JPG →**). HEIC is not taken by the AI image tools this round.
+- **Cancel while working** on Upscale and Image to text too, not only during the download; it goes back to the drop zone and counts as `cancelled`.
+
+### New microcopy added in round 3
+Strings not in §4, added for real gaps:
+
+- AI tools: **Choose another file** (quiet button on the consent, download-failed and "Reading audio…" screens; back to the drop zone).
+- Transcribe audio: "Files up to 300 MB for now. Try a shorter recording." · "Reading audio…" (decoding, with a bar that just runs).
+- Upscale image: "This can take a few minutes on this device." (2×-only devices, input over 1 MP) · how-to step "Choose how much larger: 2×, or 4× on devices that support it."
+- PDF to JPG: "Very large pages were drawn at a lower resolution to fit your device's memory."
+- JPG to PDF: "We couldn't read <name>. It may be damaged or incomplete."
+- Compress video: "This video's sound couldn't be kept." · "This video was already well compressed."
+- Video tools: "Couldn't load the video tools. Check your connection." · "This is a <TYPE>, not a video." with **Try Compress image →** / **Try HEIC to JPG →** · "This browser can't play this video's format. Try Chrome, Edge or Safari."
+- Video to GIF: "Your browser can't read video. Try Chrome, Edge, Safari 17+ or Firefox 130+." · "End must be after start and within the video." · "Trim, up to 15 seconds" (legend) · "Large GIF. Try 320 px or a shorter clip for a smaller file." · "Videos up to 200 MB for now." (its limit, in place of the 2 minutes and 200 MB one).
