@@ -237,7 +237,36 @@ describe('site', () => {
       }
     });
     expect(h).toContain('<h1>Tools that never upload your files</h1>');
-    expect(h).toContain('<title>Private Online Tools - Image, PDF and Developer Tools</title>');
+    expect(h).toContain('<title>jiffkit - Private Image, PDF, Video and AI Tools</title>');
+  });
+
+  it('brands every page as jiffkit: wordmark, og:site_name, and the titles with room for it', () => {
+    const pages = ['', 'licenses/', ...TOOLS.map((t) => `${t.slug}/`)];
+    for (const p of pages) {
+      const h = html(p);
+      expect(h, p).toContain('<nav class="site-nav"><a href="/">jiffkit</a></nav>');
+      expect(h, p).toContain('<meta property="og:site_name" content="jiffkit">');
+    }
+    // Tool titles keep their keywords (60-char budget); the brand goes where there is room.
+    for (const t of TOOLS) expect(html(`${t.slug}/`)).toContain(`<title>${t.title}</title>`);
+    expect(html('licenses/')).toContain('<title>Open-source licences - jiffkit</title>');
+    expect(readFileSync('dist/404.html', 'utf8')).toContain('<title>Page not found - jiffkit</title>');
+  });
+
+  it('homepage declares the WebSite name for search results', () => {
+    const blocks = [...html('').matchAll(/<script type="application\/ld\+json">([^<]*)<\/script>/g)].map((m) => JSON.parse(m[1]));
+    expect(blocks).toContainEqual({ '@context': 'https://schema.org', '@type': 'WebSite', name: 'jiffkit', url: `${SITE}/` });
+  });
+
+  it('homepage copy names every tool group, and the description fits 120-160 chars', () => {
+    const h = html('');
+    const description = h.match(/<meta name="description" content="([^"]*)"/)![1];
+    expect(description.length).toBeGreaterThanOrEqual(120);
+    expect(description.length).toBeLessThanOrEqual(160);
+    for (const word of [/background/i, /transcribe/i, /video/i, /PDF/, /photo|image/i]) {
+      expect(description).toMatch(word);
+      expect(h.match(/<p class="subhead">([^<]*)<\/p>/)![1]).toMatch(word);
+    }
   });
 
   it('homepage has no licences entry in the tool list', () => {
