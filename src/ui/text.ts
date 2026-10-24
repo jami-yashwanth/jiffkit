@@ -127,6 +127,8 @@ function json(root: HTMLElement) {
     });
   }
   wireCopy(copy, out);
+  // Browsers can restore a typed value on reload: run the input path so Format and Minify match the box.
+  if (input.value) input.dispatchEvent(new Event('input'));
 }
 
 function base64(root: HTMLElement) {
@@ -231,6 +233,7 @@ function jwt(root: HTMLElement) {
 
   input.addEventListener('input', () => timer.later(render));
   copies.forEach((btn) => wireCopy(btn, btn.dataset.copy === 'header' ? header : payload));
+  if (input.value) render(); // a value restored on reload is decoded straight away
 }
 
 export function mount(el: HTMLElement): void {

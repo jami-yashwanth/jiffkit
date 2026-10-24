@@ -288,3 +288,38 @@ test('empty status regions stay in the accessibility tree and take no room', asy
     }
   }
 });
+
+/** Put a value into the textarea the moment the parser creates it, so it is there before the island mounts (what a reload's form restore does). */
+async function presetBeforeMount(page: Page, selector: string, value: string) {
+  await page.addInitScript(
+    ({ selector, value }) => {
+      const set = () => {
+        const el = document.querySelector<HTMLTextAreaElement>(selector);
+        if (el) el.value = value;
+        return !!el;
+      };
+      const mo = new MutationObserver(() => set() && mo.disconnect());
+      mo.observe(document, { childList: true, subtree: true });
+    },
+    { selector, value },
+  );
+}
+
+test.describe('restored input (reload with form restore)', () => {
+  test('JSON: Format and Minify are enabled when the box already has text', async ({ page }) => {
+    await presetBeforeMount(page, '[data-input]', '{"a": 1}');
+    await page.goto('/json-formatter/');
+    await expect(page.getByLabel('JSON', { exact: true })).toHaveValue('{"a": 1}');
+    await expect(page.getByRole('button', { name: 'Format', exact: true })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Minify', exact: true })).toBeEnabled();
+    await page.getByRole('button', { name: 'Minify', exact: true }).click();
+    await expect(page.locator('pre[data-results]')).toHaveText('{"a":1}');
+  });
+
+  test('JWT: a restored token is decoded', async ({ page }) => {
+    await presetBeforeMount(page, '[data-input]', jwt({ sub: 'restored-user' }));
+    await page.goto('/jwt-decoder/');
+    await expect(page.locator('[data-payload]')).toContainText('restored-user');
+    await expect(page.getByRole('button', { name: 'Copy', exact: true }).first()).toBeEnabled();
+  });
+});
