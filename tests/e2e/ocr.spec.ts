@@ -14,7 +14,7 @@ async function open(page: Page) {
   await recordPanel(page);
   // The language data ships with the site (same origin), so no model host is routed. Count its requests.
   const models = { requests: 0, body: undefined as Buffer | undefined };
-  await page.route('**/models/tessdata/eng-fast.traineddata.gz.bin', (route) => {
+  await page.route('**/models/tessdata/eng-fast-4.1.0.traineddata.gz.bin', (route) => {
     models.requests++;
     return models.body ? route.fulfill({ status: 200, contentType: 'application/octet-stream', body: models.body }) : route.continue();
   });

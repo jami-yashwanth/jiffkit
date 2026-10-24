@@ -345,7 +345,7 @@ test.describe('AI tools', () => {
     await page.locator('[data-kind="ai"] input[type=file]').setInputFiles('tests/fixtures/ocr/hello.png');
     await expect(page.getByRole('textbox', { name: 'Text' })).toHaveValue(/quick brown fox/i);
     await settle(page);
-    const data = requests.filter((r) => r.url.endsWith('/models/tessdata/eng-fast.traineddata.gz.bin'));
+    const data = requests.filter((r) => r.url.endsWith('/models/tessdata/eng-fast-4.1.0.traineddata.gz.bin'));
     expect(data).toHaveLength(1);
     expect(data[0]!.origin).toBe(new URL(info.project.use.baseURL ?? 'http://localhost:4399').origin);
     expect(requests.some((r) => isModel(r.url))).toBe(false);

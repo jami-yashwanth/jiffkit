@@ -73,7 +73,7 @@ export const MODELS: Record<ModelKey, ModelEntry> = {
   },
   // tessdata_fast `eng` 4.1.0, gzipped (its sha256 is on /licenses/). At 2 MB it ships with the site, from
   // public/models/tessdata/ (a .bin name, so no server adds Content-Encoding: gzip and unpacks it in transit), so it is the one model not read from MODEL_BASE. Verified in Task 4.
-  tessdata: { path: 'models/tessdata/eng-fast.traineddata.gz.bin', bytes: 1_967_599, licence: 'Apache-2.0', sameOrigin: true },
+  tessdata: { path: 'models/tessdata/eng-fast-4.1.0.traineddata.gz.bin', bytes: 1_967_599, licence: 'Apache-2.0', sameOrigin: true },
 };
 
 export const modelUrl = (key: ModelKey): string => {

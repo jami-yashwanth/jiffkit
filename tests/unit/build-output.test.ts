@@ -163,8 +163,11 @@ describe('site', () => {
     }
   });
 
-  it('ships the OCR language data from dist, at the size the model list says', () => {
+  it('ships the OCR language data from dist, at the size the model list says, named with its version', () => {
     expect(MODELS.tessdata.sameOrigin).toBe(true);
+    // Served same-origin and cached by URL: a new version gets a new name, never the old one's cache.
+    expect(MODELS.tessdata.path).toBe('models/tessdata/eng-fast-4.1.0.traineddata.gz.bin');
+    expect(html('licenses/')).toContain('eng-fast-4.1.0.traineddata.gz.bin');
     const file = `dist/${MODELS.tessdata.path}`;
     expect(existsSync(file)).toBe(true);
     expect(statSync(file).size).toBe(MODELS.tessdata.bytes);
