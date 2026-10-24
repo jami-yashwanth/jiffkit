@@ -1,0 +1,22 @@
+---
+import Base from '../layouts/Base.astro';
+import { CATEGORY_LABEL, TOOLS, type Category } from '../tools';
+
+// Cloudflare Pages serves this with a 404 status for any unknown path. Without it, Pages falls back to the homepage
+// with a 200, which search engines count as a soft 404.
+const order: Category[] = ['image', 'pdf', 'ai', 'video', 'developer', 'qr'];
+---
+<Base title="Page not found" description="There is no page at this address." path="/404/">
+  <h1>Page not found</h1>
+  <p class="subhead">There's no page at this address. Every tool is listed below.</p>
+  {order.map((c) => (
+    <section class="category">
+      <h2>{CATEGORY_LABEL[c]}</h2>
+      <ul class="tool-list">
+        {TOOLS.filter((t) => t.category === c).map((t) => (
+          <li><a href={`/${t.slug}/`}><strong>{t.h1}</strong>{t.subhead}</a></li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</Base>
