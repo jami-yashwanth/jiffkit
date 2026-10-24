@@ -36,6 +36,7 @@ export function ocrDef(): AiToolDef<OcrOut> {
   return {
     verb: 'Reading text',
     modelKey: 'tessdata',
+    cancelWork: true, // a large page can take a while on a slow device
     inputName: 'JPG, PNG or WebP image',
     elsewhere: {
       heic: { href: '/heic-to-jpg/', h1: 'HEIC to JPG' },

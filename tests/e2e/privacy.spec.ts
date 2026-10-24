@@ -478,6 +478,28 @@ test.describe('AI tools: analytics', () => {
     expectClean(requests, [Buffer.from('photo.jpg'), Buffer.from(head64('photo.jpg'))], info.project.use.baseURL);
   });
 
+  for (const t of [
+    { slug: 'upscale-image', verb: 'Upscaling', file: 'tests/fixtures/photo.jpg', routed: true },
+    { slug: 'image-to-text', verb: 'Reading text', file: 'tests/fixtures/ocr/hello.png', routed: false },
+  ]) {
+    test(`${t.slug}: Cancel while working goes back to the drop zone and fires convert_error {${t.slug}, cancelled}`, async ({ page }) => {
+      const { events } = await watch(page);
+      await installResultHold(page);
+      await page.goto(`/${t.slug}/`);
+      if (t.routed) await routeModels(page, await modelBytes(page));
+      await holdResults(page); // the result waits, so Cancel is there to press however fast the work is
+      await aiInput(page).setInputFiles(t.file);
+      await expect(page.locator('[data-ai-panel] > p').first()).toHaveText(new RegExp(`^${t.verb}… \\d+%$`));
+      await page.getByRole('button', { name: 'Cancel' }).click();
+      await expect(page.locator('[data-kind="ai"] .drop')).toBeVisible();
+      await expect(page.locator('[data-ai-panel]')).toBeHidden();
+      await expect(page.locator('[data-kind="ai"] input[type=file]')).toBeFocused();
+      await expect.poll(() => events.length).toBe(1);
+      await settle(page);
+      expect(only(events)).toEqual([['convert_error', { tool: t.slug, reason: 'cancelled' }]]);
+    });
+  }
+
   test('transcribe: Cancel during the download fires convert_error {transcribe-audio, cancelled}; the run then fires one convert_success', async ({ page }, info) => {
     const { events, requests } = await watch(page);
     await noGpu(page);

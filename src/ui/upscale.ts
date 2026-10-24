@@ -56,6 +56,7 @@ export function upscaleDef(el: HTMLElement): AiToolDef<UpscaleOut> {
     modelKey: 'upscale',
     // The runtime's 14 MB .wasm downloads with the model on first use; it counts towards the size shown.
     withModel: ['ortWasm'],
+    cancelWork: true, // a big image can take minutes
     inputName: 'JPG, PNG or WebP image',
     elsewhere: { heic: { href: '/heic-to-jpg/', h1: 'HEIC to JPG' } },
     messages: { 'too-large': () => TOO_LARGE[asked] },
