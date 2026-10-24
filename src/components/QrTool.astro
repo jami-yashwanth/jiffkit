@@ -1,0 +1,44 @@
+---
+import type { QrTool } from '../tools';
+
+interface Props { tool: QrTool }
+const { tool } = Astro.props;
+const levels = ['L', 'M', 'Q', 'H'];
+const sizes = [256, 512, 1024];
+---
+<div data-kind="qr" data-tool={tool.slug}>
+  <div class="field">
+    <label for="qr-text">Text or URL</label>
+    <input id="qr-text" class="text-input" type="text" autocomplete="off" spellcheck="false" data-input />
+  </div>
+  <p class="status" role="status" aria-live="polite" data-status></p>
+  <div class="qr-preview" data-results>
+    <p class="qr-empty">Your QR code appears here.</p>
+  </div>
+  <p class="note">Static code: works forever, no tracking, no sign-up.</p>
+  <div class="actions">
+    <button type="button" class="btn" data-download="png" disabled>Download PNG</button>
+    <button type="button" class="btn btn-quiet" data-download="svg" disabled>Download SVG</button>
+  </div>
+  <details class="settings">
+    <summary>Options</summary>
+    <fieldset class="settings toggle">
+      <legend>Error correction</legend>
+      {levels.map((l) => (
+        <label><input type="radio" name="qr-level" value={l} {...(l === 'M' ? { checked: true } : {})} data-level />{l}</label>
+      ))}
+    </fieldset>
+    <fieldset class="settings toggle">
+      <legend>Size</legend>
+      {sizes.map((s) => (
+        <label><input type="radio" name="qr-size" value={s} {...(s === 512 ? { checked: true } : {})} data-size />{s} px</label>
+      ))}
+    </fieldset>
+  </details>
+</div>
+
+<script>
+  import { mount } from '../ui/qr';
+  const el = document.querySelector<HTMLElement>('[data-kind="qr"]');
+  if (el) mount(el);
+</script>

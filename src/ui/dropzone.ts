@@ -1,8 +1,9 @@
 import type { EngineClient } from '../engine/client';
 import { sniff } from '../engine/sniff';
 import { DOWNSCALE_MEGAPIXELS, type Done, type Failed, type Job, type Progress } from '../engine/types';
-import type { InType, OutFormat, ToolSlug } from '../tools';
+import type { ImageSlug, InType, OutFormat } from '../tools';
 import { formatBytes, middleTruncate, uniqueNames } from './format';
+import { track } from './track';
 
 // The engine (and with it the worker and codecs) is imported only on hover, focus or drop, which keeps the
 // page's up-front JavaScript inside the 15 KB budget.
@@ -37,14 +38,9 @@ function h<K extends keyof HTMLElementTagNameMap>(
   return el;
 }
 
-/** Plausible events. Props are only ever {tool, count} or {tool, reason}: never a file name, size or type. */
-function track(name: 'convert_success' | 'convert_error', props: Record<string, string | number>): void {
-  (window as { plausible?: (n: string, o: { props: typeof props }) => void }).plausible?.(name, { props });
-}
-
 export function mount(el: HTMLElement): void {
   const q = <T extends Element>(sel: string): T => el.querySelector<T>(sel)!;
-  const tool = el.dataset.tool as ToolSlug;
+  const tool = el.dataset.tool as ImageSlug;
   const types = (el.dataset.types ?? '').split(' ') as InType[];
   const inputName = el.dataset.inputName ?? '';
   const noun = el.dataset.noun ?? 'image';

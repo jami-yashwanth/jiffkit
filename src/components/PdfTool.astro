@@ -1,0 +1,83 @@
+---
+import type { PdfTool } from '../tools';
+
+interface Props { tool: PdfTool }
+const { tool } = Astro.props;
+const merge = tool.op === 'merge';
+// Spec §4 empty states. The island (src/ui/pdf.ts) takes over as files arrive.
+const title = merge ? 'Drop PDF files here' : 'Drop a PDF here';
+const choose = merge ? 'Choose PDFs' : 'Choose PDF';
+const privacy = merge
+  ? 'Merged on your device. Your files are never uploaded.'
+  : 'Split on your device. Your files are never uploaded.';
+// Gzipped size of the PDF worker and the pdf-lib chunk it loads on first use: measured from the build
+// (tests/unit/build-output.test.ts checks it still matches).
+const ENGINE_SIZE = '0.2 MB';
+---
+<div data-kind="pdf" data-tool={tool.slug} data-op={tool.op} data-codec-size={ENGINE_SIZE}>
+  <div class="drop">
+    <p class="drop-title">{title}</p>
+    <label class="btn">
+      {choose}
+      <input type="file" accept="application/pdf,.pdf" {...(merge ? { multiple: true } : {})} />
+    </label>
+    <p class="privacy">{privacy}</p>
+  </div>
+  <div class="loading" data-loading hidden>
+    <p>Getting the PDF tools ready… {ENGINE_SIZE}, one time only</p>
+    <progress aria-label="Getting the PDF tools ready"></progress>
+  </div>
+  <div class="pdf-alert" role="alert" data-alert hidden>
+    <p class="error" data-alert-text></p>
+    <button type="button" class="btn" data-retry>Try again</button>
+  </div>
+  <p class="status" role="status" aria-live="polite" data-status></p>
+  <div data-results>
+    {merge ? (
+      <div data-list hidden>
+        <ul class="rows pdf-rows" data-rows></ul>
+        <p class="note pdf-hint" data-hint hidden>Add at least one more PDF to merge.</p>
+        <div class="actions">
+          <button type="button" class="btn" data-run disabled>Merge PDFs</button>
+        </div>
+      </div>
+    ) : (
+      <div data-list hidden>
+        <div class="pdf-file">
+          <span class="name" data-name></span>
+          <span class="size" data-meta></span>
+        </div>
+        <p class="error" role="alert" data-file-error hidden></p>
+        <fieldset class="settings pdf-mode" aria-label="How to split" data-options>
+          <label><input type="radio" name="mode" value="every" checked data-mode />Every page as a separate file</label>
+          <div class="pdf-extract">
+            <label><input type="radio" name="mode" value="ranges" data-mode />Extract pages:</label>
+            <input type="text" class="text-input" placeholder="1-3, 5" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Pages to extract" aria-describedby="pdf-range-error" disabled data-ranges />
+          </div>
+          <p class="error" id="pdf-range-error" role="alert" data-range-error hidden></p>
+        </fieldset>
+        <div class="actions" data-options>
+          <button type="button" class="btn" data-run disabled>Split PDF</button>
+        </div>
+      </div>
+    )}
+    <div class="pdf-done" data-done hidden>
+      <div class="pdf-file">
+        <span class="name" data-done-name></span>
+        <span class="size" data-done-meta></span>
+      </div>
+      <div class="actions">
+        <a class="btn" data-download>Download</a>
+        <button type="button" class="btn btn-quiet" data-reset>Start over</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { mount } from '../ui/pdf';
+  const el = document.querySelector<HTMLElement>('[data-kind="pdf"]');
+  if (el) {
+    mount(el);
+  }
+</script>

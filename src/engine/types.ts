@@ -1,4 +1,4 @@
-import type { InType, OutFormat, ToolSlug } from '../tools';
+import type { ImageSlug, InType, OutFormat } from '../tools';
 
 export type Note = 'gps-removed' | 'first-frame-only' | 'already-optimized' | 'transparency-filled';
 export type FailReason = 'wrong-type' | 'corrupt' | 'too-large' | 'oom' | 'codec-load';
@@ -6,7 +6,7 @@ export type FailReason = 'wrong-type' | 'corrupt' | 'too-large' | 'oom' | 'codec
 export interface Job {
   id: string;
   file: File;
-  tool: ToolSlug;
+  tool: ImageSlug;
   options: { format?: OutFormat; quality?: number; downscaleTo?: number };
 }
 

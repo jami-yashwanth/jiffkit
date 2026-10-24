@@ -6,12 +6,12 @@ import { CodecLoadError, load } from '../../src/engine/codecs';
 import { convert, outputName } from '../../src/engine/convert';
 import { sniff } from '../../src/engine/sniff';
 import { MAX_MEGAPIXELS, type Done, type Failed, type Job, type Progress } from '../../src/engine/types';
-import type { ToolSlug } from '../../src/tools';
+import type { ImageSlug } from '../../src/tools';
 import { useNodeWasm } from '../helpers/node-codecs';
 
 const path = (name: string) => resolve(__dirname, '../fixtures', name);
 const file = (name: string, type = ''): File => new File([readFileSync(path(name))], name, { type });
-const job = (name: string, tool: ToolSlug, options: Job['options'] = {}): Job => ({ id: name, file: file(name), tool, options });
+const job = (name: string, tool: ImageSlug, options: Job['options'] = {}): Job => ({ id: name, file: file(name), tool, options });
 const bytes = async (b: Blob) => new Uint8Array(await b.arrayBuffer());
 const isDone = (r: Done | Failed): r is Done => 'blob' in r;
 async function done(j: Job, limits?: { maxMegapixels: number }): Promise<Done> {

@@ -1,0 +1,88 @@
+---
+import type { TextTool } from '../tools';
+
+interface Props { tool: TextTool }
+const { tool } = Astro.props;
+const indents = [
+  { value: '2', label: '2 spaces' },
+  { value: '4', label: '4 spaces' },
+  { value: 'tab', label: 'Tab' },
+];
+---
+<div data-kind="text" data-tool={tool.slug} data-transform={tool.transform}>
+  {tool.transform === 'json' && (
+    <>
+      <div class="field">
+        <label for="json-in">JSON</label>
+        <textarea id="json-in" class="text-input" rows="10" placeholder="Paste JSON here" spellcheck="false" data-input></textarea>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn" data-action="format" disabled>Format</button>
+        <button type="button" class="btn btn-quiet" data-action="minify" disabled>Minify</button>
+        <button type="button" class="btn btn-quiet" data-action="copy" disabled>Copy</button>
+      </div>
+      <p class="status" role="status" aria-live="polite" data-status></p>
+      <pre class="pane" data-results aria-label="Result" tabindex="0"></pre>
+      <details class="settings">
+        <summary>Options</summary>
+        <fieldset class="settings toggle">
+          <legend>Indent</legend>
+          {indents.map((i) => (
+            <label><input type="radio" name="indent" value={i.value} checked={i.value === '2'} data-indent />{i.label}</label>
+          ))}
+        </fieldset>
+      </details>
+    </>
+  )}
+  {tool.transform === 'base64' && (
+    <>
+      <div class="field">
+        <label for="b64-text">Text</label>
+        <textarea id="b64-text" class="text-input" rows="6" spellcheck="false" data-text></textarea>
+        <div class="actions">
+          <button type="button" class="btn btn-quiet" data-copy="text" disabled>Copy</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="b64-base64">Base64</label>
+        <textarea id="b64-base64" class="text-input" rows="6" spellcheck="false" data-base64></textarea>
+        <div class="actions">
+          <button type="button" class="btn btn-quiet" data-copy="base64" disabled>Copy</button>
+        </div>
+      </div>
+      <p class="status" role="status" aria-live="polite" data-status></p>
+      <div data-results></div>
+      <div class="settings toggle">
+        <label><input type="checkbox" data-urlsafe />URL-safe</label>
+      </div>
+    </>
+  )}
+  {tool.transform === 'jwt' && (
+    <>
+      <div class="field">
+        <label for="jwt-in">Token</label>
+        <textarea id="jwt-in" class="text-input" rows="4" placeholder="Paste a JWT (eyJ…)" spellcheck="false" data-input></textarea>
+      </div>
+      <p class="status" role="status" aria-live="polite" data-status></p>
+      <div data-results>
+        <div class="pane-head">
+          <p class="pane-title" id="jwt-header-title">Header</p>
+          <button type="button" class="btn btn-quiet" data-copy="header" disabled>Copy</button>
+        </div>
+        <pre class="pane" aria-labelledby="jwt-header-title" tabindex="0" data-header></pre>
+        <div class="pane-head">
+          <p class="pane-title" id="jwt-payload-title">Payload</p>
+          <button type="button" class="btn btn-quiet" data-copy="payload" disabled>Copy</button>
+        </div>
+        <pre class="pane" aria-labelledby="jwt-payload-title" tabindex="0" data-payload></pre>
+      </div>
+      <p class="note">Signature not verified. This tool only decodes the token. Your token never leaves this page.</p>
+    </>
+  )}
+</div>
+
+<script>
+  import { mount } from '../ui/text';
+  const el = document.querySelector<HTMLElement>('[data-kind="text"]');
+  if (el) mount(el);
+</script>

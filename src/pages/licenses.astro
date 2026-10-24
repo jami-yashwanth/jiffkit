@@ -25,6 +25,9 @@ const heifJs = pkgVersion('libheif-js');
 const libheifVersion = '1.23.5';
 const libde265Version = '1.0.15';
 
+// pdf-lib bundles its own nested tslib 1.x, not the root tslib.
+const pdfLibTslib = pkgVersion('pdf-lib/node_modules/tslib');
+
 const libs = [
   {
     name: 'libheif-js',
@@ -79,6 +82,57 @@ const libs = [
     texts: [{ label: 'LICENSE', text: licenceText('fflate/LICENSE') }],
   },
   {
+    name: 'pdf-lib',
+    version: pkgVersion('pdf-lib'),
+    licence: 'MIT',
+    note: 'Merges and splits PDFs. Bundles pako, @pdf-lib/standard-fonts, @pdf-lib/upng and tslib, listed below.',
+    source: `https://github.com/Hopding/pdf-lib/tree/v${pkgVersion('pdf-lib')}`,
+    texts: [{ label: 'LICENSE', text: licenceText('pdf-lib/LICENSE.md') }],
+  },
+  {
+    name: 'pako',
+    version: pkgVersion('pako'),
+    licence: 'MIT AND Zlib',
+    note: 'Compression, bundled inside pdf-lib.',
+    source: `https://github.com/nodeca/pako/tree/${pkgVersion('pako')}`,
+    texts: [
+      { label: 'LICENSE', text: licenceText('pako/LICENSE') },
+      { label: 'Zlib licence notice', text: licenceText(null, 'pako-zlib.txt') },
+    ],
+  },
+  {
+    name: '@pdf-lib/standard-fonts',
+    version: pkgVersion('@pdf-lib/standard-fonts'),
+    licence: 'MIT',
+    note: 'Standard PDF font data, bundled inside pdf-lib.',
+    source: `https://www.npmjs.com/package/@pdf-lib/standard-fonts/v/${pkgVersion('@pdf-lib/standard-fonts')}?activeTab=code`,
+    texts: [{ label: 'LICENSE', text: licenceText('@pdf-lib/standard-fonts/LICENSE.md') }],
+  },
+  {
+    name: '@pdf-lib/upng',
+    version: pkgVersion('@pdf-lib/upng'),
+    licence: 'MIT',
+    note: 'PNG decoding, bundled inside pdf-lib.',
+    source: `https://www.npmjs.com/package/@pdf-lib/upng/v/${pkgVersion('@pdf-lib/upng')}?activeTab=code`,
+    texts: [{ label: 'LICENSE', text: licenceText('@pdf-lib/upng/LICENSE') }],
+  },
+  {
+    name: 'tslib',
+    version: pdfLibTslib,
+    licence: '0BSD',
+    note: 'TypeScript runtime helpers, bundled inside pdf-lib.',
+    source: `https://github.com/microsoft/tslib/tree/v${pdfLibTslib}`,
+    texts: [{ label: 'LICENSE', text: licenceText('pdf-lib/node_modules/tslib/LICENSE.txt') }],
+  },
+  {
+    name: 'qrcode-generator',
+    version: pkgVersion('qrcode-generator'),
+    licence: 'MIT',
+    note: 'Draws QR codes.',
+    source: `https://github.com/kazuhikoarase/qrcode-generator/tree/js${pkgVersion('qrcode-generator')}`,
+    texts: [{ label: 'LICENSE', text: licenceText(null, 'qrcode-generator.txt') }],
+  },
+  {
     name: 'Astro',
     version: pkgVersion('astro'),
     licence: 'MIT',
@@ -88,7 +142,7 @@ const libs = [
   },
 ];
 ---
-<Base title="Open-source licences" description="Open-source software used by these image tools, with licences and source links." path="/licenses/">
+<Base title="Open-source licences" description="Open-source software used by the tools on this site, with licences and source links." path="/licenses/">
   <h1>Open-source licences</h1>
   <p class="subhead">These tools are built on open-source software. Source code for the exact versions we ship is linked below.</p>
   <p>This software is based in part on the work of the Independent JPEG Group.</p>
