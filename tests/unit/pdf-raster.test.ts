@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_PAGE_PIXELS, renderScale } from '../../src/pdf/raster';
+import { canvasSize, isMemoryError, MAX_DOCUMENT_PIXELS, MAX_PAGE_PIXELS, pageScale, renderScale } from '../../src/pdf/raster';
 
 const pixels = (w: number, h: number, scale: number) => Math.floor(w * scale) * Math.floor(h * scale);
 
@@ -28,9 +28,39 @@ describe('renderScale', () => {
     expect(r.capped).toBe(true);
     expect(pixels(5000, 5000, r.scale)).toBeLessThanOrEqual(MAX_PAGE_PIXELS);
   });
-  it('never returns a zero-size page', () => {
-    const r = renderScale(0.5, 0.5, 150);
-    expect(Math.floor(0.5 * r.scale)).toBeGreaterThanOrEqual(0);
-    expect(r.scale).toBeGreaterThan(0);
+})
+
+describe('canvasSize', () => {
+  it('is never zero, even for a sliver of a page', () => {
+    expect(canvasSize(0.4, 0.2)).toEqual({ width: 1, height: 1 });
+  });
+  it('rounds down, so a page at the cap stays under it', () => {
+    const r = renderScale(5000, 5000, 300);
+    const c = canvasSize(5000 * r.scale, 5000 * r.scale);
+    expect(c.width * c.height).toBeLessThanOrEqual(MAX_PAGE_PIXELS);
+  });
+});
+
+describe('pageScale (the whole-file budget)', () => {
+  it('is renderScale while the file is inside 500 MP', () => {
+    expect(pageScale(612, 792, 300, 0)).toEqual(renderScale(612, 792, 300));
+  });
+  it('draws at 150 dpi, and says so, once 300 dpi would pass the budget', () => {
+    // A Letter page at 300 dpi is ~8.7 MP: 495 MP used leaves no room for it.
+    const r = pageScale(612, 792, 300, MAX_DOCUMENT_PIXELS - 1_000_000);
+    expect(r).toEqual({ scale: 150 / 72, dpi: 150, capped: true });
+  });
+  it('leaves a 150 dpi request alone', () => {
+    expect(pageScale(612, 792, 150, MAX_DOCUMENT_PIXELS)).toEqual({ scale: 150 / 72, dpi: 150, capped: false });
+  });
+});
+
+describe('isMemoryError', () => {
+  it('knows a RangeError and messages that say memory', () => {
+    expect(isMemoryError(new RangeError('Array buffer allocation failed'))).toBe(true);
+    expect(isMemoryError(new Error('Out of memory'))).toBe(true);
+    expect(isMemoryError(new Error('Canvas exceeds max size'))).toBe(false);
+    expect(isMemoryError(new Error('Invalid PDF structure'))).toBe(false);
+    expect(isMemoryError('nope')).toBe(false);
   });
 });

@@ -1,7 +1,7 @@
 import { PdfError } from './ops';
-import { renderScale } from './raster';
+import { canvasSize, isMemoryError, pageScale } from './raster';
 import type { ImageFormat, PdfOut, PdfRequest, RasterOut } from './types';
-import { serve } from './worker-host';
+import { serve, type EmitPage } from './worker-host';
 
 // PDF to JPG. pdf.js runs right here, in this worker: its own "main-thread" mode, fed the parser module through
 // `globalThis.pdfjsWorker`, so it never starts a second worker and works the same in every browser. Both pdf.js modules
@@ -11,9 +11,9 @@ type Pdfjs = typeof import('pdfjs-dist');
 
 /** Where the build put pdf.js's font, CMap and wasm data, by file name. The build only fetches them if a PDF needs them. */
 const assets = {
-  standardFontDataUrl: import.meta.glob('../../node_modules/pdfjs-dist/standard_fonts/*', { query: '?url', import: 'default', eager: true }),
-  cMapUrl: import.meta.glob('../../node_modules/pdfjs-dist/cmaps/*.bcmap', { query: '?url', import: 'default', eager: true }),
-  wasmUrl: import.meta.glob('../../node_modules/pdfjs-dist/wasm/{jbig2,openjpeg,qcms_bg}.wasm', { query: '?url', import: 'default', eager: true }),
+  standardFontDataUrl: import.meta.glob('../../node_modules/pdfjs-dist/standard_fonts/*.{pfb,ttf}', { query: '?url&no-inline', import: 'default', eager: true }),
+  cMapUrl: import.meta.glob('../../node_modules/pdfjs-dist/cmaps/*.bcmap', { query: '?url&no-inline', import: 'default', eager: true }),
+  wasmUrl: import.meta.glob('../../node_modules/pdfjs-dist/wasm/{jbig2,openjpeg}.wasm', { query: '?url&no-inline', import: 'default', eager: true }),
 } as const;
 
 /** pdf.js asks for these by file name; we answer from the files the build emitted. */
@@ -80,8 +80,8 @@ async function open(lib: Pdfjs, bytes: ArrayBuffer) {
 }
 
 const MIME: Record<ImageFormat, string> = { jpg: 'image/jpeg', png: 'image/png' };
-// Page images use convertToBlob (the main-thread canvas route the v1 image engine avoids, because it caps what it can
-// hold): safe here because every page is capped at 25 MP by renderScale, well inside what a canvas can encode.
+// Page images use convertToBlob (the canvas route the v1 image engine avoids, because it caps what it can hold): safe
+// here because every page is capped at 25 MP by renderScale, well inside what a canvas can encode.
 const JPEG_QUALITY = 0.85;
 
 async function pageCount(bytes: ArrayBuffer): Promise<number> {
@@ -94,42 +94,46 @@ async function pageCount(bytes: ArrayBuffer): Promise<number> {
   }
 }
 
-async function rasterize(bytes: ArrayBuffer, base: string, format: ImageFormat, dpi: 150 | 300): Promise<RasterOut> {
+async function rasterize(bytes: ArrayBuffer, base: string, format: ImageFormat, dpi: 150 | 300, emit: EmitPage): Promise<RasterOut> {
   const lib = await loadPdfjs();
   const { doc, close } = await open(lib, bytes);
-  const files: RasterOut['files'] = [];
   let capped = false;
+  let used = 0; // pixels drawn so far, for the whole-file budget
   try {
     for (let n = 1; n <= doc.numPages; n++) {
       const page = await doc.getPage(n);
       try {
-        const [w, h] = (({ width, height }) => [width, height])(page.getViewport({ scale: 1 }));
-        const r = renderScale(w, h, dpi);
+        const { width: w, height: h } = page.getViewport({ scale: 1 });
+        const r = pageScale(w, h, dpi, used);
         capped ||= r.capped;
         const viewport = page.getViewport({ scale: r.scale });
-        const canvas = new OffscreenCanvas(Math.max(1, Math.floor(viewport.width)), Math.max(1, Math.floor(viewport.height)));
+        const size = canvasSize(viewport.width, viewport.height);
+        used += size.width * size.height;
+        const canvas = new OffscreenCanvas(size.width, size.height);
         const ctx = canvas.getContext('2d')!;
         ctx.fillStyle = '#fff'; // a page has no transparency: JPEG would turn it black
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         await page.render({ canvasContext: ctx as unknown as CanvasRenderingContext2D, canvas: canvas as unknown as HTMLCanvasElement, viewport }).promise;
         const blob = await canvas.convertToBlob(format === 'jpg' ? { type: MIME.jpg, quality: JPEG_QUALITY } : { type: MIME.png });
-        files.push({ name: `${base}-page-${n}.${format}`, bytes: new Uint8Array(await blob.arrayBuffer()) });
         canvas.width = canvas.height = 0; // let go of the pixels now, not when the GC gets to it
+        // Out it goes at once: this worker never holds more than the page it is on.
+        emit({ name: `${base}-page-${n}.${format}`, n, total: doc.numPages, bytes: new Uint8Array(await blob.arrayBuffer()) });
       } finally {
         page.cleanup();
       }
     }
   } catch (err) {
     if (err instanceof PdfError) throw err;
+    if (isMemoryError(err)) throw new PdfError('memory');
     console.error('pdf: could not draw a page', err);
     throw new PdfError('corrupt');
   } finally {
     await close();
   }
-  return { files, capped };
+  return { count: doc.numPages, capped };
 }
 
-async function run(msg: PdfRequest): Promise<number | PdfOut | RasterOut> {
+async function run(msg: PdfRequest, emit: EmitPage): Promise<number | PdfOut | RasterOut> {
   switch (msg.op) {
     case 'warm':
       await loadPdfjs();
@@ -137,7 +141,7 @@ async function run(msg: PdfRequest): Promise<number | PdfOut | RasterOut> {
     case 'count':
       return pageCount(msg.bytes);
     case 'rasterize':
-      return rasterize(msg.bytes, msg.base, msg.format, msg.dpi);
+      return rasterize(msg.bytes, msg.base, msg.format, msg.dpi, emit);
     default:
       throw new PdfError('corrupt'); // served by worker.ts
   }

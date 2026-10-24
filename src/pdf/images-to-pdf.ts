@@ -43,14 +43,19 @@ export async function imagesToPdf(images: PdfImage[], size: PageSize): Promise<{
   const L = await loadLib();
   try {
     const doc = await L.PDFDocument.create();
-    for (const img of images) {
-      const embedded = img.kind === 'jpg' ? await doc.embedJpg(img.bytes) : await doc.embedPng(img.bytes);
+    for (const [i, img] of images.entries()) {
+      let embedded;
+      try {
+        embedded = img.kind === 'jpg' ? await doc.embedJpg(img.bytes) : await doc.embedPng(img.bytes);
+      } catch {
+        throw new PdfError('corrupt', i);
+      }
       const l = layout(img.width, img.height, size);
       const page = doc.addPage([l.pageWidth, l.pageHeight]);
       page.drawImage(embedded, { x: l.x, y: l.y, width: l.width, height: l.height });
     }
     return { bytes: await doc.save(), pages: images.length };
-  } catch {
-    throw new PdfError('corrupt');
+  } catch (err) {
+    throw err instanceof PdfError ? err : new PdfError('corrupt');
   }
 }

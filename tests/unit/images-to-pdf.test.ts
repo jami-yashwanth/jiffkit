@@ -60,4 +60,9 @@ describe('imagesToPdf', () => {
   it('a damaged image is corrupt', async () => {
     await expect(imagesToPdf([{ bytes: new Uint8Array([1, 2, 3]), kind: 'jpg', width: 1, height: 1 }], 'fit')).rejects.toMatchObject({ reason: 'corrupt' });
   });
+  it('says which image was damaged', async () => {
+    const good = { bytes: jpg, kind: 'jpg' as const, width: 800, height: 600 };
+    const bad = { bytes: new Uint8Array([1, 2, 3]), kind: 'png' as const, width: 1, height: 1 };
+    await expect(imagesToPdf([good, bad], 'fit')).rejects.toMatchObject({ reason: 'corrupt', index: 1 });
+  });
 });

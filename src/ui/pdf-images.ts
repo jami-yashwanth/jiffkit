@@ -1,7 +1,8 @@
 import type { EngineClient } from '../engine/client';
 import type { Done, FailReason } from '../engine/types';
 import type { PdfEngine } from '../pdf/client';
-import type { ImageFormat, ImageIn, PageSize, PdfOut } from '../pdf/types';
+import { MAX_REENCODE_PIXELS } from '../pdf/raster';
+import type { ImageFormat, ImageIn, PageSize, PdfFail, PdfOut } from '../pdf/types';
 import { formatBytes, middleTruncate } from './format';
 import { moveRow, removeRow, rowTools } from './pdf-rows';
 import { COPY, createShell, failed, h, NAME_MAX, pages, reasonOf, succeeded, Unusable, type PdfErrorReason } from './pdf-shell';
@@ -19,12 +20,22 @@ export function mount(el: HTMLElement): void {
 }
 
 const MIME: Record<ImageFormat, string> = { jpg: 'image/jpeg', png: 'image/png' };
+const TYPE_NAMES: Record<string, string> = { heic: 'HEIC', jpg: 'JPG', png: 'PNG', webp: 'WebP' };
+/** "JPG" when the file is really an image, undefined when it is something else (or unreadable). */
+async function imageTypeName(file: File): Promise<string | undefined> {
+  try {
+    return TYPE_NAMES[(await (await import('../engine/sniff')).sniff(file)).type];
+  } catch {
+    return undefined;
+  }
+}
 const baseOf = (file: File) => file.name.replace(/\.pdf$/i, '') || 'document';
 
 // ======================= PDF to JPG =======================
 function mountToImages(el: HTMLElement): void {
   const shell = createShell<PdfEngine>(el, loadRasterEngine);
-  const { q, drop, list, runBtn, job, report, hideAlert, showDone, runJob } = shell;
+  const { q, drop, list, runBtn, job, progress, say, report, hideAlert, showDone, runJob } = shell;
+  const tryLink = q<HTMLAnchorElement>('[data-try]');
   const nameEl = q('[data-name]');
   const metaEl = q('[data-meta]');
   const fileError = q('[data-file-error]');
@@ -45,20 +56,26 @@ function mountToImages(el: HTMLElement): void {
           target.pages = n;
           metaEl.textContent = pages(n);
           runBtn.disabled = false;
-        } else fail('corrupt');
+        } else void fail('corrupt');
       },
-      (err) => gen === shell.generation && fail(reasonOf(err)),
+      (err) => void (gen === shell.generation && fail(reasonOf(err))),
     );
   }
-  function fail(reason: keyof typeof COPY): void {
+  async function fail(reason: PdfFail): Promise<void> {
+    const gen = shell.generation;
+    const target = current!;
     metaEl.textContent = '';
     if (reason === 'codec-load') {
       report('codec-load', count);
       return;
     }
-    failed(reason);
-    fileError.textContent = COPY[reason];
+    // An image is not "damaged": say what it is, and where it belongs.
+    const type = reason === 'corrupt' ? await imageTypeName(target.file) : undefined;
+    if (gen !== shell.generation) return;
+    failed(type ? 'wrong-type' : reason);
+    fileError.textContent = type ? `This is a ${type}, not a PDF.` : COPY[reason];
     fileError.hidden = false;
+    tryLink.hidden = !type;
     options.forEach((o) => (o.hidden = true));
   }
 
@@ -70,6 +87,7 @@ function mountToImages(el: HTMLElement): void {
     nameEl.textContent = middleTruncate(current.file.name, NAME_MAX);
     nameEl.title = current.file.name;
     fileError.hidden = true;
+    tryLink.hidden = true;
     options.forEach((o) => (o.hidden = false));
     list.hidden = false;
     drop.classList.add('drop-compact');
@@ -78,6 +96,7 @@ function mountToImages(el: HTMLElement): void {
   function clear(): void {
     current = undefined;
     fileError.hidden = true;
+    tryLink.hidden = true;
   }
   shell.wire(add, clear);
 
@@ -87,24 +106,36 @@ function mountToImages(el: HTMLElement): void {
     const format = checked('format') as ImageFormat;
     const dpi = Number(checked('dpi')) as 150 | 300;
     await runJob(
-      'Converting…',
+      'Converting… 0%',
       async (gen) => {
-        const out = await job((e) => e.rasterize(target.file, format, dpi));
+        const { zipStream } = await import('./zip');
+        progress(0);
+        // Pages arrive one at a time. Several go straight into a ZIP and are let go of; one page is kept as it is.
+        let zip: ReturnType<typeof zipStream> | undefined;
+        let only: { name: string; bytes: Uint8Array } | undefined;
+        const out = await job((e) =>
+          e.rasterize(target.file, format, dpi, (p) => {
+            if (gen !== shell.generation) return;
+            if (p.total === 1) only = p;
+            else (zip ??= zipStream()).add(p.name, p.bytes);
+            const pct = Math.floor((p.n / p.total) * 100);
+            progress(pct);
+            say(`Converting… ${pct}%`, true);
+          }),
+        );
         if (gen !== shell.generation) return;
-        if (!out.files.length) throw new Unusable();
+        if (!out.count) throw new Unusable();
         const note = out.capped ? "Very large pages were drawn at a lower resolution to fit your device's memory." : '';
-        const blob = (f: { bytes: Uint8Array }) => new Blob([f.bytes as BlobPart], { type: MIME[format] });
-        if (out.files.length > 1) {
-          const { zipFiles } = await import('./zip');
-          const zip = await zipFiles(out.files.map((f) => ({ name: f.name, blob: blob(f) })));
+        if (zip) {
+          const blob = await zip.finish();
           if (gen !== shell.generation) return;
           const zipName = `${baseOf(target.file)}-pages.zip`;
-          showDone(zip, zipName, 'Download all (ZIP)', '', `${out.files.length} files`, `${zipName} ready, ${out.files.length} files`, note);
+          showDone(blob, zipName, 'Download all (ZIP)', '', `${out.count} files`, `${zipName} ready, ${out.count} files`, note);
         } else {
-          const f = out.files[0]!;
-          showDone(blob(f), f.name, 'Download', f.name, '', `${f.name} ready`, note);
+          const f = only!;
+          showDone(new Blob([f.bytes as BlobPart], { type: MIME[format] }), f.name, 'Download', f.name, '', `${f.name} ready`, note);
         }
-        succeeded(out.files.length);
+        succeeded(out.count);
       },
       () => void run(),
     );
@@ -113,7 +144,7 @@ function mountToImages(el: HTMLElement): void {
 }
 
 // ======================= JPG to PDF =======================
-type Fail = 'codec-load' | 'corrupt' | 'wrong-type' | 'too-large' | 'oom';
+type Fail = 'codec-load' | 'corrupt' | 'too-large' | 'oom';
 interface Prepared {
   bytes: ArrayBuffer;
   kind: ImageFormat;
@@ -130,17 +161,14 @@ interface Row {
 
 const ROW_COPY: Record<Exclude<Fail, 'codec-load'>, string> = {
   corrupt: "We couldn't read this file. It may be damaged or incomplete.",
-  'wrong-type': "This isn't a JPG, PNG, WebP or HEIC image.",
   'too-large': 'This image is too large for your device to convert.',
-  oom: 'Your device ran out of memory on this image.',
+  oom: COPY.memory,
 };
 const ANALYTICS: Record<Exclude<Fail, 'codec-load'>, PdfErrorReason> = {
   corrupt: 'corrupt',
-  'wrong-type': 'wrong-type',
   'too-large': 'too-large',
   oom: 'device',
 };
-const MAX_REENCODE_PIXELS = 50e6; // as the image engine: one canvas this big is the most a phone can be trusted with
 
 class ImageFail extends Error {
   constructor(readonly reason: Fail) {
@@ -167,7 +195,7 @@ function createImageConverter() {
     async convert(id: string, file: File, type: 'heic' | 'webp'): Promise<Done> {
       const e = await get().catch(() => Promise.reject(new ImageFail('codec-load')));
       return new Promise<Done>((ok, no) => {
-        waiting.set(id, { ok, no: (reason) => no(new ImageFail(reason)) });
+        waiting.set(id, { ok, no: (reason) => no(new ImageFail(reason === 'wrong-type' ? 'corrupt' : reason)) });
         e.enqueue({ id, file, tool: type === 'heic' ? 'heic-to-jpg' : 'webp-to-jpg', options: type === 'heic' ? {} : { format: 'png' } });
       }).finally(() => waiting.delete(id));
     },
@@ -177,7 +205,8 @@ function createImageConverter() {
 }
 
 /** A JPEG whose EXIF says "rotated": the browser draws it upright, so a PDF viewer (which ignores EXIF) shows it right. */
-async function reencodeUpright(file: File): Promise<Prepared> {
+async function reencodeUpright(file: File, width?: number, height?: number): Promise<Prepared> {
+  if (width && height && width * height > MAX_REENCODE_PIXELS) throw new ImageFail('too-large'); // before decoding it
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
@@ -213,7 +242,7 @@ function mountFromImages(el: HTMLElement): void {
       throw new ImageFail('corrupt');
     }
     const { type, width, height } = sniffed;
-    if (type === 'unknown') throw new ImageFail('wrong-type');
+    if (type === 'unknown') throw new ImageFail('corrupt'); // none of the four kinds we take: nothing more to say
     if (type === 'webp' || type === 'heic') {
       const d = await converter.convert(row.id, file, type);
       return { bytes: await d.blob.arrayBuffer(), kind: type === 'heic' ? 'jpg' : 'png', width: d.width, height: d.height };
@@ -224,7 +253,7 @@ function mountFromImages(el: HTMLElement): void {
       const { jpegOrientation } = await import('../engine/orientation');
       if (jpegOrientation(new Uint8Array(bytes)) === 1) return { bytes, kind: 'jpg', width, height };
     }
-    if (type === 'jpg') return reencodeUpright(file);
+    if (type === 'jpg') return reencodeUpright(file, width, height);
     throw new ImageFail('corrupt'); // a PNG with no readable header
   }
 
@@ -301,6 +330,7 @@ function mountFromImages(el: HTMLElement): void {
 
   function run(): Promise<void> {
     const ready = rows.flatMap((r) => (r.state.kind === 'ready' ? [r.state.image] : []));
+    const used = rows.flatMap((r) => (r.state.kind === 'ready' ? [r.file] : []));
     const size = el.querySelector<HTMLInputElement>('input[name=size]:checked')!.value as PageSize;
     return runJob(
       ready.length === 1 ? 'Creating PDF…' : `Creating PDF from ${ready.length} images…`,
@@ -315,6 +345,13 @@ function mountFromImages(el: HTMLElement): void {
         succeeded(1);
       },
       () => void run(),
+      // pdf-lib names the image it choked on; so do we.
+      (err) => {
+        const at = (err as { index?: number }).index;
+        return reasonOf(err) === 'corrupt' && at !== undefined && used[at]
+          ? `We couldn't read ${middleTruncate(used[at].name, NAME_MAX)}. It may be damaged or incomplete.`
+          : undefined;
+      },
     );
   }
   runBtn.addEventListener('click', () => void run());

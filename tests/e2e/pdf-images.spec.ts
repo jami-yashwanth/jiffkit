@@ -2,13 +2,15 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { unzipSync } from 'fflate';
 import { PDFDocument } from 'pdf-lib';
+import { holdResults, installResultHold, releaseOne, releaseResults, waitHeld } from './pdf-hold';
 import { stubPlausible, type PlausibleEvent } from './plausible';
 
 // Spec §4 PDF to JPG and JPG to PDF states, with the exact copy. Runs against `astro build` + `astro preview`.
 
 let events: PlausibleEvent[];
-test.beforeEach(async ({ context }) => {
+test.beforeEach(async ({ context, page }) => {
   events = await stubPlausible(context);
+  await installResultHold(page);
 });
 
 /** The analytics the page has sent, as ['success', count] / ['error', reason]. */
@@ -26,7 +28,9 @@ async function expectHooks(expected: [string, unknown][]) {
 const DAMAGED = "We couldn't read this file. It may be damaged or not a PDF.";
 const ENCRYPTED = 'This PDF is password-protected. Remove the password and try again.';
 const CODEC_FAILED = "Couldn't load the PDF tools. Check your connection.";
-const PDFJS = /\/_astro\/pdf(\.worker)?-[^/]*\.js$/;
+// pdf.js's two modules (pdf-<hash>.js, pdf.worker-<hash>.js), and not pdf-lib's chunk or the island's own pdf-images.<hash>.js.
+const PDFJS = /\/_astro\/pdf(?!-lib)(\.worker)?-[\w-]+\.js$/;
+const PDF_LIB = /\/_astro\/pdf-lib-[\w-]+\.js$/;
 
 const fixture = (name: string) => `tests/fixtures/${name}`;
 const choose = (page: Page, ...names: string[]) => page.locator('[data-kind="pdf"] input[type=file]').setInputFiles(names.map(fixture));
@@ -150,6 +154,32 @@ test.describe('PDF to JPG', () => {
     expect(img.width).toBe(Math.floor((1500 * 150) / 72)); // fell back to 150 dpi
   });
 
+  test('shows progress while pages are made: Converting… n% and a bar', async ({ page }) => {
+    await choose(page, 'pdf/three-pages.pdf');
+    await expect(page.getByText('3 pages', { exact: true })).toBeVisible();
+    await holdResults(page); // pages wait in the page until released, one at a time
+    await button(page, 'Convert').click();
+    await expect(page.getByText('Converting… 0%')).toBeVisible();
+    await expect(page.locator('[data-progress]')).toBeVisible();
+    await waitHeld(page, 3); // all three pages are made and waiting
+    await releaseOne(page);
+    await expect(page.getByText('Converting… 33%')).toBeVisible();
+    await expect(page.locator('[data-progress]')).toHaveJSProperty('value', 33);
+    await releaseOne(page);
+    await expect(page.getByText('Converting… 66%')).toBeVisible();
+    await releaseResults(page);
+    await expect(page.getByText('3 files', { exact: true })).toBeVisible();
+    await expect(page.locator('[data-progress]')).toBeHidden();
+  });
+
+  test('an image dropped here is named, with a way to the right tool', async ({ page }) => {
+    await choose(page, 'photo.jpg');
+    await expect(page.getByText('This is a JPG, not a PDF.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Try JPG to PDF →' })).toHaveAttribute('href', '/jpg-to-pdf/');
+    await expect(button(page, 'Convert')).toBeHidden();
+    await expectHooks([['error', 'wrong-type']]);
+  });
+
   test('a password-protected PDF shows the password copy', async ({ page }) => {
     await choose(page, 'pdf/encrypted.pdf');
     await expect(page.getByText(ENCRYPTED)).toBeVisible();
@@ -169,9 +199,11 @@ test.describe('PDF to JPG', () => {
   });
 
   test('codec load failed, then Try again', async ({ page }) => {
-    await page.context().route(PDFJS, (route) => route.abort());
+    let blocked = 0;
+    await page.context().route(PDFJS, (route) => (blocked++, route.abort()));
     await choose(page, 'pdf/three-pages.pdf');
     await expect(page.getByRole('alert')).toContainText(CODEC_FAILED);
+    expect(blocked).toBeGreaterThan(0); // the route really caught pdf.js: the test isn't vacuous
     await expectHooks([['error', 'codec-load']]);
     await page.context().unroute(PDFJS);
     await button(page, 'Try again').click();
@@ -253,9 +285,9 @@ test.describe('JPG to PDF', () => {
 
   test('a file that is not an image blocks Create PDF until removed', async ({ page }) => {
     await choose(page, 'photo.jpg', 'pdf/not-a.pdf');
-    await expect(rows(page).last()).toContainText("This isn't a JPG, PNG, WebP or HEIC image.");
+    await expect(rows(page).last()).toContainText("We couldn't read this file. It may be damaged or incomplete.");
     await expect(button(page, 'Create PDF')).toBeDisabled();
-    await expectHooks([['error', 'wrong-type']]);
+    await expectHooks([['error', 'corrupt']]);
     await rows(page).last().getByRole('button', { name: 'Remove' }).click();
     await expect(button(page, 'Create PDF')).toBeEnabled();
   });
@@ -267,14 +299,16 @@ test.describe('JPG to PDF', () => {
   });
 
   test('codec load failed, then Try again', async ({ page }) => {
-    await page.context().route(/\/_astro\/pdf-lib-[^/]*\.js$/, (route) => route.abort());
+    let blocked = 0;
+    await page.context().route(PDF_LIB, (route) => (blocked++, route.abort()));
     await choose(page, 'photo.jpg');
     await expect(rows(page).first()).toContainText('1600 × 1200 px');
     await button(page, 'Create PDF').click();
     await expect(page.getByRole('alert')).toContainText(CODEC_FAILED);
+    expect(blocked).toBeGreaterThan(0);
     await expect(rows(page).first()).toBeVisible(); // the list is back, nothing lost
     await expectHooks([['error', 'codec-load']]);
-    await page.context().unroute(/\/_astro\/pdf-lib-[^/]*\.js$/);
+    await page.context().unroute(PDF_LIB);
     await button(page, 'Try again').click();
     await expect(page.getByText(/^1 page · /)).toBeVisible();
     await expectHooks([['error', 'codec-load'], ['success', 1]]);

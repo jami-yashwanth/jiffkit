@@ -17,13 +17,15 @@ export function onError(cb: (reason: PdfErrorReason) => void): void {
   errorListeners.push(cb);
 }
 const succeeded = (count: number) => successListeners.forEach((cb) => cb(count));
-const failed = (reason: PdfErrorReason) => errorListeners.forEach((cb) => cb(reason));
+// Analytics knows a lack of memory as `device`.
+const failed = (reason: PdfErrorReason | 'memory') => errorListeners.forEach((cb) => cb(reason === 'memory' ? 'device' : reason));
 export { failed, succeeded };
 
 export const COPY: Record<PdfFail, string> = {
   encrypted: 'This PDF is password-protected. Remove the password and try again.',
   corrupt: "We couldn't read this file. It may be damaged or not a PDF.",
   'codec-load': "Couldn't load the PDF tools. Check your connection.",
+  memory: 'This tool needs more memory than this device has.',
 };
 export const NAME_MAX = 40;
 const LOADING_DELAY_MS = 300; // a cached engine answers well inside this: don't flash the banner
@@ -67,6 +69,7 @@ export function createShell<E extends Engine>(el: HTMLElement, load: () => Promi
   const doneName = q('[data-done-name]');
   const doneMeta = q('[data-done-meta]');
   const doneNote = q('[data-done-note]');
+  const bar = q<HTMLProgressElement>('[data-progress]');
   const download = q<HTMLAnchorElement>('[data-download]');
   const resetBtn = q<HTMLButtonElement>('[data-reset]');
 
@@ -122,6 +125,12 @@ export function createShell<E extends Engine>(el: HTMLElement, load: () => Promi
   drop.addEventListener('pointerenter', preload);
   drop.addEventListener('focusin', preload);
 
+  /** Show the progress bar at `percent`, or hide it with `null`. */
+  function progress(percent: number | null): void {
+    bar.hidden = percent === null;
+    if (percent !== null) bar.value = percent;
+  }
+
   /** Put text in the status region. `visible: false` is for screen readers only, when the screen already shows it. */
   function say(text: string, visible: boolean): void {
     status.textContent = text;
@@ -135,10 +144,10 @@ export function createShell<E extends Engine>(el: HTMLElement, load: () => Promi
    * Show a failure in the alert and report it once. One outage fails every pending job as codec-load: while its
    * alert is up, later codec-load failures only refresh what Try again does.
    */
-  function report(reason: PdfFail, onRetry: () => void): void {
+  function report(reason: PdfFail, onRetry: () => void, text = COPY[reason]): void {
     const repeat = reason === 'codec-load' && alertReason === 'codec-load';
     if (!repeat) failed(reason);
-    alertText.textContent = COPY[reason];
+    alertText.textContent = text;
     alertReason = reason;
     retry = reason === 'codec-load' ? onRetry : null;
     retryBtn.hidden = !retry;
@@ -171,6 +180,7 @@ export function createShell<E extends Engine>(el: HTMLElement, load: () => Promi
     doneMeta.hidden = !meta;
     doneNote.textContent = note;
     doneNote.hidden = !note;
+    progress(null);
     say(announce, false);
     list.hidden = true;
     drop.hidden = true;
@@ -185,6 +195,7 @@ export function createShell<E extends Engine>(el: HTMLElement, load: () => Promi
     done.hidden = true;
     say('', true);
     hideAlert();
+    progress(null);
     clearTool();
     drop.hidden = false;
     drop.classList.remove('drop-compact');
@@ -195,7 +206,13 @@ export function createShell<E extends Engine>(el: HTMLElement, load: () => Promi
 
   let busyRunning = false; // a job is running: drops are ignored until it is done
   /** Run a job: show `running`, hide the inputs, and on failure bring them back with the alert. */
-  async function runJob(running: string, work: (gen: number) => Promise<void>, again: () => void): Promise<void> {
+  async function runJob(
+    running: string,
+    work: (gen: number) => Promise<void>,
+    again: () => void,
+    /** Words for this failure, when the shared copy for its reason isn't the whole story. */
+    explain?: (err: unknown) => string | undefined,
+  ): Promise<void> {
     const gen = generation;
     hideAlert();
     busyRunning = true;
@@ -206,10 +223,11 @@ export function createShell<E extends Engine>(el: HTMLElement, load: () => Promi
       await work(gen);
     } catch (err) {
       if (gen !== generation) return;
+      progress(null);
       say('', true);
       list.hidden = false;
       drop.hidden = false;
-      report(reasonOf(err), again);
+      report(reasonOf(err), again, explain?.(err));
     } finally {
       busyRunning = false;
     }
@@ -261,6 +279,7 @@ export function createShell<E extends Engine>(el: HTMLElement, load: () => Promi
     runBtn,
     job,
     say,
+    progress,
     report,
     hideAlert,
     showDone,

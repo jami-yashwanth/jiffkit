@@ -1,5 +1,7 @@
 ---
-import type { PdfTool } from '../tools';
+import PdfImagesScript from './PdfImagesScript.astro';
+import PdfMergeSplitScript from './PdfMergeSplitScript.astro';
+import { getTool, type PdfTool } from '../tools';
 
 interface Props { tool: PdfTool }
 const { tool } = Astro.props;
@@ -7,6 +9,9 @@ const merge = tool.op === 'merge';
 // All four ops are driven by an island: Merge and Split by src/ui/pdf.ts, PDF to JPG and JPG to PDF by src/ui/pdf-images.ts.
 const toImages = tool.op === 'to-images';
 const fromImages = tool.op === 'from-images';
+const imageOp = toImages || fromImages;
+// An image dropped on PDF to JPG is sent to the tool that takes images.
+const tryTool = { href: '/jpg-to-pdf/', h1: getTool('jpg-to-pdf').h1 };
 // Spec §4 empty states.
 const title = { merge: 'Drop PDF files here', split: 'Drop a PDF here', 'to-images': 'Drop a PDF here', 'from-images': 'Drop images here' }[tool.op];
 const choose = { merge: 'Choose PDFs', split: 'Choose PDF', 'to-images': 'Choose PDF', 'from-images': 'Choose images' }[tool.op];
@@ -41,6 +46,7 @@ const ENGINE_SIZE = toImages ? '0.5 MB' : '0.2 MB';
     <button type="button" class="btn" data-retry>Try again</button>
   </div>
   <p class="status" role="status" aria-live="polite" data-status></p>
+  <progress class="pdf-progress" max="100" aria-label="Progress" data-progress hidden></progress>
   <div data-results>
     {merge || fromImages ? (
       <div data-list hidden>
@@ -65,6 +71,7 @@ const ENGINE_SIZE = toImages ? '0.5 MB' : '0.2 MB';
           <span class="size" data-meta></span>
         </div>
         <p class="error" role="alert" data-file-error hidden></p>
+        {toImages && <a class="link pdf-try" data-try href={tryTool.href} hidden>Try {tryTool.h1} →</a>}
         {toImages ? (
           <>
             <fieldset class="settings pdf-mode pdf-inline" data-options>
@@ -112,11 +119,4 @@ const ENGINE_SIZE = toImages ? '0.5 MB' : '0.2 MB';
   </div>
 </div>
 
-<script>
-  import { mount } from '../ui/pdf';
-  const el = document.querySelector<HTMLElement>('[data-kind="pdf"]');
-  if (el) {
-    if (el.dataset.op === 'merge' || el.dataset.op === 'split') mount(el);
-    else void import('../ui/pdf-images').then(({ mount: mountImages }) => mountImages(el));
-  }
-</script>
+{imageOp ? <PdfImagesScript /> : <PdfMergeSplitScript />}

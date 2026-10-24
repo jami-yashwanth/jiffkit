@@ -24,3 +24,32 @@ export function renderScale(pageWidthPt: number, pageHeightPt: number, dpi: 150 
   if (dpi === 300 && fits(150 / 72)) return { scale: 150 / 72, dpi: 150, capped: true };
   return { scale: Math.sqrt(MAX_PAGE_PIXELS / area), dpi: 150, capped: true };
 }
+
+/** The most pixels one whole document may take at 300 dpi; past it the remaining pages are drawn at 150 dpi. */
+export const MAX_DOCUMENT_PIXELS = 500_000_000;
+
+/** The canvas size for a viewport: whole pixels, never zero, never past the page cap (floor keeps it under). */
+export function canvasSize(viewportWidth: number, viewportHeight: number): { width: number; height: number } {
+  return { width: Math.max(1, Math.floor(viewportWidth)), height: Math.max(1, Math.floor(viewportHeight)) };
+}
+
+/**
+ * The scale for one page, given the pixels the earlier pages already used. As renderScale, except that once the
+ * document would pass MAX_DOCUMENT_PIXELS at 300 dpi, the page is drawn at 150 dpi and reported as capped.
+ */
+export function pageScale(pageWidthPt: number, pageHeightPt: number, dpi: 150 | 300, usedPixels: number): Scale {
+  const r = renderScale(pageWidthPt, pageHeightPt, dpi);
+  const { width, height } = canvasSize(pageWidthPt * r.scale, pageHeightPt * r.scale);
+  if (r.dpi === 300 && usedPixels + width * height > MAX_DOCUMENT_PIXELS) {
+    return { ...renderScale(pageWidthPt, pageHeightPt, 150), capped: true };
+  }
+  return r;
+}
+
+/** Did a canvas, a blob or an allocation fail for lack of memory? (A RangeError, or an error that says so.) */
+export function isMemoryError(err: unknown): boolean {
+  return err instanceof RangeError || (err instanceof Error && /memory|alloc|too large|too big/i.test(err.message));
+}
+
+/** The most pixels JPG to PDF will decode to re-encode a rotated JPEG: what one canvas can be trusted with on a phone. */
+export const MAX_REENCODE_PIXELS = 50_000_000;
