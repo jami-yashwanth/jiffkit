@@ -62,15 +62,18 @@ export interface Picker<F> {
 export function createPicker<F>(timesUs: number[], emit: (frame: F, samples: number) => void, release: (frame: F) => void): Picker<F> {
   let held: { frame: F; ts: number; samples: number } | null = null;
   let i = 0;
-  const letGo = () => {
-    if (!held) return;
-    const { frame, samples } = held;
-    held = null;
+  const flush = ({ frame, samples }: { frame: F; samples: number }) => {
     try {
       if (samples) emit(frame, samples);
     } finally {
       release(frame);
     }
+  };
+  const letGo = () => {
+    if (!held) return;
+    const h = held;
+    held = null;
+    flush(h);
   };
   return {
     push(frame, ts) {
@@ -87,9 +90,15 @@ export function createPicker<F>(timesUs: number[], emit: (frame: F, samples: num
         else samples++;
         i++;
       }
-      letGo();
+      // Hold the new frame before the old one is emitted, so a throwing `emit` can't leave it unreleased: it is let
+      // go of with the last sample, or by `finish`.
+      const prev = held;
       held = { frame, ts, samples };
-      if (i >= timesUs.length) letGo();
+      try {
+        if (prev) flush(prev);
+      } finally {
+        if (i >= timesUs.length) letGo();
+      }
     },
     finish() {
       if (held) held.samples += timesUs.length - i;
@@ -128,3 +137,7 @@ export function decodeSpan(samples: { timestamp: number; key: boolean }[], start
   }
   return { from, to };
 }
+
+/** Over 20 MB a GIF is slow to load and share: the result says how to get a smaller one. */
+export const LARGE_GIF_BYTES = 20_000_000;
+export const isLargeGif = (bytes: number): boolean => bytes > LARGE_GIF_BYTES;

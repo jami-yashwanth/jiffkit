@@ -83,6 +83,7 @@ const verb = compress ? 'Compressing' : 'Making GIF';
       {gif && <img class="gif-result" data-gif alt="Your GIF" />}
       <p class="video-sizes" data-video-sizes></p>
       {compress && <p class="note" data-video-notes hidden></p>}
+      {gif && <p class="note" data-gif-note hidden></p>}
       <div class="actions">
         <button type="button" class="btn" data-download>{compress ? 'Download MP4' : 'Download GIF'}</button>
         <button type="button" class="btn btn-quiet" data-reset>Start over</button>

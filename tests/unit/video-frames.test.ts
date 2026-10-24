@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkTrim, createPicker, decodeSpan, gifSize, MAX_GIF_SECONDS, sampleTimes } from '../../src/video/frames';
+import { checkTrim, createPicker, decodeSpan, gifSize, isLargeGif, LARGE_GIF_BYTES, MAX_GIF_SECONDS, sampleTimes } from '../../src/video/frames';
 
 describe('Video to GIF: sample times', () => {
   it('0–2 s at 10 fps: 20 times, from 0 to 1.9', () => {
@@ -173,5 +173,41 @@ describe('Video to GIF: the span to decode', () => {
   it('from the first keyframe when the start is before it', () => {
     const late = samples.map((s, i) => ({ ...s, key: i === 5 || i === 50 }));
     expect(decodeSpan(late, 0, 1_000_000)).toEqual({ from: 5, to: 50 });
+  });
+});
+
+describe('Video to GIF: a picker whose emit throws', () => {
+  it('still lets go of every frame exactly once', () => {
+    const frames = [0, 100_000, 200_000, 300_000];
+    const released: number[] = [];
+    const picker = createPicker<number>(
+      [0, 100_000, 200_000],
+      () => {
+        throw new Error('draw failed');
+      },
+      (f) => released.push(f),
+    );
+    for (const ts of frames) {
+      try {
+        picker.push(ts, ts);
+      } catch {
+        // the caller records the failure and carries on letting go
+      }
+    }
+    try {
+      picker.finish();
+    } catch {
+      // as above
+    }
+    expect([...released].sort((a, b) => a - b)).toEqual(frames);
+  });
+});
+
+describe('Video to GIF: large result', () => {
+  it('over 20 MB is a large GIF', () => {
+    expect(LARGE_GIF_BYTES).toBe(20_000_000);
+    expect(isLargeGif(20_000_000)).toBe(false);
+    expect(isLargeGif(20_000_001)).toBe(true);
+    expect(isLargeGif(500_000)).toBe(false);
   });
 });

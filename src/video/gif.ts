@@ -75,6 +75,8 @@ export async function makeGif(file: File, opts: GifOptions, onProgress: (done: n
   };
 
   let failure: AiError | null = null;
+  /** Set once the run is over, however it ended: the picker then only lets go of frames, never draws. */
+  let stopped = false;
   const fail = (reason: 'corrupt' | 'device') => (err: unknown) => {
     console.error(`gif: ${reason === 'corrupt' ? 'decoding' : 'drawing'} failed`, err);
     failure ??= new AiError(reason);
@@ -83,7 +85,7 @@ export async function makeGif(file: File, opts: GifOptions, onProgress: (done: n
   const picker = createPicker<VideoFrame>(
     timesUs,
     (frame, samples) => {
-      if (failure) return;
+      if (failure || stopped) return; // after a failure, frames are only let go of
       ctx.drawImage(frame, -drawW / 2, -drawH / 2, drawW, drawH);
       const { data } = ctx.getImageData(0, 0, size.width, size.height);
       const palette = quantize(data, 256, { format: FORMAT });
@@ -99,7 +101,7 @@ export async function makeGif(file: File, opts: GifOptions, onProgress: (done: n
 
   const decoder = new VideoDecoder({
     output: (frame) => {
-      if (failure) return frame.close();
+      if (failure || stopped) return frame.close();
       try {
         picker.push(frame, frame.timestamp);
       } catch (err) {
@@ -130,8 +132,13 @@ export async function makeGif(file: File, opts: GifOptions, onProgress: (done: n
     picker.finish();
     if (failure) throw failure;
   } finally {
+    stopped = true;
     if (decoder.state !== 'closed') decoder.close();
-    picker.finish(); // after a failure: lets go of the frame it holds (nothing is drawn once failed)
+    try {
+      picker.finish(); // after a throw: lets go of the frame it holds, drawing nothing
+    } catch (err) {
+      console.error('gif: letting go of frames failed', err); // never masks the error that ended the run
+    }
   }
   if (!written) throw new AiError('corrupt'); // nothing in the span could be decoded
 

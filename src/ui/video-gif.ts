@@ -1,4 +1,4 @@
-import { checkTrim, gifSize, type GifFps, type GifWidth } from '../video/frames';
+import { checkTrim, gifSize, isLargeGif, type GifFps, type GifWidth } from '../video/frames';
 import { formatBytes } from './format';
 import { baseName, createVideoShell, type VideoHooks } from './video-shell';
 
@@ -10,6 +10,7 @@ import { baseName, createVideoShell, type VideoHooks } from './video-shell';
 const NO_DECODE = "Your browser can't read video. Try Chrome, Edge, Safari 17+ or Firefox 130+.";
 const SPAN = 'GIFs can be up to 15 seconds.';
 const RANGE = 'End must be after start and within the video.';
+const LARGE = 'Large GIF. Try 320 px or a shorter clip for a smaller file.';
 /** The clip offered at first: from the start, up to 5 s of it. */
 const DEFAULT_SECONDS = 5;
 
@@ -21,6 +22,7 @@ export function mountGif(el: HTMLElement): VideoHooks {
   const trimError = q('[data-trim-error]');
   const gifImg = q<HTMLImageElement>('[data-gif]');
   const sizes = q('[data-video-sizes]');
+  const note = q('[data-gif-note]');
   let previewUrl: string | null = null;
 
   function showTrimError(text: string | null, field?: HTMLInputElement): void {
@@ -79,7 +81,10 @@ export function mountGif(el: HTMLElement): VideoHooks {
     if (!out) return;
     const size = gifSize(ready.info.width, ready.info.height, 0, width); // the probe's size is upright already
     sizes.textContent = `${size.width} × ${size.height} · ${formatBytes(out.gif.size)}`;
-    gifImg.src = shell.finish(out.gif, `${baseName(out.file.name)}.gif`, `Done. ${sizes.textContent}`);
+    const large = isLargeGif(out.gif.size);
+    note.textContent = large ? LARGE : '';
+    note.hidden = !large;
+    gifImg.src = shell.finish(out.gif, `${baseName(out.file.name)}.gif`, `Done. ${sizes.textContent}${large ? ` ${LARGE}` : ''}`);
   }
   q('[data-run]').addEventListener('click', () => void run());
 

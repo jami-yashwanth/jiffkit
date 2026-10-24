@@ -18,6 +18,7 @@ const SPAN = 'GIFs can be up to 15 seconds.';
 const RANGE = 'End must be after start and within the video.';
 const NO_DECODE = "Your browser can't read video. Try Chrome, Edge, Safari 17+ or Firefox 130+.";
 const LIMITS = 'Videos up to 2 minutes and 200 MB for now.';
+const LARGE = 'Large GIF. Try 320 px or a shorter clip for a smaller file.';
 const UNSUPPORTED = "This video format isn't supported yet. Try an MP4 or MOV.";
 
 interface GifInfo {
@@ -142,6 +143,32 @@ test('clip.mp4, 0–2 s at 320 px and 10 fps: Making GIF… n%, then clip.gif, 3
   expect(gif).toMatchObject({ width: 320, height: 180, frames: 20, loops: true });
   expect(gif.delays.every((d) => d === 10)).toBe(true);
   await expect(page.locator('[data-video-sizes]')).toHaveText(`320 × 180 · ${Math.max(1, Math.round(bytes.length / 1000))} KB`);
+  await expect(page.locator('[data-gif-note]')).toBeHidden();
+});
+
+test('a GIF over 20 MB: the result says how to get a smaller one', async ({ page }) => {
+  // Stand-in for a long 480 px clip: the worker's GIF is swapped for 20 MB and a byte as it reaches the page.
+  await page.addInitScript(() => {
+    const Base = window.Worker;
+    window.Worker = class extends Base {
+      set onmessage(fn: ((e: MessageEvent) => void) | null) {
+        super.onmessage = (e: MessageEvent) => {
+          const big = e.data?.kind === 'done' && e.data.result instanceof Blob;
+          const data = big ? { ...e.data, result: new Blob([new Uint8Array(20_000_001)], { type: 'image/gif' }) } : e.data;
+          fn?.call(this, big ? new MessageEvent('message', { data }) : e);
+        };
+      }
+      get onmessage() {
+        return super.onmessage;
+      }
+    };
+  });
+  await open(page);
+  await choose(page, CLIP);
+  await trim(page, '0', '0.5');
+  await make(page);
+  await expect(page.locator('[data-video-sizes]')).toHaveText('320 × 180 · 20.0 MB');
+  await expect(page.locator('[data-gif-note]')).toHaveText(LARGE);
 });
 
 test('480 px at 15 fps, from 1 s to 2 s', async ({ page }) => {
