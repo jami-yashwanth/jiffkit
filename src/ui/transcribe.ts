@@ -1,6 +1,7 @@
 import type { Caps } from '../ai/capability';
 import { AiError } from '../ai/errors';
-import { MAX_SECONDS, SAMPLE_RATE, decodeAudio, hasSound, mediaDuration } from '../ai/whisper/audio';
+import { MODEL_BASE_SET } from '../ai/config';
+import { MAX_BYTES, MAX_SECONDS, SAMPLE_RATE, decodeAudio, hasSound, mediaDuration } from '../ai/whisper/audio';
 import { whisperEngine, type WhisperPartial } from '../ai/whisper/engine';
 import { toSrt, toTxt, toVtt, type Segment } from '../ai/whisper/subtitles';
 import { sniff } from '../engine/sniff';
@@ -18,6 +19,8 @@ interface TranscribeOut {
 }
 
 const TOO_LONG = 'Audio up to 30 minutes for now.';
+const TOO_LARGE = 'Files up to 300 MB for now. Try a shorter recording.';
+const READING = 'Reading audio…';
 const SLOW = 'This will be slow on this device (about as long as the audio).';
 const NO_SPEECH = "We couldn't hear any speech in this file.";
 const COPIED_MS = 1500;
@@ -28,7 +31,9 @@ const TOO_LONG_AFTER = MAX_SECONDS + 0.5;
  * WebGPU on a computer whose GPU runs 16-bit shaders (the model's WebGPU files need them; without them WebGPU was
  * no faster than WebAssembly). Phones run on WebAssembly: their GPUs are slow to start and short of memory.
  */
-export const usesWebGpu = (caps: Pick<Caps, 'webgpu' | 'webgpuF16' | 'mobile'>): boolean => caps.webgpu && caps.webgpuF16 && !caps.mobile;
+export const usesWebGpu = (caps: Pick<Caps, 'webgpu' | 'webgpuF16' | 'mobile'>, hosted = MODEL_BASE_SET): boolean =>
+  // Only where the model host holds the WebGPU runtime: one set for this build (the default host has none).
+  hosted && caps.webgpu && caps.webgpuF16 && !caps.mobile;
 
 const baseName = (name: string): string => name.replace(/\.[^./\\]*$/, '').trim() || 'transcript';
 
@@ -63,16 +68,19 @@ export function transcribeDef(): AiToolDef<TranscribeOut> {
     needsModel: (file) => decoded.get(file)?.silent !== true,
     cancelWork: true,
     inputName: 'audio or video file',
-    messages: { 'too-long': TOO_LONG },
+    messages: { 'too-long': TOO_LONG, 'too-large': TOO_LARGE },
+    checking: READING,
+    forget: (file) => void decoded.delete(file),
     workNote: () => (slow ? SLOW : undefined),
 
-    async check(file) {
+    async check(file, _caps, signal) {
+      if (file.size > MAX_BYTES) throw new AiError('too-large'); // before anything reads it
       const { type } = await sniff(file);
       if (type !== 'unknown') throw new AiError('wrong-type', { detectedType: type }); // an image
       // The header's length first: a long file is turned away before it is decoded into memory.
       const seconds = await mediaDuration(file);
       if (seconds !== undefined && seconds > TOO_LONG_AFTER) throw new AiError('too-long');
-      const audio = await decodeAudio(file);
+      const audio = await decodeAudio(file, signal);
       if (audio.length / SAMPLE_RATE > TOO_LONG_AFTER) throw new AiError('too-long');
       decoded.set(file, { audio, silent: !hasSound(audio, SAMPLE_RATE) });
     },

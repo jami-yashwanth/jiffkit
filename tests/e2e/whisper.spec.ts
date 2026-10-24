@@ -254,3 +254,54 @@ test('Cancel while transcribing stops it and goes back to the drop zone', async 
   await expect(panel(page)).toBeHidden();
   await expect(page.locator('[data-kind="ai"] input[type=file]')).toBeFocused();
 });
+
+/** Make decoding take `ms` longer, so the page's state while it decodes can be seen. */
+const slowDecode = (page: Page, ms: number) =>
+  page.addInitScript((delay) => {
+    const decode = OfflineAudioContext.prototype.decodeAudioData;
+    OfflineAudioContext.prototype.decodeAudioData = function (this: OfflineAudioContext, data: ArrayBuffer) {
+      return new Promise((r) => setTimeout(r, delay)).then(() => decode.call(this, data));
+    } as typeof decode;
+  }, ms);
+
+test('over 300 MB: "Files up to 300 MB for now. Try a shorter recording.", without reading the file', async ({ page }) => {
+  // A small file that says it is 301 MB: the cap is checked from the size alone.
+  await page.addInitScript(() => {
+    const size = Object.getOwnPropertyDescriptor(Blob.prototype, 'size')!.get!;
+    Object.defineProperty(Blob.prototype, 'size', {
+      get(this: Blob) {
+        return this instanceof File && this.name === 'huge.wav' ? 301_000_000 : size.call(this);
+      },
+    });
+    const read = Blob.prototype.arrayBuffer;
+    Blob.prototype.arrayBuffer = function (this: Blob) {
+      if (this instanceof File && this.name === 'huge.wav') (window as unknown as { readHuge: boolean }).readHuge = true;
+      return read.call(this);
+    };
+  });
+  const models = await open(page);
+  await choose(page, { name: 'huge.wav', mimeType: 'audio/wav', buffer: readFileSync(HELLO) });
+  await expect(page.getByRole('alert').getByText('Files up to 300 MB for now. Try a shorter recording.', { exact: true })).toBeVisible();
+  await expect(page.locator('.drop')).toBeVisible();
+  await expect(consent(page)).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as { readHuge?: boolean }).readHuge)).toBeUndefined();
+  expect(models.requests).toBe(0);
+});
+
+test('while decoding: "Reading audio…" with a bar that just runs; a newer file replaces the one still decoding', async ({ page }) => {
+  await slowDecode(page, 1500);
+  await open(page);
+  await choose(page, toneWav('first.wav', 65));
+  await expect(panel(page).locator('p').first()).toHaveText('Reading audio…');
+  const bar = panel(page).locator('progress');
+  await expect(bar).toBeVisible();
+  expect(await bar.getAttribute('value')).toBeNull(); // indeterminate
+  // A second file while the first still decodes: only the second goes on.
+  await choose(page);
+  await expect(consent(page)).toBeVisible();
+  await consent(page).click();
+  await expect(transcript(page)).toHaveValue(STUB_TEXT); // hello.wav's one window, not first.wav's three
+  await page.waitForTimeout(1600); // the first decode ends now: it must change nothing
+  await expect(transcript(page)).toHaveValue(STUB_TEXT);
+  await expect(consent(page)).toHaveCount(0);
+});

@@ -11,6 +11,9 @@ export const SAMPLE_RATE = 16_000;
 /** Audio up to 30 minutes for now (spec §4). */
 export const MAX_SECONDS = 30 * 60;
 
+/** Files up to 300 MB for now: the whole file is read into memory to decode it (spec ruling, Task 7). */
+export const MAX_BYTES = 300_000_000;
+
 /** Below this level (about -50 dBFS, RMS over 20 ms) a stretch of audio counts as silent. */
 const SILENT_RMS = 0.003;
 
@@ -99,9 +102,18 @@ export function mediaDuration(file: Blob, timeoutMs = 5000): Promise<number | un
   });
 }
 
-/** The file's sound as 16 kHz mono. Rejects with AiError corrupt when the browser can't decode it. */
-export async function decodeAudio(file: Blob): Promise<Float32Array> {
+/**
+ * The file's sound as 16 kHz mono. Rejects with AiError too-large over MAX_BYTES (before reading it), corrupt when
+ * the browser can't decode it, and cancelled once `signal` aborts (the decode itself can't be stopped: its result
+ * is dropped).
+ */
+export async function decodeAudio(file: Blob, signal?: AbortSignal): Promise<Float32Array> {
+  if (file.size > MAX_BYTES) throw new AiError('too-large');
+  const stop = () => {
+    if (signal?.aborted) throw new AiError('cancelled');
+  };
   const data = await file.arrayBuffer();
+  stop();
   let ctx: OfflineAudioContext;
   try {
     // decodeAudioData resamples to the context's rate, so the decoded audio is already 16 kHz: a third of 48 kHz.
@@ -113,8 +125,10 @@ export async function decodeAudio(file: Blob): Promise<Float32Array> {
   try {
     buf = await ctx.decodeAudioData(data);
   } catch {
+    stop();
     throw new AiError('corrupt');
   }
+  stop();
   const channels = Array.from({ length: buf.numberOfChannels }, (_, c) => buf.getChannelData(c));
   // A copy: the channel data belongs to the AudioBuffer, and the samples will be transferred to the worker.
   const mono = channels.length === 1 ? channels[0]!.slice() : downmix(channels);

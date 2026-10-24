@@ -7,6 +7,12 @@ const DEFAULT_MODEL_BASE = 'https://huggingface.co';
 
 export const MODEL_BASE: string = (import.meta.env.PUBLIC_MODEL_BASE_URL || DEFAULT_MODEL_BASE).replace(/\/+$/, '');
 
+/**
+ * The model host was set for this build (the owner's bucket), so it holds what the default host lacks: the WebGPU
+ * runtime (ortWebgpu). Without it, nothing runs on WebGPU.
+ */
+export const MODEL_BASE_SET: boolean = !!import.meta.env.PUBLIC_MODEL_BASE_URL;
+
 export type ModelKey = 'bg' | 'ortWasm' | 'ortWebgpu' | 'upscale' | 'whisper' | 'whisperGpu' | 'tessdata';
 
 export interface ModelEntry {

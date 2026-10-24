@@ -93,10 +93,16 @@ describe('Whisper model files', () => {
 });
 
 describe('usesWebGpu', () => {
-  it('on a computer with WebGPU that runs 16-bit shaders only', () => {
-    expect(usesWebGpu({ webgpu: true, webgpuF16: true, mobile: false })).toBe(true);
-    expect(usesWebGpu({ webgpu: true, webgpuF16: false, mobile: false })).toBe(false);
-    expect(usesWebGpu({ webgpu: true, webgpuF16: true, mobile: true })).toBe(false);
-    expect(usesWebGpu({ webgpu: false, webgpuF16: false, mobile: false })).toBe(false);
+  it('on a computer with WebGPU that runs 16-bit shaders only, where the model host was set', () => {
+    const gpu = { webgpu: true, webgpuF16: true, mobile: false };
+    expect(usesWebGpu(gpu, true)).toBe(true);
+    expect(usesWebGpu({ ...gpu, webgpuF16: false }, true)).toBe(false);
+    expect(usesWebGpu({ ...gpu, mobile: true }, true)).toBe(false);
+    expect(usesWebGpu({ ...gpu, webgpu: false, webgpuF16: false }, true)).toBe(false);
+  });
+
+  it('never on the default model host (it has no WebGPU runtime), which a build without PUBLIC_MODEL_BASE_URL uses', () => {
+    expect(usesWebGpu({ webgpu: true, webgpuF16: true, mobile: false }, false)).toBe(false);
+    expect(usesWebGpu({ webgpu: true, webgpuF16: true, mobile: false })).toBe(false); // this unit build sets none
   });
 });

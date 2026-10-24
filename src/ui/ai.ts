@@ -44,7 +44,11 @@ export interface AiToolDef<Res> {
   /** A note shown under the progress while the tool works (e.g. that it will be slow), if any. */
   workNote?(): string | undefined;
   /** Cheap checks before any download (type, length, size). Throw an AiError to stop. */
-  check?(file: File, caps: Caps): Promise<void>;
+  check?(file: File, caps: Caps, signal: AbortSignal): Promise<void>;
+  /** Shown, with a bar that just runs, while `check` works on a file that takes a while ("Reading audio…"). */
+  checking?: string;
+  /** Let go of anything kept for this file (Cancel took the page back to the start). */
+  forget?(file: File): void;
   /** Do the work. Report download and work progress; reject with an AiError. */
   run(file: File, caps: Caps, onProgress: (p: AiProgress) => void, ctx: AiRunContext): Promise<Res>;
   /** Called once, as soon as the device's capabilities are known (to offer what this device can do). */
@@ -151,13 +155,20 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
     running = false;
   }
 
-  function showPanel(text: string, button: { label: string; action: () => void } | null, progress?: { value: number; max: number }) {
+  function showPanel(
+    text: string,
+    button: { label: string; action: () => void } | null,
+    progress?: { value: number; max: number } | 'indeterminate',
+  ) {
     panelText.textContent = text;
     cellularNote.hidden = true;
     workNote.hidden = true;
     live.hidden = true;
     bar.hidden = !progress;
-    if (progress) {
+    if (progress === 'indeterminate') {
+      bar.removeAttribute('value'); // a bar that just runs
+      bar.setAttribute('aria-label', text.split('…')[0]!);
+    } else if (progress) {
       bar.max = progress.max;
       bar.value = progress.value;
       bar.setAttribute('aria-label', text.split('…')[0]!);
@@ -237,14 +248,21 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
 
   /** A file was chosen or dropped: check it, then ask for consent or start. */
   async function take(file: File): Promise<void> {
-    abortRun();
+    abortRun(); // also stops an earlier file's check (its decode)
     const g = ++gen;
+    const ctrl = new AbortController();
+    controller = ctrl;
     clearResult();
     alert.hidden = true;
     try {
       if (file.size === 0) throw new AiError('corrupt');
       const c = await caps();
-      await def.check?.(file, c);
+      if (def.checking && g === gen) {
+        showPanel(def.checking, null, 'indeterminate');
+        say(def.checking);
+      }
+      await def.check?.(file, c, ctrl.signal);
+      if (g !== gen) return; // a newer file took over
       const key = def.needsModel?.(file) === false ? undefined : keyFor(c);
       const pending = await pendingBytes(key, c);
       if (g !== gen) return;
@@ -275,6 +293,7 @@ export function mountAi<Res>(el: HTMLElement, def: AiToolDef<Res>): AiHooks {
       // Cancelled while downloading: back to the consent screen. Once working, the model is in: back to the start.
       if (consented && key && downloading) showConsent(file, key, total, c, true);
       else {
+        def.forget?.(file);
         view('drop');
         say('');
         input.focus();

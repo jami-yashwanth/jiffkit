@@ -7,6 +7,7 @@ import { looksLikeOnnx, sessionFailure } from '../ort/session';
 import { SAMPLE_RATE, hasSound } from './audio';
 import { ORT_KEY } from './ort-key';
 import type { Segment } from './subtitles';
+import { collapseRepeats, looksLikeLoop } from './loops';
 import { ownSpan, planWindows } from './windows';
 
 // The Transcribe audio worker. A job gets the audio as 16 kHz mono samples (decoded on the page) and transcribes it
@@ -58,6 +59,9 @@ interface Transcriber {
     feature_extractor: { config: { chunk_length: number } };
   };
   tokenizer: {
+    decode(tokens: number[], options: { skip_special_tokens: true }): string;
+    timestamp_begin: number;
+    all_special_ids: number[];
     /** The pipeline's own merge of overlapping windows into timed segments. */
     _decode_asr(
       readings: Reading[],
@@ -264,7 +268,8 @@ async function transcribe(req: WhisperRequest, report: Report): Promise<WhisperR
         detected = true;
       }
       // A window of silence has nothing to read: no tokens (the model would only make up words for it).
-      const tokens = sound ? await readWindow(run, samples, language) : [];
+      let tokens = sound ? await readWindow(run, samples, language) : [];
+      if (isLoop(run, tokens)) tokens = []; // a loop: better no words than made-up ones
       readings.push({ tokens, stride: [w.end - w.start, w.strideLeft, w.strideRight].map((n) => n / SAMPLE_RATE) as Reading['stride'] });
       segments = merge(run, readings, w.end / SAMPLE_RATE);
     }
@@ -285,13 +290,22 @@ async function readWindow(run: Transcriber, samples: Float32Array, language: str
   return out[0]!.tolist();
 }
 
+/** Did the model fall into a loop on this window? (Its words alone: no timestamps, no special tokens.) */
+function isLoop(run: Transcriber, tokens: (number | bigint)[]): boolean {
+  const special = new Set(run.tokenizer.all_special_ids);
+  const words = tokens.map(Number).filter((t) => t < run.tokenizer.timestamp_begin && !special.has(t));
+  const loop = looksLikeLoop(run.tokenizer.decode(words, { skip_special_tokens: true }), words);
+  if (loop) console.warn('whisper worker: dropped a window that repeats itself');
+  return loop;
+}
+
 /** The readings so far merged into timed segments, as the pipeline does; a segment not yet ended ends at `until`. */
 function merge(run: Transcriber, readings: Reading[], until: number): Segment[] {
   const time_precision = run.processor.feature_extractor.config.chunk_length / run.model.config.max_source_positions;
   const [, { chunks = [] }] = run.tokenizer._decode_asr(readings, { time_precision, return_timestamps: true, force_full_sequences: false });
-  return chunks
-    .map((c) => ({ start: c.timestamp[0], end: c.timestamp[1] ?? until, text: c.text.trim() }))
-    .filter((c) => c.text);
+  return collapseRepeats(
+    chunks.map((c) => ({ start: c.timestamp[0], end: c.timestamp[1] ?? until, text: c.text.trim() })).filter((c) => c.text),
+  );
 }
 
 function toAiError(err: unknown): AiError {
