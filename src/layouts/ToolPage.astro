@@ -8,12 +8,16 @@ import TextTool from '../components/TextTool.astro';
 import QrTool from '../components/QrTool.astro';
 import DevTool from '../components/DevTool.astro';
 import Icon from '../components/Icon.astro';
-import ToolCard from '../components/ToolCard.astro';
+import Tag from '../components/Tag.astro';
 import { getTool, type Tool } from '../tools';
+import { ARROW_RIGHT } from '../icons';
+import { IO, placeOf } from '../wall';
 
 interface Props { tool: Tool }
 const { tool } = Astro.props;
 const related = tool.related.map(getTool);
+const place = placeOf(tool.slug);
+const io = IO[tool.slug];
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -26,8 +30,10 @@ const jsonLd = {
 };
 ---
 <Base title={tool.title} description={tool.description} path={`/${tool.slug}/`} jsonLd={jsonLd}>
-  <header class="tool-head"><span class="tool-tile"><Icon slug={tool.slug} size={28} /></span><h1>{tool.h1}</h1><p class="subhead">{tool.subhead}</p></header>
+  <header class="tool-head" data-zone={place.zone}><span class="tool-tile"><Icon slug={tool.slug} size={32} /></span><h1>{tool.h1}</h1><p class="subhead">{tool.subhead}</p></header>
 
+  <div class="bench" data-zone={place.zone}>
+  <p class="bench-io"><b>In</b> {io[0]} <Icon svg={ARROW_RIGHT} size={16} /><span class="visually-hidden">, </span> <b>Out</b> {io[1]}</p>
   {tool.kind === 'image' && <ImageTool tool={tool} />}
   {tool.kind === 'pdf' && <PdfTool tool={tool} />}
   {tool.kind === 'ai' && <AiTool tool={tool} />}
@@ -35,10 +41,11 @@ const jsonLd = {
   {tool.kind === 'text' && <TextTool tool={tool} />}
   {tool.kind === 'qr' && <QrTool tool={tool} />}
   {tool.kind === 'dev' && <DevTool tool={tool} />}
+  </div>
 
   <section>
     <h2>How it works</h2>
-    <ol>{tool.howTo.map((step) => <li>{step}</li>)}</ol>
+    <ol class="courses">{tool.howTo.map((step) => <li>{step}</li>)}</ol>
   </section>
 
   <section>
@@ -50,8 +57,8 @@ const jsonLd = {
 
   <section>
     <h2>Related tools</h2>
-    <ul class="card-grid related">
-      {related.map((r) => <li><ToolCard tool={r} /></li>)}
+    <ul class="pegs related">
+      {related.map((r) => <li data-zone={placeOf(r.slug).zone}><Tag tool={r} /></li>)}
     </ul>
   </section>
 </Base>

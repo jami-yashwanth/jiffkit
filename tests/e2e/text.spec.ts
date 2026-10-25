@@ -232,7 +232,7 @@ test.describe('JWT decoder', () => {
       return c;
     });
     expect(colour).toBe(errorColour);
-    expect(colour).not.toBe('rgb(23, 32, 28)'); // not the ink colour
+    expect(colour).not.toBe('rgb(20, 20, 20)'); // not the ink colour
   });
 
   test('a malformed token gets the three-parts message', async ({ page }) => {

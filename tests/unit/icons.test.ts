@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { ICONS, ICON_NAME } from '../../src/icons';
+import { ARROW_RIGHT, CHECK, ICONS, SEARCH, ZONE_ICONS, ZONE_ICON_NAME, ICON_NAME } from '../../src/icons';
 import { TOOLS } from '../../src/tools';
 
 // The children of a lucide-static icon's <svg>, as one line: the licence comment dropped, whitespace between tags
@@ -21,6 +21,18 @@ describe('tool icons', () => {
   it('matches the pinned lucide-static source', () => {
     for (const [slug, name] of Object.entries(ICON_NAME)) {
       expect(ICONS[slug as keyof typeof ICONS], `${slug} (${name})`).toBe(lucideInner(name));
+    }
+  });
+
+  it('the IN → OUT, check and search icons match the pinned lucide-static source', () => {
+    expect(ARROW_RIGHT).toBe(lucideInner('arrow-right'));
+    expect(SEARCH).toBe(lucideInner('search'));
+    expect(CHECK).toBe(lucideInner('check'));
+  });
+
+  it('every zone has a mark, matching the pinned lucide-static source', () => {
+    for (const [zone, name] of Object.entries(ZONE_ICON_NAME)) {
+      expect(ZONE_ICONS[zone as keyof typeof ZONE_ICONS], `${zone} (${name})`).toBe(lucideInner(name));
     }
   });
 });

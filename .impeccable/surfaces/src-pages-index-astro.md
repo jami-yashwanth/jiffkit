@@ -7,7 +7,7 @@ related_targets: ["src/pages/developer.astro","src/layouts/ToolPage.astro","src/
 
 # jiffkit site: The Tool Wall
 
-Scope: homepage (Persuade), /developer/ hub (Persuade), every tool page (Operate), 404. Two audiences of equal weight (PRODUCT.md). Constraints: system fonts only, no third-party requests, 15 KB JS before interaction, WCAG AA, 390 px.
+Scope: homepage (Persuade), /developer/ hub (Persuade), every tool page (Operate), 404. Two audiences of equal weight (PRODUCT.md). Constraints: system fonts for body and UI text plus one self-hosted stencil display face (Big Shoulders Stencil Display 800, OFL) for headings and tape labels, no third-party requests, 15 KB JS before interaction, WCAG AA, 390 px.
 
 ## Direction contract
 

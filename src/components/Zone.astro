@@ -1,0 +1,17 @@
+---
+import Tag from './Tag.astro';
+import Icon from './Icon.astro';
+import { ZONE_ICONS } from '../icons';
+import type { Zone } from '../wall';
+
+// One zone of a wall: a pale wash of the zone's colour, its name, and its tags. The head slot sits beside the name
+// (the homepage's way into /developer/).
+interface Props { zone: Zone; count?: number }
+const { zone, count = zone.tools.length } = Astro.props;
+---
+<section class="zone" data-zone={zone.id} aria-labelledby={`zone-${zone.id}`}>
+  <div class="zone-head"><h2 id={`zone-${zone.id}`}><span class="zone-mark"><Icon svg={ZONE_ICONS[zone.id]} size={16} /></span>{zone.label} <small>{count}</small></h2><slot name="head" /></div>
+  <ul class="pegs">
+    {zone.tools.map((t) => <li><Tag tool={t} /></li>)}
+  </ul>
+</section>

@@ -1,0 +1,17 @@
+---
+import Zone from './Zone.astro';
+import Icon from './Icon.astro';
+import { ARROW_RIGHT } from '../icons';
+import { HOME_ZONES, DEV_ZONES } from '../wall';
+
+// The homepage wall, also shown on the 404 page: the five tool families, and in the Developer zone the way into all
+// the developer tools.
+const devCount = DEV_ZONES.reduce((n, z) => n + z.tools.length, 0);
+---
+<div class="wall wall-home">
+  {HOME_ZONES.map((z) => (
+    <Zone zone={z} count={z.id === 'developer' ? devCount : undefined}>
+      {z.id === 'developer' && <a slot="head" class="zone-link" href="/developer/">All {devCount} developer tools<Icon svg={ARROW_RIGHT} size={16} /></a>}
+    </Zone>
+  ))}
+</div>

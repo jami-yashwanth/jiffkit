@@ -1,0 +1,58 @@
+---
+import Icon from './Icon.astro';
+import { SEARCH } from '../icons';
+
+// Find any tool by name or by the words people type ("png to jpg", "remove bg"). The script that searches, and the list
+// it searches, load the first time the box gets focus. Without the script, Enter goes to the homepage, where every tool
+// is listed. Nothing typed here leaves the page: the form sends no field, and the list of tools (/search-index.json) is
+// fetched whole, the same for everyone. One per page, in the top bar.
+const id = 'search';
+---
+<form class="search" role="search" action="/" method="get" data-search>
+  <label class="visually-hidden" for={id}>Search tools</label>
+  <span class="search-icon"><Icon svg={SEARCH} size={18} /></span>
+  <input
+    id={id}
+    type="search"
+    class="search-input"
+    placeholder="Find a tool"
+    autocomplete="off"
+    autocapitalize="off"
+    spellcheck="false"
+    enterkeyhint="go"
+    role="combobox"
+    aria-expanded="false"
+    aria-autocomplete="list"
+    aria-controls={`${id}-list`}
+  />
+  <div class="search-pop" hidden>
+    <p class="search-head" aria-live="polite"></p>
+    <ul class="search-list" id={`${id}-list`} role="listbox" aria-label="Tools"></ul>
+    <p class="search-none" hidden>No tool for “<span data-q></span>” yet. <a href="/">See all tools</a></p>
+    <p class="search-none search-failed" hidden>Search didn’t load. Check your connection, or <a href="/">see all tools</a>.</p>
+    <p class="search-foot search-keys" aria-hidden="true"><span><kbd>↑</kbd> <kbd>↓</kbd> move</span><span><kbd>↵</kbd> open</span><span><kbd>esc</kbd> close</span><span class="search-slash"><kbd>/</kbd> to search</span></p>
+    <p class="search-foot search-tip">Search by format too, like <b>heic</b> or <b>sha256</b>.</p>
+  </div>
+</form>
+
+<script>
+  // Load the search on first focus, so the page itself ships only this. "/" jumps to the box from anywhere on the page
+  // that isn't a text field.
+  const forms = document.querySelectorAll<HTMLFormElement>('[data-search]');
+  for (const form of forms) {
+    const input = form.querySelector<HTMLInputElement>('input')!;
+    input.addEventListener('focus', () => import('../ui/search').then((m) => m.mount(form)), { once: true });
+    form.addEventListener('submit', (e) => {
+      if (form.dataset.ready) e.preventDefault(); // the search handles Enter once it has loaded
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+    const t = e.target as HTMLElement;
+    if (t.closest('input, textarea, select, [contenteditable]')) return;
+    const input = forms[0]?.querySelector<HTMLInputElement>('input');
+    if (!input) return;
+    e.preventDefault();
+    input.focus();
+  });
+</script>

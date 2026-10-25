@@ -5,16 +5,23 @@ test.skip(({ browserName }) => browserName !== 'chromium', 'computed-style check
 test.beforeEach(({ context }) => context.route('https://plausible.io/**', (r) => r.fulfill({ status: 202, body: '' })));
 
 const PAGES = ['/merge-pdf/', '/heic-to-jpg/', '/remove-background/', '/compress-video/'];
-const TINT_STRONG = 'rgb(216, 234, 225)';
+// The drop zone sits on the tool's bench, which sets its own tints from the zone colour.
+const benchTint = (page: import('@playwright/test').Page, v: string) =>
+  page.locator('.bench').evaluate((b, v) => {
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = `var(${v})`;
+    b.append(probe);
+    const c = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return c;
+  }, v);
 
 const columns = (el: import('@playwright/test').Locator) =>
   el.evaluate((u) => getComputedStyle(u).gridTemplateColumns.split(' ').length);
 
-test('related tools and the 404 list use at most 3 columns on desktop', async ({ page }) => {
+test('related tools hang 3 to a row on desktop', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/merge-pdf/');
-  expect(await columns(page.locator('.related'))).toBe(3);
-  await page.goto('/nope/');
   expect(await columns(page.locator('.related'))).toBe(3);
 });
 
@@ -24,7 +31,7 @@ test('after files are chosen, the compact zone keeps its look: tinted box, title
   await page.locator('[data-kind="pdf"] input[type=file]').setInputFiles(['tests/fixtures/pdf/two-pages.pdf', 'tests/fixtures/pdf/three-pages.pdf']);
   const drop = page.locator('.drop.drop-compact');
   await expect(drop).toBeVisible();
-  await expect(drop).toHaveCSS('background-color', 'rgb(236, 244, 240)');
+  await expect(drop).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   await expect(drop).toHaveCSS('border-top-style', 'dashed');
   const btn = (await drop.locator('label.btn').boundingBox())!;
   const title = (await drop.locator('.drop-title').boundingBox())!;
@@ -62,8 +69,8 @@ for (const path of PAGES) {
       if (width === 1280) {
         await drop.evaluate((d) => d.classList.add('is-over'));
         await expect(drop).toHaveCSS('border-top-style', 'dashed');
-        await expect(drop).toHaveCSS('border-top-color', 'rgb(94, 143, 125)');
-        await expect(drop).toHaveCSS('background-color', TINT_STRONG);
+        await expect(drop).toHaveCSS('border-top-color', 'rgb(107, 107, 102)');
+        await expect(drop).toHaveCSS('background-color', await benchTint(page, '--tint-strong'));
       }
     }
   });
