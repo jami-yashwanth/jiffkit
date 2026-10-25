@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { stubPlausible } from './plausible';
+import { stubAnalytics } from './analytics';
 import { panelSeen, recordPanel } from './panel';
 
 // Image to text, with the real tesseract.js and the real tessdata_fast `eng` model (the committed fixture, served
@@ -10,7 +10,7 @@ const MODEL = readFileSync('tests/fixtures/models/tessdata/eng.traineddata.gz');
 const HELLO = 'tests/fixtures/ocr/hello.png';
 
 async function open(page: Page) {
-  await stubPlausible(page.context());
+  await stubAnalytics(page.context());
   await recordPanel(page);
   // The language data ships with the site (same origin), so no model host is routed. Count its requests.
   const models = { requests: 0, body: undefined as Buffer | undefined };

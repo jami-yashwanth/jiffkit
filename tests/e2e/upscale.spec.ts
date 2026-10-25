@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { crc32 } from 'node:zlib';
 import { PNG } from 'pngjs';
 import { expect, test, type Page } from '@playwright/test';
-import { stubPlausible } from './plausible';
+import { stubAnalytics } from './analytics';
 import { modelBytes, routeModels } from './models';
 import { panelSeen, recordPanel } from './panel';
 
@@ -32,7 +32,7 @@ async function device(page: Page, { memory, phone = false }: { memory?: number; 
 }
 
 async function open(page: Page, memory = 8) {
-  await stubPlausible(page.context());
+  await stubAnalytics(page.context());
   await recordPanel(page);
   await device(page, { memory });
   await page.goto('/upscale-image/');

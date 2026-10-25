@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createFile, Log, type Movie } from 'mp4box';
 import { expect, test, type Page } from '@playwright/test';
-import { stubPlausible } from './plausible';
+import { stubAnalytics } from './analytics';
 import { panelSeen, recordPanel } from './panel';
 import { holdResults, installResultHold } from './pdf-hold';
 import { rotationOf } from '../../src/video/demux';
@@ -41,7 +41,7 @@ function mp4Info(bytes: Buffer): Movie {
 }
 
 async function open(page: Page) {
-  await stubPlausible(page.context());
+  await stubAnalytics(page.context());
   await recordPanel(page);
   await page.goto('/compress-video/');
   await expect(page.locator('[data-kind="video"][data-ready]')).toBeAttached(); // the island has mounted

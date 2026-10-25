@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 // so the zone is pinned; the clock is fixed so relative wording ("2 hours ago") is deterministic.
 
 test.use({ timezoneId: 'UTC' });
-test.beforeEach(({ context }) => context.route('https://plausible.io/**', (r) => r.fulfill({ status: 202, body: '' })));
+test.beforeEach(({ context }) => context.route('https://cloud.umami.is/**', (r) => r.fulfill({ status: 202, body: '' })));
 
 const NOW = new Date('2026-10-24T12:00:00Z');
 const at = (offsetSeconds: number) => Math.floor(NOW.getTime() / 1000) + offsetSeconds;

@@ -3,13 +3,13 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { unzipSync } from 'fflate';
 import { PDFDocument } from 'pdf-lib';
 import { holdResults, installResultHold, releaseOne, releaseResults, waitHeld } from './pdf-hold';
-import { stubPlausible, type PlausibleEvent } from './plausible';
+import { stubAnalytics, type AnalyticsEvent } from './analytics';
 
 // Spec §4 PDF to JPG and JPG to PDF states, with the exact copy. Runs against `astro build` + `astro preview`.
 
-let events: PlausibleEvent[];
+let events: AnalyticsEvent[];
 test.beforeEach(async ({ context, page }) => {
-  events = await stubPlausible(context);
+  events = await stubAnalytics(context);
   await installResultHold(page);
 });
 

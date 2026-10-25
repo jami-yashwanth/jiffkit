@@ -1,11 +1,16 @@
 import type { AiFail } from '../ai/errors';
 
+type Props = Record<string, string | number>;
+
 /**
- * Plausible events. Props are only ever {tool, count} or {tool, reason}, or {tool} for tool_used:
- * never a file name, size, type or any pasted/typed content.
+ * Umami events. Props are only ever {tool, count} or {tool, reason}, or {tool} for tool_used:
+ * never a file name, size, type or any pasted/typed content. Before Umami's script has loaded, events wait in the
+ * queue Base.astro sets up (and flushes once it loads); a build without analytics has neither, so this does nothing.
  */
-export function track(name: 'convert_success' | 'convert_error' | 'tool_used', props: Record<string, string | number>): void {
-  (window as { plausible?: (n: string, o: { props: typeof props }) => void }).plausible?.(name, { props });
+export function track(name: 'convert_success' | 'convert_error' | 'tool_used', props: Props): void {
+  const w = window as { umami?: { track(n: string, data: Props): void }; umamiQ?: [string, Props][] };
+  if (w.umami) w.umami.track(name, props);
+  else w.umamiQ?.push([name, props]);
 }
 
 /**

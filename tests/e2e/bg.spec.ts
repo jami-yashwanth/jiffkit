@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 import { expect, test, type Page } from '@playwright/test';
-import { stubPlausible } from './plausible';
+import { stubAnalytics } from './analytics';
 import { modelBytes, routeModels } from './models';
 import { panelSeen, recordPanel } from './panel';
 
@@ -13,7 +13,7 @@ const PHOTO = 'tests/fixtures/photo.jpg'; // 1600×1200
 const BIG = 'tests/fixtures/bg-26mp.png'; // 5200×5000, 26 MP
 
 async function open(page: Page) {
-  await stubPlausible(page.context());
+  await stubAnalytics(page.context());
   await recordPanel(page);
   await page.goto('/remove-background/');
   return routeModels(page, await modelBytes(page));

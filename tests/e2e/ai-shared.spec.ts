@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { stubPlausible } from './plausible';
+import { stubAnalytics } from './analytics';
 import { statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { modelBytes, routeModels } from './models';
@@ -22,7 +22,7 @@ const modelCached = (page: Page) =>
   page.evaluate(async () => (await (await caches.open('models-v1')).keys()).some((r) => r.url.includes('/test-models/')));
 
 async function open(page: Page) {
-  await stubPlausible(page.context());
+  await stubAnalytics(page.context());
   await recordPanel(page);
   await page.goto('/remove-background/');
   const models = await routeModels(page, await modelBytes(page));
