@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test.beforeEach(({ context }) => context.route('https://plausible.io/**', (r) => r.fulfill({ status: 202, body: '' })));
+test.beforeEach(({ context }) => context.route('https://cloud.umami.is/**', (r) => r.fulfill({ status: 202, body: '' })));
 
 const zone = (page: import('@playwright/test').Page, name: string) => page.getByRole('region', { name: new RegExp(`^${name}`) });
 

@@ -7,9 +7,9 @@ test.skip(({ browserName }) => browserName !== 'chromium', 'one browser is enoug
 
 let offsite: string[];
 test.beforeEach(async ({ page, context }) => {
-  await context.route('https://plausible.io/**', (r) => r.fulfill({ status: 202, body: '' }));
+  await context.route('https://cloud.umami.is/**', (r) => r.fulfill({ status: 202, body: '' }));
   offsite = [];
-  const away = (url: string) => !url.startsWith('http://localhost:4399/') && !/^(data|blob):/.test(url) && !url.startsWith('https://plausible.io/');
+  const away = (url: string) => !url.startsWith('http://localhost:4399/') && !/^(data|blob):/.test(url) && !url.startsWith('https://cloud.umami.is/');
   // A request counts once it reached the network: finished, or failed for any reason but the page's own CSP (which
   // cancels it in the browser before anything is sent, as the Markdown preview does).
   page.on('requestfinished', (r) => away(r.url()) && offsite.push(r.url()));

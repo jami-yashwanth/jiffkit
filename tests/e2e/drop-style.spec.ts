@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 // Layout A §4: every file tool opens with one big button; the dashed edge shows only while a file is held over it.
 test.skip(({ browserName }) => browserName !== 'chromium', 'computed-style checks run once, on chromium');
-test.beforeEach(({ context }) => context.route('https://plausible.io/**', (r) => r.fulfill({ status: 202, body: '' })));
+test.beforeEach(({ context }) => context.route('https://cloud.umami.is/**', (r) => r.fulfill({ status: 202, body: '' })));
 
 const PAGES = ['/merge-pdf/', '/heic-to-jpg/', '/remove-background/', '/compress-video/'];
 // The drop zone sits on the tool's bench, which sets its own tints from the zone colour.

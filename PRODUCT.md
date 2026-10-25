@@ -33,7 +33,7 @@ Open decision: the product owner has not chosen a single headline among "never u
 ## Capabilities and Constraints
 
 - Static Astro site on Cloudflare Pages at jiffkit.com; AI models served from models.jiffkit.com (R2).
-- Hard limits that every design must keep: under 15 KB of gzip JavaScript per page before interaction; no third-party requests (no web fonts from a CDN, no trackers; analytics, when added, is Plausible only); WCAG AA; works at 390 px.
+- Hard limits that every design must keep: under 15 KB of gzip JavaScript per page before interaction; no third-party requests (no web fonts from a CDN, no trackers; analytics is Umami Cloud only: cookieless, Do Not Track respected, events carry a tool name and a count or reason); WCAG AA; works at 390 px.
 - Light theme only today; dark mode is not built.
 - Tool pages carry SEO content (How it works, Questions, Related tools) that must stay.
 - Tools are listed from one registry (`src/tools.ts`, `src/dev/tools.ts`); 17 tools on the homepage plus a card for the 29 developer tools on `/developer/`.

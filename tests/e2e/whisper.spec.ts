@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { WHISPER_BYTES, WHISPER_FILES, WHISPER_GPU_BYTES, WHISPER_GPU_FILES } from '../../src/ai/whisper/files';
 import { routeModels } from './models';
 import { clearPanelSeen, panelExtraSeen, panelSeen, recordPanel } from './panel';
-import { stubPlausible } from './plausible';
+import { stubAnalytics } from './analytics';
 import { tone, wav } from './wav';
 
 // Transcribe audio, and with it the shared AI states that need a model over 20 MB: the consent screen, the mobile
@@ -38,7 +38,7 @@ const routedSize = (url: string) => {
 };
 
 async function open(page: Page, { cellular = false, webgpu = false } = {}) {
-  await stubPlausible(page.context());
+  await stubAnalytics(page.context());
   await recordPanel(page);
   if (cellular) await page.addInitScript(() => Object.defineProperty(navigator, 'connection', { value: { type: 'cellular' } }));
   // WebGPU as asked, whatever the test browser has (Playwright's WebKit on a Mac has a real adapter).
