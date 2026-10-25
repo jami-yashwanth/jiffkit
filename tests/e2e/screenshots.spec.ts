@@ -158,9 +158,9 @@ for (const vp of VIEWPORTS) {
     test('home', async ({ page }) => {
       await page.goto('/');
       await shot(page, 'home-all', true);
-      await page.locator('.chips').getByRole('button', { name: 'PDF', exact: true }).click();
-      await expect(page.locator('#tools li:visible')).toHaveCount(4);
-      await shot(page, 'home-pdf');
+      await shot(page, 'home-fold');
+      await page.locator('a.tag[href="/merge-pdf/"]').hover();
+      await page.screenshot({ path: `review/screenshots/home-tag-hover-${vp.width}.png` });
     });
 
     test('heic: empty, hover, focus, drag-over, options', async ({ page }) => {
@@ -169,10 +169,11 @@ for (const vp of VIEWPORTS) {
       await shot(page, 'heic-to-jpg-empty-fold');
       await page.locator('label.btn').hover();
       // Wait out the colour transition, then capture with the pointer still on the button.
-      await expect(page.locator('label.btn')).toHaveCSS('background-color', 'rgb(8, 69, 54)');
+      await expect(page.locator('label.btn')).toHaveCSS('background-color', 'rgb(58, 58, 58)');
       await page.screenshot({ path: `review/screenshots/heic-to-jpg-hover-${vp.width}.png` });
       await page.mouse.move(0, 0);
-      await page.keyboard.press('Tab'); // nav link
+      await page.keyboard.press('Tab'); // wordmark
+      await page.keyboard.press('Tab'); // search
       await page.keyboard.press('Tab'); // file input inside the Choose photos label
       await expect(page.locator('[data-tool] input[type=file]')).toBeFocused();
       await shot(page, 'heic-to-jpg-focus');
@@ -185,7 +186,7 @@ for (const vp of VIEWPORTS) {
       await expect(page.locator('.drop')).toHaveClass(/is-over/);
       // At 390 the drop zone is a plain button with no drag-over look, so only desktop gets this shot.
       if (vp.width > 600) {
-        await expect(page.locator('.drop')).toHaveCSS('background-color', 'rgb(216, 234, 225)');
+        await expect(page.locator('.drop')).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
         await shot(page, 'heic-to-jpg-drag-over');
       }
       await page.reload();

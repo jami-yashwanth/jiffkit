@@ -189,20 +189,18 @@ test('copy puts the value on the clipboard and says so', async ({ page, context 
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('900150983cd24fb0d6963f7d28e17f72');
 });
 
-test('developer hub: chips filter the 29 tools by group', async ({ page }) => {
+test('developer hub: the 29 tools hang in five group zones', async ({ page }) => {
   await page.goto('/developer/');
-  const visible = page.locator('#tools li:visible');
-  await expect(visible).toHaveCount(29);
-  for (const [name, n] of [['Security', 6], ['Encoding', 6], ['Convert', 6], ['Text', 5], ['Code', 6], ['All', 29]] as const) {
-    await page.locator('.chips').getByRole('button', { name, exact: true }).click();
-    await expect(visible).toHaveCount(n);
+  await expect(page.locator('a.tag')).toHaveCount(29);
+  for (const [name, n] of [['Security', 6], ['Encoding', 6], ['Convert', 6], ['Text', 5], ['Code', 6]] as const) {
+    await expect(page.getByRole('region', { name: new RegExp(`^${name}`) }).locator('a.tag')).toHaveCount(n);
   }
 });
 
-test('homepage links to the hub from the Developer chip', async ({ page }) => {
+test('homepage links to the hub from the Developer zone, and the hub to each developer tool', async ({ page }) => {
   await page.goto('/');
-  await page.locator('.chips').getByRole('button', { name: 'Developer', exact: true }).click();
-  await expect(page.locator('#tools li:visible')).toHaveCount(5);
-  await page.getByRole('link', { name: /All developer tools/ }).click();
+  await page.getByRole('region', { name: /^Developer/ }).getByRole('link', { name: /All 29 developer tools/ }).click();
   await expect(page).toHaveURL(/\/developer\/$/);
+  await page.getByRole('link', { name: /Hash generator/ }).click();
+  await expect(page).toHaveURL(/\/hash-generator\/$/);
 });

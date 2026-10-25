@@ -43,9 +43,9 @@ const COPIED_MS = 1500;
 // otherwise tell its host you visited). Only inline styles and data: images load.
 const PREVIEW_CSP = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">`;
 const PREVIEW_STYLE =
-  '<style>body{font:16px/1.55 system-ui,-apple-system,sans-serif;color:#17201c;margin:16px;overflow-wrap:anywhere}' +
-  'pre,code{font-family:ui-monospace,Menlo,monospace;font-size:.9em}pre{background:#ecf4f0;padding:12px;border-radius:6px;overflow:auto}' +
-  'table{border-collapse:collapse}td,th{border:1px solid #d3dbd7;padding:4px 8px}img{max-width:100%}a{color:#0e6b52}</style>';
+  '<style>body{font:16px/1.55 system-ui,-apple-system,sans-serif;color:#141414;margin:16px;overflow-wrap:anywhere}' +
+  'pre,code{font-family:ui-monospace,Menlo,monospace;font-size:.9em}pre{background:#f1f1ee;padding:12px;border-radius:6px;overflow:auto}' +
+  'table{border-collapse:collapse}td,th{border:1px solid #d4d4ce;padding:4px 8px}img{max-width:100%}a{color:#141414}</style>';
 
 type FieldEl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 

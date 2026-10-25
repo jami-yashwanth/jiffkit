@@ -1,0 +1,169 @@
+{
+  "title": "Choose jiffkit's new look",
+  "question": "The roll landed on The Assembly Manual. Keep it, take an alternate, or re-roll. Each card's picture is the homepage layout.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "The Assembly Manual",
+      "kicker": "THE ROLL",
+      "lineage": "wordless flat-pack instruction sheets and their parts lists",
+      "thesis": "Every tool is a three-step instruction sheet: your file in, numbered steps, the result out, and nothing leaves the bench.",
+      "palette": ["#ffffff", "#111111", "#ffd400", "#e7e6e1"],
+      "materials": ["hairline line drawings", "numbered step circles", "parts list with 1× counts", "crossed-out upload pictogram"],
+      "viewport": "Homepage: a full-width band showing file → your device → result as a three-step diagram with a crossed-out cloud, then a parts index A–E (Image, PDF, AI, Video, Developer) listing every tool by part number.",
+      "risk": "Turns dry or IKEA-pastiche if the drawings are clip-art; needs a consistent line-drawing language across 42 tools.",
+      "raised": [
+        { "from": "challenger-jacquard", "raise": "Traceability: every result states what happened, step by step (in 4.2 MB HEIC → out 1.1 MB JPG, 0 bytes sent)." },
+        { "from": "challenger-sun", "raise": "One dominant band: the homepage's step diagram spans the full width as a single horizontal strip." },
+        { "from": "challenger-ink", "raise": "Honest verbs: controls are named for what they do (Choose, Adjust, Take), never generic labels." },
+        { "from": "challenger-wuxia", "raise": "A held moment: step 3 freezes before and after side by side as the page's climax." }
+      ],
+      "wireframe": {
+        "cols": 10,
+        "rows": 10,
+        "regions": [
+          { "label": "jiffkit · 42 tools · 0 uploads", "x": 0, "y": 0, "w": 10, "h": 1 },
+          { "label": "① your file → ② your device → ③ result  (cloud crossed out)", "x": 0, "y": 1, "w": 10, "h": 3, "accent": true },
+          { "label": "A  Image parts", "x": 0, "y": 4, "w": 2, "h": 6 },
+          { "label": "B  PDF parts", "x": 2, "y": 4, "w": 2, "h": 6 },
+          { "label": "C  AI parts", "x": 4, "y": 4, "w": 2, "h": 6 },
+          { "label": "D  Video parts", "x": 6, "y": 4, "w": 2, "h": 6 },
+          { "label": "E  Developer parts", "x": 8, "y": 4, "w": 2, "h": 6 }
+        ]
+      }
+    },
+    {
+      "id": "model-pick",
+      "label": "The Periodic Table of Tools",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "the periodic table of the elements",
+      "thesis": "Every tool is an element with a symbol, a number and a group colour, so all 42 read at a glance and both audiences find theirs.",
+      "palette": ["#ffffff", "#14181f", "#f4a259", "#e04f5f", "#5b5bd6", "#2a9d8f", "#3a86ff"],
+      "materials": ["element tiles with atomic numbers", "two-letter symbols", "group-coloured columns", "a large detail tile"],
+      "viewport": "Homepage: the whole table on one screen, 42 element tiles in group columns, a legend on top, and one large tile that shows the hovered or tapped tool with its Open button.",
+      "risk": "Familiar: 'the periodic table of X' is a well-worn infographic trope, and symbols need a legend for first-time visitors.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 10,
+        "regions": [
+          { "label": "jiffkit · legend: Image PDF AI Video Developer", "x": 0, "y": 0, "w": 12, "h": 1 },
+          { "label": "Image group", "x": 0, "y": 1, "w": 2, "h": 5 },
+          { "label": "PDF group", "x": 2, "y": 1, "w": 2, "h": 5 },
+          { "label": "detail tile: hovered tool + Open", "x": 4, "y": 1, "w": 4, "h": 4, "accent": true },
+          { "label": "AI group", "x": 8, "y": 1, "w": 2, "h": 5 },
+          { "label": "Video group", "x": 10, "y": 1, "w": 2, "h": 5 },
+          { "label": "Developer block (29 elements, the 'lanthanides')", "x": 0, "y": 7, "w": 12, "h": 3 }
+        ]
+      }
+    },
+    {
+      "id": "challenger-segment",
+      "label": "The Zero Readout",
+      "verdict": "competitive",
+      "lineage": "seven-segment displays: bedside clocks, price totems, scoreboards",
+      "thesis": "A counter that never moves: every page carries a lit readout BYTES UPLOADED 0000000, and results report in LED digits.",
+      "palette": ["#111111", "#ff3b2f", "#2a2a2a", "#ffb000"],
+      "materials": ["lit and ghost segments", "matte panel", "held-button controls"],
+      "viewport": "Homepage: a dark panel with a giant seven-segment '0 BYTES UPLOADED' readout, tools below as labelled panel buttons.",
+      "case": "Holds audience identification (everyone knows the readout, and it makes 'never uploaded' literal) but loses product clarity on long pages: 42 tools, FAQs and SEO text.",
+      "risk": "A gimmick if the counter is the only idea, and a dark panel edges toward the category's 'hacker' rut.",
+      "wireframe": {
+        "cols": 10,
+        "rows": 10,
+        "regions": [
+          { "label": "jiffkit", "x": 0, "y": 0, "w": 10, "h": 1 },
+          { "label": "0 0 0 0 0 0 0  BYTES UPLOADED", "x": 0, "y": 1, "w": 10, "h": 3, "accent": true },
+          { "label": "panel buttons: Image · PDF · AI · Video · Developer", "x": 0, "y": 4, "w": 10, "h": 1 },
+          { "label": "tool buttons", "x": 0, "y": 5, "w": 10, "h": 5 }
+        ]
+      }
+    },
+    {
+      "id": "challenger-poster",
+      "label": "The Street Poster",
+      "verdict": "competitive",
+      "lineage": "wood-type theatre street posters",
+      "thesis": "jiffkit as a street poster: tool names in giant condensed capitals, and the loudest word is the tool you came for.",
+      "palette": ["#ffd600", "#ffffff", "#111111", "#ff4b1f"],
+      "materials": ["condensed wood-type capitals", "diagonal baselines", "words cropped by the frame", "one red band"],
+      "viewport": "Homepage: a wall of stacked tool names in condensed caps (MERGE PDF / HEIC → JPG / REMOVE BACKGROUND), each word a link, one red band reading NOTHING IS UPLOADED.",
+      "case": "Wins on brand feel and memorability, which fixes 'generic', but loses product clarity on tool pages, where the task must lead.",
+      "risk": "Loud: tool pages must quiet down hard or the task drowns, and it needs a self-hosted condensed display font.",
+      "wireframe": {
+        "cols": 10,
+        "rows": 10,
+        "regions": [
+          { "label": "MERGE PDF", "x": 0, "y": 0, "w": 10, "h": 2, "accent": true },
+          { "label": "HEIC → JPG", "x": 0, "y": 2, "w": 7, "h": 2 },
+          { "label": "REMOVE BACKGROUND", "x": 3, "y": 4, "w": 7, "h": 2 },
+          { "label": "NOTHING IS UPLOADED (red band)", "x": 0, "y": 6, "w": 10, "h": 1 },
+          { "label": "TRANSCRIBE · COMPRESS · …", "x": 0, "y": 7, "w": 10, "h": 3 }
+        ]
+      }
+    },
+    {
+      "id": "challenger-jacquard",
+      "label": "Punched-card Brocade",
+      "verdict": "declined",
+      "lineage": "jacquard looms driven by punched cards",
+      "thesis": "Every conversion shown as instruction rows weaving into a finished motif.",
+      "palette": ["#141c3a", "#d4a82a", "#efe6cc", "#0b0b0b"],
+      "materials": ["midnight silk", "gold weft", "punch-card rows"],
+      "viewport": "Instruction rows above, the woven result below.",
+      "case": "Developers might see binary in it; everyday visitors would not, and it says nothing about files.",
+      "kept": "Traceability: every result now states what happened, step by step.",
+      "risk": "Ornate and opaque for a quick task."
+    },
+    {
+      "id": "challenger-sun",
+      "label": "The Indoor Sun",
+      "verdict": "declined",
+      "lineage": "an amber half-sun in a misty hall",
+      "thesis": "One vast hazy hall; visitors walk toward the light.",
+      "palette": ["#e8a33d", "#2a1a0a", "#f6c46a"],
+      "materials": ["amber haze", "mirrored ceiling", "silhouettes"],
+      "viewport": "A single horizontal band with a half sun.",
+      "case": "Beautiful but carries neither tools nor privacy.",
+      "kept": "One dominant band: the step diagram spans the full width.",
+      "risk": "All mood, no task."
+    },
+    {
+      "id": "challenger-ink",
+      "label": "Ink Basin",
+      "verdict": "declined",
+      "lineage": "suminagashi marbling",
+      "thesis": "The page as a live fluid surface.",
+      "palette": ["#1d2a5b", "#2b2b2b", "#f7f7f5"],
+      "materials": ["marbled ink", "WebGL fluid"],
+      "viewport": "A full-screen ink basin that answers the pointer.",
+      "case": "Breaks the 15 KB script budget and says nothing about files.",
+      "kept": "Honest verbs: controls named for what they do.",
+      "risk": "Heavy, slow on cheap phones."
+    },
+    {
+      "id": "challenger-wuxia",
+      "label": "Painted Film Hoarding",
+      "verdict": "declined",
+      "lineage": "hand-painted martial-arts film posters",
+      "thesis": "One held moment, painted at full drama.",
+      "palette": ["#c8352b", "#3b3b3b", "#f2efe6", "#c9a227"],
+      "materials": ["ink-wash cloud", "vertical brush title"],
+      "viewport": "A frozen leap with a vertical title.",
+      "case": "Neither audience sees their task in it.",
+      "kept": "A held moment: step 3 freezes before and after side by side.",
+      "risk": "Costume, not system."
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "buildPath": { "value": "code" },
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "What iLovePDF and Smallpdf ship: a clean grid of coloured tool cards, executed impeccably.",
+    "palette": ["#ffffff", "#111827", "#e5322d"],
+    "materials": ["icon card grid", "category chips", "big red Select button"],
+    "viewport": "A headline, category chips and a grid of icon cards: the arrangement visitors already expect.",
+    "risk": "Indistinguishable from the competition by design, which is the problem you named."
+  },
+  "steer": true
+}

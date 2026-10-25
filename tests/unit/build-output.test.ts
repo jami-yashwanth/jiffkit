@@ -229,24 +229,32 @@ describe('site', () => {
     expect(walk('dist').some((f) => /\.onnx$|asyncify[^/]*\.wasm$/.test(f))).toBe(false);
   });
 
-  it('homepage is a grid of 17 tool cards in category order, then the developer tools card', () => {
+  // The tags of a wall, in order, each with the zone it hangs in.
+  const tags = (h: string) =>
+    [...h.matchAll(/<section class="zone" data-zone="([a-z]+)"[\s\S]*?<\/section>/g)].flatMap((z) =>
+      [...z[0].matchAll(/<a class="tag[^"]*" href="\/([^"]+)\/"/g)].map((m) => [z[1], m[1]]),
+    );
+
+  it('homepage is a wall of five zones: the 17 tools in category order, and the way into the developer tools', () => {
     const h = html('');
+    const zone: Record<Category, string> = { image: 'image', pdf: 'pdf', ai: 'ai', video: 'video', developer: 'developer', qr: 'developer' };
     const order: Category[] = ['image', 'pdf', 'ai', 'video', 'developer', 'qr'];
-    const expected = order.flatMap((c) => HOME_TOOLS.filter((t) => t.category === c));
-    const cards = [...h.matchAll(/<a class="card" href="\/([^"]+)\/"/g)].map((m) => m[1]);
-    expect(cards).toEqual([...expected.map((t) => t.slug), 'developer']);
-    const cats = [...h.matchAll(/<li data-category="([a-z]+)"/g)].map((m) => m[1]);
-    expect(cats).toEqual([...expected.map((t) => t.category), 'developer']);
-    expect(h).toContain('<strong>All developer tools</strong><span class="card-sub">29 tools:');
-    expect(h).toContain('<h1>Tools that never upload your files</h1>');
+    const expected = order.flatMap((c) => HOME_TOOLS.filter((t) => t.category === c)).map((t) => [zone[t.category], t.slug]);
+    expect(tags(h)).toEqual(expected);
+    const zones = [...h.matchAll(/<h2 id="zone-[a-z]+"><span class="zone-mark"><svg[^>]*>.*?<\/svg><\/span>([^<]+) <small>(\d+)<\/small><\/h2>/g)].map((m) => [m[1], m[2]]);
+    expect(zones).toEqual([['Image', '3'], ['PDF', '4'], ['AI', '4'], ['Video', '2'], ['Developer', '29']]);
+    expect(h).toMatch(/<a class="zone-link" href="\/developer\/">All 29 developer tools<svg/);
+    expect(h).toContain('<h1>Free tools for images, PDFs, video and code</h1>');
+    expect([...h.matchAll(/<li><svg[^>]*>.*?<\/svg>([^<]+)<\/li>/g)].map((m) => m[1])).toEqual(['Nothing uploaded', 'No account', 'No watermarks']);
     expect(h).toContain('<title>jiffkit - Private Image, PDF, Video and AI Tools</title>');
+    expect(h).toContain('<body>');
   });
 
   it('brands every page as jiffkit: wordmark, og:site_name, and the titles with room for it', () => {
     const pages = ['', 'licenses/', ...TOOLS.map((t) => `${t.slug}/`)];
     for (const p of pages) {
       const h = html(p);
-      expect(h, p).toContain('<nav class="site-nav"><a href="/">jiffkit</a></nav>');
+      expect(h, p).toMatch(/<header class="topbar"><div class="frame topbar-in"><a class="wordmark" href="\/"><span class="mark" aria-hidden="true">j<\/span>jiffkit<\/a><form class="search"/);
       expect(h, p).toContain('<meta property="og:site_name" content="jiffkit">');
     }
     // Tool titles keep their keywords (60-char budget); the brand goes where there is room.
@@ -255,58 +263,88 @@ describe('site', () => {
     expect(readFileSync('dist/404.html', 'utf8')).toContain('<title>Page not found - jiffkit</title>');
   });
 
-  it('homepage chips start hidden with All pressed, and the old search is gone', () => {
-    const h = html('');
-    const group = h.match(/<div class="chips"[^>]*>([\s\S]*?)<\/div>/)!;
-    expect(group[0]).toMatch(/^<div class="chips"[^>]* hidden/);
-    const chips = [...group[1].matchAll(/<button type="button"[^>]*aria-pressed="(true|false)"[^>]*>([^<]*)<\/button>/g)];
-    expect(chips.map((m) => m[2])).toEqual(['All', 'Image', 'PDF', 'AI', 'Video', 'Developer']);
-    expect(chips.map((m) => m[1])).toEqual(['true', 'false', 'false', 'false', 'false', 'false']);
-    expect(h).not.toContain('type="search"');
-    expect(h).not.toContain('id="no-match"');
-    expect(h).not.toMatch(/<h2/);
+  it('every page has one tool search, in the top bar, and the list of every tool is a file', () => {
+    const pages = ['', 'developer/', 'licenses/', ...TOOLS.map((t) => `${t.slug}/`)];
+    for (const p of pages) {
+      const h = html(p);
+      expect([...h.matchAll(/<form class="search" role="search" action="\/" method="get" data-search>/g)], p).toHaveLength(1);
+      // The box has no name, so submitting it without the script sends nothing typed.
+      expect(h.match(/<input id="search" type="search"[^>]*>/)![0], p).not.toContain('name=');
+      expect(h, p).not.toContain('data-search-index'); // the list is a file, fetched on first focus, not page weight
+    }
+    const index = JSON.parse(readFileSync('dist/search-index.json', 'utf8'));
+    expect(index.map((e: { slug: string }) => e.slug).sort()).toEqual(TOOLS.map((t) => t.slug).sort());
   });
 
-  it('every tool page opens with a centred icon header', () => {
+  it('the walls have no chips: the zones sort the tools', () => {
+    for (const p of ['', 'developer/']) {
+      const h = html(p);
+      expect(h, p).not.toContain('class="chips"');
+      expect(h, p).not.toContain('id="no-match"');
+    }
+  });
+
+  it('every tool page opens with its icon on its zone, straight under the top bar', () => {
     for (const t of TOOLS) {
       const h = html(`${t.slug}/`);
-      const head = h.match(/<header class="tool-head">([\s\S]*?)<\/header>/);
+      const dev = t.kind === 'dev' || t.category === 'developer' || t.category === 'qr';
+      expect(h, t.slug).not.toContain('zone-strip'); // the logo and the search are the way back
+      // Developer tools keep their group's zone; the stylesheet paints every group the Developer yellow.
+      const zone = h.match(/<header class="tool-head" data-zone="([a-z]+)">/)![1];
+      expect(['security', 'encoding', 'convert', 'text', 'code'].includes(zone), t.slug).toBe(dev);
+      const head = h.match(/<header class="tool-head" data-zone="[a-z]+">([\s\S]*?)<\/header>/);
       expect(head, t.slug).not.toBeNull();
-      expect(head![1], t.slug).toMatch(/^<span class="tool-tile"><svg width="28" height="28"[^>]*>[\s\S]*?<\/svg><\/span><h1>[^<]+<\/h1><p class="subhead">/);
+      expect(head![1], t.slug).toMatch(/^<span class="tool-tile"><svg width="32" height="32"[^>]*>[\s\S]*?<\/svg><\/span><h1>[^<]+<\/h1><p class="subhead">/);
+      expect(h, t.slug).toMatch(/<div class="bench" data-zone="[a-z]+">/);
+      expect(h, t.slug).toContain('<ol class="courses">');
     }
   });
 
-  it('related tools are cards, in registry order', () => {
+  it('every tool shows what goes in and what comes out on its bench', () => {
+    for (const t of TOOLS) {
+      expect(html(`${t.slug}/`), t.slug).toMatch(/<p class="bench-io"><b>In<\/b> [^<]+ <svg[^>]*>.*?<\/svg><span class="visually-hidden">, <\/span> <b>Out<\/b> [^<]+<\/p>/);
+    }
+  });
+
+  it('related tools are tags, in registry order', () => {
     for (const t of TOOLS) {
       const h = html(`${t.slug}/`);
-      const list = h.match(/<ul class="card-grid related">([\s\S]*?)<\/ul>/);
+      const list = h.match(/<ul class="pegs related">([\s\S]*?)<\/ul>/);
       expect(list, t.slug).not.toBeNull();
-      const cards = [...list![1].matchAll(/<a class="card" href="\/([^"]+)\/"/g)].map((m) => m[1]);
-      expect(cards, t.slug).toEqual(t.related);
-      expect(h, t.slug).not.toContain('class="tool-list"');
+      const related = [...list![1].matchAll(/<a class="tag" href="\/([^"]+)\/"/g)].map((m) => m[1]);
+      expect(related, t.slug).toEqual(t.related);
     }
   });
 
-  it('the 404 page lists the homepage tools and the developer tools card', () => {
+  it('the 404 page is the homepage wall', () => {
     const h = readFileSync('dist/404.html', 'utf8');
-    expect([...h.matchAll(/<a class="card" href="/g)]).toHaveLength(HOME_TOOLS.length + 1);
-    expect(h).toContain('href="/developer/"');
-    expect(h).not.toContain('class="tool-list"');
+    expect(tags(h).map((t) => t[1])).toEqual(tags(html('')).map((t) => t[1]));
   });
 
-  it('the developer hub lists all 29 developer tools under group chips', () => {
+  it('the developer hub is a wall of five group zones holding all 29 developer tools', () => {
     const h = html('developer/');
-    const cards = [...h.matchAll(/<li data-category="([a-z]+)"><a class="card" href="\/([^"]+)\/"/g)];
-    expect(cards).toHaveLength(29);
-    expect(new Set(cards.map((m) => m[2]))).toEqual(new Set([...DEV_TOOLS.map((t) => t.slug), 'json-formatter', 'base64-encode-decode', 'jwt-decoder', 'qr-code-generator']));
-    expect([...new Set(cards.map((m) => m[1]))]).toEqual(['security', 'encoding', 'convert', 'text', 'code']);
-    const chips = [...h.match(/<div class="chips"[^>]*>([\s\S]*?)<\/div>/)![1].matchAll(/>([^<]+)<\/button>/g)].map((m) => m[1]);
-    expect(chips).toEqual(['All', 'Security', 'Encoding', 'Convert', 'Text', 'Code']);
+    const placed = tags(h);
+    expect(placed).toHaveLength(29);
+    expect(new Set(placed.map((m) => m[1]))).toEqual(new Set([...DEV_TOOLS.map((t) => t.slug), 'json-formatter', 'base64-encode-decode', 'jwt-decoder', 'qr-code-generator']));
+    expect([...new Set(placed.map((m) => m[0]))]).toEqual(['security', 'encoding', 'convert', 'text', 'code']);
+    const zones = [...h.matchAll(/<h2 id="zone-[a-z]+"><span class="zone-mark"><svg[^>]*>.*?<\/svg><\/span>([^<]+) <small>/g)].map((m) => m[1]);
+    expect(zones).toEqual(['Security', 'Encoding', 'Convert', 'Text', 'Code']);
     expect(h).toContain('<title>Developer Tools - Free, Private, Run in Your Browser</title>');
     const description = h.match(/<meta name="description" content="([^"]*)"/)![1];
     expect(description.length).toBeGreaterThanOrEqual(120);
     expect(description.length).toBeLessThanOrEqual(160);
     expect(h).toContain('<div class="page page-wide">');
+  });
+
+  it('the top bar and the footer are one width on every page; only the content between them narrows', () => {
+    for (const p of ['', 'developer/', 'merge-pdf/', 'hash-generator/', 'licenses/']) {
+      const h = html(p);
+      expect(h, p).toContain('<header class="topbar"><div class="frame topbar-in">');
+      expect(h, p).toContain('<footer class="site-footer"><p class="frame">');
+    }
+    const notFound = readFileSync('dist/404.html', 'utf8');
+    for (const p of ['', 'developer/']) expect(html(p), p).toMatch(/<div class="hero"><h1>/);
+    expect(notFound).toMatch(/<div class="hero"><h1>Page not found<\/h1>/);
   });
 
   it('homepage uses the wide page container; tool pages keep the measure', () => {
@@ -319,15 +357,17 @@ describe('site', () => {
     expect(blocks).toContainEqual({ '@context': 'https://schema.org', '@type': 'WebSite', name: 'jiffkit', url: `${SITE}/` });
   });
 
-  it('homepage copy names every tool group, and the description fits 120-160 chars', () => {
+  it('homepage names every tool group in its description and on its tags, and the description fits 120-160 chars', () => {
     const h = html('');
     const description = h.match(/<meta name="description" content="([^"]*)"/)![1];
     expect(description.length).toBeGreaterThanOrEqual(120);
     expect(description.length).toBeLessThanOrEqual(160);
+    const names = [...h.matchAll(/<strong class="tag-name">([^<]*)<\/strong>/g)].map((m) => m[1]).join(' ');
     for (const word of [/background/i, /transcribe/i, /video/i, /PDF/, /photo|image/i]) {
       expect(description).toMatch(word);
-      expect(h.match(/<p class="subhead">([^<]*)<\/p>/)![1]).toMatch(word);
+      expect(names).toMatch(word);
     }
+    expect(h).not.toContain('class="subhead"'); // the three promises say it once
   });
 
   it('homepage has no licences entry in the tool list', () => {

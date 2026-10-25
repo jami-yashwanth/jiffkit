@@ -267,6 +267,19 @@ const libs = [
     source: `https://github.com/lucide-icons/lucide/tree/${pkgVersion('lucide-static')}`,
     texts: [{ label: 'LICENSE', text: licenceText('lucide-static/LICENSE') }],
   },
+  ...(
+    [
+      ['@fontsource-variable/geist', 'Geist', 'The typeface of every page, served from this site.'],
+      ['@fontsource-variable/geist-mono', 'Geist Mono', 'The typeface of code and data in the developer tools, served from this site.'],
+    ] as const
+  ).map(([pkg, name, note]) => ({
+    name: `${name} (${pkg})`,
+    version: pkgVersion(pkg),
+    licence: 'OFL-1.1',
+    note,
+    source: 'https://github.com/vercel/geist-font',
+    texts: [{ label: 'LICENSE', text: licenceText(`${pkg}/LICENSE`) }],
+  })),
   // The developer tools' libraries, each loaded only on its own tool's page when the tool is first used.
   ...(
     [

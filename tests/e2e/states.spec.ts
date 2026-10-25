@@ -280,7 +280,9 @@ test('at 390 px the drop zone is one full-width Choose photos button', async ({ 
   const button = page.locator('label.btn', { hasText: 'Choose photos' });
   await expect(button).toBeVisible();
   const [b, d] = await Promise.all([button.boundingBox(), page.locator('.drop').boundingBox()]);
-  expect(b!.width).toBeGreaterThanOrEqual(390 - 2 * 16 - 1);
+  // The drop zone fills the bench mat it sits on.
+  const bench = await page.locator('.bench').evaluate((el) => el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft) - parseFloat(getComputedStyle(el).paddingRight));
+  expect(Math.abs(b!.width - bench)).toBeLessThanOrEqual(1);
   expect(Math.abs(b!.width - d!.width)).toBeLessThanOrEqual(1);
   // No dashed drop target on mobile: the button is the drop zone.
   await expect(page.locator('.drop')).toHaveCSS('border-top-style', 'none');

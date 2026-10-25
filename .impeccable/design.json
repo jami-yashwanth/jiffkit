@@ -1,0 +1,552 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-25T00:00:00Z",
+  "title": "Design System: jiffkit",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "primary",
+        "displayName": "Ink",
+        "canonical": "#141414",
+        "oklch": "oklch(19.1% 0.000 89.9)",
+        "cssVar": "--ink",
+        "tonalRamp": [
+          "oklch(15% 0.000 89.9)",
+          "oklch(26% 0.000 89.9)",
+          "oklch(38% 0.000 89.9)",
+          "oklch(49% 0.000 89.9)",
+          "oklch(61% 0.000 89.9)",
+          "oklch(72% 0.000 89.9)",
+          "oklch(84% 0.000 89.9)",
+          "oklch(95% 0.000 89.9)"
+        ]
+      },
+      "ink-soft": {
+        "role": "primary",
+        "displayName": "Hover Ink",
+        "canonical": "#3a3a3a",
+        "oklch": "oklch(34.8% 0.000 89.9)",
+        "cssVar": "--accent-strong",
+        "tonalRamp": [
+          "oklch(15% 0.000 89.9)",
+          "oklch(26% 0.000 89.9)",
+          "oklch(38% 0.000 89.9)",
+          "oklch(49% 0.000 89.9)",
+          "oklch(61% 0.000 89.9)",
+          "oklch(72% 0.000 89.9)",
+          "oklch(84% 0.000 89.9)",
+          "oklch(95% 0.000 89.9)"
+        ]
+      },
+      "z-image": {
+        "role": "secondary",
+        "displayName": "Image Orange",
+        "canonical": "#ff6b1a",
+        "oklch": "oklch(70.3% 0.198 43.4)",
+        "cssVar": "--z-image",
+        "tonalRamp": [
+          "oklch(15% 0.198 43.4)",
+          "oklch(26% 0.198 43.4)",
+          "oklch(38% 0.198 43.4)",
+          "oklch(49% 0.198 43.4)",
+          "oklch(61% 0.198 43.4)",
+          "oklch(72% 0.198 43.4)",
+          "oklch(84% 0.198 43.4)",
+          "oklch(95% 0.198 43.4)"
+        ]
+      },
+      "z-pdf": {
+        "role": "secondary",
+        "displayName": "PDF Blue",
+        "canonical": "#1f5eff",
+        "oklch": "oklch(55.3% 0.247 263.7)",
+        "cssVar": "--z-pdf",
+        "tonalRamp": [
+          "oklch(15% 0.247 263.7)",
+          "oklch(26% 0.247 263.7)",
+          "oklch(38% 0.247 263.7)",
+          "oklch(49% 0.247 263.7)",
+          "oklch(61% 0.247 263.7)",
+          "oklch(72% 0.247 263.7)",
+          "oklch(84% 0.247 263.7)",
+          "oklch(95% 0.200 263.7)"
+        ]
+      },
+      "z-ai": {
+        "role": "secondary",
+        "displayName": "AI Green",
+        "canonical": "#12a150",
+        "oklch": "oklch(62.2% 0.163 151.0)",
+        "cssVar": "--z-ai",
+        "tonalRamp": [
+          "oklch(15% 0.163 151.0)",
+          "oklch(26% 0.163 151.0)",
+          "oklch(38% 0.163 151.0)",
+          "oklch(49% 0.163 151.0)",
+          "oklch(61% 0.163 151.0)",
+          "oklch(72% 0.163 151.0)",
+          "oklch(84% 0.163 151.0)",
+          "oklch(95% 0.163 151.0)"
+        ]
+      },
+      "z-video": {
+        "role": "secondary",
+        "displayName": "Video Magenta",
+        "canonical": "#c43c84",
+        "oklch": "oklch(57.4% 0.185 351.9)",
+        "cssVar": "--z-video",
+        "tonalRamp": [
+          "oklch(15% 0.185 351.9)",
+          "oklch(26% 0.185 351.9)",
+          "oklch(38% 0.185 351.9)",
+          "oklch(49% 0.185 351.9)",
+          "oklch(61% 0.185 351.9)",
+          "oklch(72% 0.185 351.9)",
+          "oklch(84% 0.185 351.9)",
+          "oklch(95% 0.185 351.9)"
+        ]
+      },
+      "z-developer": {
+        "role": "secondary",
+        "displayName": "Developer Amber",
+        "canonical": "#e0a400",
+        "oklch": "oklch(75.5% 0.156 82.2)",
+        "cssVar": "--z-developer (also --z-security, --z-encoding, --z-convert, --z-text, --z-code)",
+        "tonalRamp": [
+          "oklch(15% 0.156 82.2)",
+          "oklch(26% 0.156 82.2)",
+          "oklch(38% 0.156 82.2)",
+          "oklch(49% 0.156 82.2)",
+          "oklch(61% 0.156 82.2)",
+          "oklch(72% 0.156 82.2)",
+          "oklch(84% 0.156 82.2)",
+          "oklch(95% 0.156 82.2)"
+        ]
+      },
+      "board": {
+        "role": "neutral",
+        "displayName": "Off-white Ground",
+        "canonical": "#f7f7f4",
+        "oklch": "oklch(97.5% 0.004 106.5)",
+        "cssVar": "--board",
+        "tonalRamp": [
+          "oklch(15% 0.004 106.5)",
+          "oklch(26% 0.004 106.5)",
+          "oklch(38% 0.004 106.5)",
+          "oklch(49% 0.004 106.5)",
+          "oklch(61% 0.004 106.5)",
+          "oklch(72% 0.004 106.5)",
+          "oklch(84% 0.004 106.5)",
+          "oklch(95% 0.004 106.5)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "cssVar": "--paper",
+        "tonalRamp": [
+          "oklch(15% 0.000 89.9)",
+          "oklch(26% 0.000 89.9)",
+          "oklch(38% 0.000 89.9)",
+          "oklch(49% 0.000 89.9)",
+          "oklch(61% 0.000 89.9)",
+          "oklch(72% 0.000 89.9)",
+          "oklch(84% 0.000 89.9)",
+          "oklch(95% 0.000 89.9)"
+        ]
+      },
+      "tint": {
+        "role": "neutral",
+        "displayName": "Quiet Fill",
+        "canonical": "#f1f1ee",
+        "oklch": "oklch(95.7% 0.004 106.5)",
+        "cssVar": "--tint",
+        "tonalRamp": [
+          "oklch(15% 0.004 106.5)",
+          "oklch(26% 0.004 106.5)",
+          "oklch(38% 0.004 106.5)",
+          "oklch(49% 0.004 106.5)",
+          "oklch(61% 0.004 106.5)",
+          "oklch(72% 0.004 106.5)",
+          "oklch(84% 0.004 106.5)",
+          "oklch(95% 0.004 106.5)"
+        ]
+      },
+      "tint-strong": {
+        "role": "neutral",
+        "displayName": "Held Fill",
+        "canonical": "#e2e2dc",
+        "oklch": "oklch(91.1% 0.008 106.6)",
+        "cssVar": "--tint-strong",
+        "tonalRamp": [
+          "oklch(15% 0.008 106.6)",
+          "oklch(26% 0.008 106.6)",
+          "oklch(38% 0.008 106.6)",
+          "oklch(49% 0.008 106.6)",
+          "oklch(61% 0.008 106.6)",
+          "oklch(72% 0.008 106.6)",
+          "oklch(84% 0.008 106.6)",
+          "oklch(95% 0.008 106.6)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#d4d4ce",
+        "oklch": "oklch(86.8% 0.008 106.6)",
+        "cssVar": "--line",
+        "tonalRamp": [
+          "oklch(15% 0.008 106.6)",
+          "oklch(26% 0.008 106.6)",
+          "oklch(38% 0.008 106.6)",
+          "oklch(49% 0.008 106.6)",
+          "oklch(61% 0.008 106.6)",
+          "oklch(72% 0.008 106.6)",
+          "oklch(84% 0.008 106.6)",
+          "oklch(95% 0.008 106.6)"
+        ]
+      },
+      "edge": {
+        "role": "neutral",
+        "displayName": "Field Edge",
+        "canonical": "#6b6b66",
+        "oklch": "oklch(52.6% 0.008 106.7)",
+        "cssVar": "--edge",
+        "tonalRamp": [
+          "oklch(15% 0.008 106.7)",
+          "oklch(26% 0.008 106.7)",
+          "oklch(38% 0.008 106.7)",
+          "oklch(49% 0.008 106.7)",
+          "oklch(61% 0.008 106.7)",
+          "oklch(72% 0.008 106.7)",
+          "oklch(84% 0.008 106.7)",
+          "oklch(95% 0.008 106.7)"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#55554f",
+        "oklch": "oklch(44.8% 0.010 106.8)",
+        "cssVar": "--ink-muted",
+        "tonalRamp": [
+          "oklch(15% 0.010 106.8)",
+          "oklch(26% 0.010 106.8)",
+          "oklch(38% 0.010 106.8)",
+          "oklch(49% 0.010 106.8)",
+          "oklch(61% 0.010 106.8)",
+          "oklch(72% 0.010 106.8)",
+          "oklch(84% 0.010 106.8)",
+          "oklch(95% 0.010 106.8)"
+        ]
+      },
+      "disabled": {
+        "role": "neutral",
+        "displayName": "Disabled Fill",
+        "canonical": "#e4e4df",
+        "oklch": "oklch(91.7% 0.007 106.5)",
+        "cssVar": "--disabled",
+        "tonalRamp": [
+          "oklch(15% 0.007 106.5)",
+          "oklch(26% 0.007 106.5)",
+          "oklch(38% 0.007 106.5)",
+          "oklch(49% 0.007 106.5)",
+          "oklch(61% 0.007 106.5)",
+          "oklch(72% 0.007 106.5)",
+          "oklch(84% 0.007 106.5)",
+          "oklch(95% 0.007 106.5)"
+        ]
+      },
+      "error": {
+        "role": "neutral",
+        "displayName": "Expired Red",
+        "canonical": "#b3261e",
+        "oklch": "oklch(50.1% 0.178 28.7)",
+        "cssVar": "--error",
+        "tonalRamp": [
+          "oklch(15% 0.178 28.7)",
+          "oklch(26% 0.178 28.7)",
+          "oklch(38% 0.178 28.7)",
+          "oklch(49% 0.178 28.7)",
+          "oklch(61% 0.178 28.7)",
+          "oklch(72% 0.178 28.7)",
+          "oklch(84% 0.178 28.7)",
+          "oklch(95% 0.178 28.7)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Wall headline (home, /developer/, 404), sentence case."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Tool page name beside the icon tile."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section headings: How it works, Questions, Related tools."
+      },
+      "zone-name": {
+        "displayName": "Zone Name",
+        "purpose": "Zone heading beside its dot, count in muted ink."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "Lowercase jiffkit wordmark."
+      },
+      "subhead": {
+        "displayName": "Subhead",
+        "purpose": "One muted sentence under a headline, max 34rem."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Everything read in sentences."
+      },
+      "tag-name": {
+        "displayName": "Tag Name",
+        "purpose": "Tool name on a tag."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Button text."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Header promise, breadcrumb, In -> Out line, zone link."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Text areas, panes, key-value values, developer inputs."
+      }
+    },
+    "derivedColors": [
+      {
+        "name": "zone-wash",
+        "value": "color-mix(in srgb, var(--zone) 7%, #fff)",
+        "purpose": "Ground of a zone on a wall."
+      },
+      {
+        "name": "tile-wash",
+        "value": "color-mix(in srgb, var(--zone) 12%, #fff)",
+        "purpose": "Icon tile behind a tool's icon on its page."
+      },
+      {
+        "name": "bench-wash",
+        "value": "color-mix(in srgb, var(--zone) 5%, #fff)",
+        "purpose": "The bench mat's ground on a tool page."
+      },
+      {
+        "name": "bench-held",
+        "value": "color-mix(in srgb, var(--zone) 16%, #fff)",
+        "purpose": "Drop zone on a bench while a file is held over it."
+      }
+    ],
+    "patterns": [
+      {
+        "name": "checkerboard",
+        "value": "repeating-conic-gradient(#e4e4df 0 25%, #fff 0 50%) 0 0 / 16px 16px",
+        "purpose": "Transparency behind a cut-out image in the compare slider. The only patterned fill."
+      }
+    ],
+    "shadows": [],
+    "shadowsNote": "None. Depth is three flat layers: off-white ground, pale zone wash or bench, white tag or field with a hairline.",
+    "motion": [
+      {
+        "name": "ease",
+        "value": "120ms ease-out",
+        "purpose": "Border and colour changes: tag hover border, buttons, icon buttons, the drop zone. Off under reduced motion."
+      },
+      {
+        "name": "spin",
+        "value": "rotate 360deg, 0.8s linear infinite (2.4s under reduced motion)",
+        "purpose": "Spinners for rows and PDF jobs."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone-max",
+        "value": "600px",
+        "note": "max-width: smaller tile and headlines, two tags per row, full-width buttons"
+      },
+      {
+        "name": "wall-grid",
+        "value": "720px",
+        "note": "min-width: six-column home wall, two-column developer wall"
+      },
+      {
+        "name": "wall-wide",
+        "value": "1100px",
+        "note": "min-width: three-column developer wall"
+      }
+    ],
+    "containers": [
+      {
+        "name": "measure",
+        "value": "40rem",
+        "purpose": "Tool and reading pages."
+      },
+      {
+        "name": "page-wide",
+        "value": "76rem",
+        "purpose": "Wall pages."
+      }
+    ],
+    "icons": {
+      "set": "Lucide via lucide-static (ISC), copied inline as SVG",
+      "stroke": "1.8, round caps and joins, currentColor (ink)",
+      "sizes": {
+        "tag": "28px",
+        "tool-tile": "32px",
+        "links-and-arrows": "16px"
+      },
+      "drawnMasks": "16px authored SVG masks for lock, check, up, down, remove, compare, alert"
+    },
+    "fonts": {
+      "display": "none; headings use the system UI stack",
+      "body": "system UI stack",
+      "mono": "system monospace stack"
+    },
+    "assetProvenance": "No shipping rasters. Zones, tags, tiles and the bench are CSS; tool and UI icons are inline Lucide SVG and authored SVG masks; no font files ship. favicon.svg and favicon.ico are unchanged.",
+    "supersedes": ".impeccable/surfaces/src-pages-index-astro.md direction contract (the loud Tool Wall, rejected by the user as stressful). DESIGN.md and the shipped code win."
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ink block, 8px corners; the one primary action in a state.",
+      "html": "<button class=\"ds-btn\">Merge PDFs</button>",
+      "css": ".ds-btn { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: #141414; color: #fff; border: 1px solid transparent; border-radius: 8px; padding: 8px 32px; min-height: 44px; font-size: 1.0625rem; font-weight: 600; line-height: 26px; cursor: pointer; transition: background-color 120ms ease-out; } .ds-btn:hover { background: #3a3a3a; } .ds-btn:focus-visible { outline: 2px solid #141414; outline-offset: 3px; } .ds-btn:disabled { background: #e4e4df; color: #55554f; cursor: not-allowed; }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Secondary actions: transparent with a field edge.",
+      "html": "<button class=\"ds-btn-quiet\">Start over</button>",
+      "css": ".ds-btn-quiet { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: transparent; color: #141414; border: 1px solid #6b6b66; border-radius: 8px; padding: 8px 24px; min-height: 44px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background-color 120ms ease-out; } .ds-btn-quiet:hover { background: #f1f1ee; color: #3a3a3a; } .ds-btn-quiet:focus-visible { outline: 2px solid #141414; outline-offset: 3px; }"
+    },
+    {
+      "name": "Zone with Tool Tags",
+      "kind": "card",
+      "refersTo": "tag",
+      "description": "Signature unit: a pale 7% zone wash with a dot by its name; white tags with a hairline that turns ink on hover.",
+      "html": "<section class=\"ds-zone\"><h2 class=\"ds-zh\">PDF <small>4</small></h2><ul class=\"ds-pegs\"><li><a class=\"ds-tag\" href=\"#\"><span class=\"ds-icon\"><svg width=\"28\" height=\"28\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M14 3a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1\"/><path d=\"M19 3a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1\"/><path d=\"m7 15 3 3\"/><path d=\"m7 21 3-3H5a2 2 0 0 1-2-2v-2\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/></svg></span><strong class=\"ds-name\">Merge PDF</strong></a></li><li><a class=\"ds-tag\" href=\"#\"><span class=\"ds-icon\"><svg width=\"28\" height=\"28\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M14 3a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1\"/><path d=\"M19 3a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1\"/><path d=\"m7 15 3 3\"/><path d=\"m7 21 3-3H5a2 2 0 0 1-2-2v-2\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/></svg></span><strong class=\"ds-name\">Split PDF</strong></a></li></ul></section>",
+      "css": ".ds-zone { --zone: #1f5eff; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: color-mix(in srgb, var(--zone) 7%, #fff); border-radius: 16px; padding: 16px; width: 22rem; color: #141414; } .ds-zh { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; font-size: 1rem; font-weight: 700; line-height: 1.15; } .ds-zh::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--zone); } .ds-zh small { font-size: inherit; font-weight: 500; color: #55554f; } .ds-pegs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); } .ds-tag { display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 6.5rem; padding: 16px; background: #fff; border: 1px solid #d4d4ce; border-radius: 8px; color: #141414; text-decoration: none; transition: border-color 120ms ease-out; } .ds-icon { line-height: 0; } .ds-name { font-size: 1rem; font-weight: 650; line-height: 1.3; letter-spacing: -0.01em; } .ds-tag:hover { border-color: #141414; } .ds-tag:hover .ds-name { text-decoration: underline; text-underline-offset: 0.18em; } .ds-tag:focus-visible { outline: 2px solid #141414; outline-offset: 2px; } @media (prefers-reduced-motion: reduce) { .ds-tag { transition: none; } }"
+    },
+    {
+      "name": "Breadcrumb and Tool Head",
+      "kind": "nav",
+      "refersTo": "tool-tile",
+      "description": "Top of a tool page: the way back, the zone dot and name, then the icon on a 12% tile beside the name.",
+      "html": "<div class=\"ds-top\"><nav class=\"ds-crumb\"><a href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m12 19-7-7 7-7\"/><path d=\"M19 12H5\"/></svg>All tools</a><span class=\"ds-zl\">PDF</span></nav><header class=\"ds-head\"><span class=\"ds-tile\"><svg width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M14 3a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1\"/><path d=\"M19 3a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1\"/><path d=\"m7 15 3 3\"/><path d=\"m7 21 3-3H5a2 2 0 0 1-2-2v-2\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/></svg></span><h1>Merge PDF</h1><p>Combine PDF files into one document.</p></header></div>",
+      "css": ".ds-top { --zone: #1f5eff; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; color: #141414; width: 32rem; } .ds-crumb { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 24px; font-size: 0.9375rem; } .ds-crumb a { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: #141414; text-underline-offset: 0.18em; } .ds-crumb a:hover { color: #3a3a3a; text-decoration-thickness: 2px; } .ds-zl { display: inline-flex; align-items: center; gap: 8px; color: #55554f; } .ds-zl::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--zone); } .ds-head { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; align-items: center; } .ds-tile { grid-row: span 2; display: grid; place-items: center; width: 4rem; height: 4rem; border-radius: 16px; background: color-mix(in srgb, var(--zone) 12%, #fff); } .ds-head h1 { margin: 0; align-self: end; font-size: 2.5rem; font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; } .ds-head p { margin: 0; align-self: start; color: #55554f; font-size: 1.125rem; line-height: 1.5; }"
+    },
+    {
+      "name": "Bench",
+      "kind": "custom",
+      "refersTo": "bench",
+      "description": "The tool's mat: 5% zone wash, hairline border, In -> Out stated before anything runs, then the drop button.",
+      "html": "<div class=\"ds-bench\"><p class=\"ds-io\"><b>In</b> PDFs <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg> <b>Out</b> one PDF</p><label class=\"ds-drop\">Choose PDFs</label></div>",
+      "css": ".ds-bench { --zone: #1f5eff; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: color-mix(in srgb, var(--zone) 5%, #fff); border: 1px solid #d4d4ce; border-radius: 16px; padding: 16px 16px 24px; width: 32rem; } .ds-io { margin: 0 0 24px; font-size: 0.9375rem; line-height: 1.6; color: #55554f; } .ds-io b { font-weight: 650; color: #141414; } .ds-io svg { vertical-align: -3px; margin: 0 2px; } .ds-drop { display: block; margin: 0 auto; width: 320px; text-align: center; background: #141414; color: #fff; border-radius: 8px; min-height: 64px; line-height: 64px; font-size: 1.1875rem; font-weight: 700; cursor: pointer; transition: background-color 120ms ease-out; } .ds-drop:hover { background: #3a3a3a; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "text-input",
+      "description": "White field, 8px corners, field edge; ink border on focus.",
+      "html": "<label class=\"ds-field\">Text to hash<textarea class=\"ds-input\" rows=\"3\" placeholder=\"Paste text here\"></textarea></label>",
+      "css": ".ds-field { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; display: block; font-weight: 600; color: #141414; } .ds-input { display: block; width: 100%; margin-top: 8px; padding: 8px 16px; min-height: 48px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9375rem; line-height: 1.5; color: #141414; background: #fff; border: 1px solid #6b6b66; border-radius: 8px; caret-color: #141414; } .ds-input::placeholder { color: #55554f; opacity: 1; } .ds-input:focus-visible { outline: 2px solid #141414; outline-offset: 0; border-color: #141414; }"
+    },
+    {
+      "name": "Site Header",
+      "kind": "nav",
+      "refersTo": "wordmark",
+      "description": "Wordmark left, the plain promise right, on the off-white ground.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-wordmark\" href=\"#\">jiffkit</a><span class=\"ds-promise\">Your files never leave your device</span></nav>",
+      "css": ".ds-nav { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; padding: 16px; background: #f7f7f4; } .ds-wordmark { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; color: #141414; text-decoration: none; } .ds-wordmark:hover { text-decoration: underline; } .ds-wordmark:focus-visible { outline: 2px solid #141414; outline-offset: 2px; } .ds-promise { color: #55554f; font-size: 0.875rem; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Calm Tool Wall",
+    "overview": "**Creative North Star: \"The Calm Tool Wall\"**\n\nEvery tool is in view at once, sorted onto one wall by what it works on, and the page stays quiet while you look. The wall keeps its structure from the first version (five zones, one place per tool, every tool a white tag) but drops everything that shouted. The ground is a soft off-white, zones are pale washes of their colour with one small solid dot by the name, tags are plain white cards with a hairline edge, and the only type is the device's own face in sentence case.\n\nThe reason is the user's: the bright, saturated version felt stressful. That is the governing principle of this system. Colour is a quiet signpost, not the main event. It tells you where a tool lives at a glance and then gets out of the way; ink, white and generous space do the rest.\n\nTool pages carry the same calm: a breadcrumb back to the wall with the zone's dot and name, the tool's icon on a small tile of its zone's wash, and the tool itself on a bench, a 5% mat with a hairline border that says what goes in and what comes out before anything runs. Below sit How it works, Questions, and Related tools as the same white tags.",
+    "keyCharacteristics": [
+      "Off-white ground on every wall page and tool page; white for tags, fields and the bench's inner surfaces.",
+      "Five zone colours used only as pale washes (5 to 12%) and 10px solid dots.",
+      "White tags with a 1px hairline border; hover turns the border ink and underlines the name.",
+      "System UI face only, sentence case everywhere, weight and size carry hierarchy.",
+      "Gently rounded: 8px on controls and tags, 16px on zones, tiles and benches.",
+      "Flat: no shadows, no gradients, no ornament. Motion is a 120ms colour or border change.",
+      "Ink controls (buttons, links, focus) at about 17:1 on the ground; every pair checked for WCAG AA."
+    ],
+    "rules": [
+      {
+        "name": "The Quiet Signpost Rule",
+        "body": "Colour says where a tool lives and is never the main event. A zone colour appears at full strength only as a 10px dot; every surface it touches is a wash of 16% or less. If a new surface makes colour the first thing you see, it is wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink Controls Rule",
+        "body": "Buttons, links, focus rings and icons are ink. A zone colour never becomes a button, a link, a border or a focus ring.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Amber Rule",
+        "body": "A developer tool is amber on every wall and every page. Group identity comes from the zone's name, never from a second colour.",
+        "section": "colors"
+      },
+      {
+        "name": "The Sentence Case Rule",
+        "body": "Every heading, label and button is sentence case. Nothing is set in uppercase or letter-spaced capitals.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Family Rule",
+        "body": "Headings and text share the system face; hierarchy comes from weight (800, 700, 650, 600) and size. Mono is for what a visitor pastes or copies, never for labels.",
+        "section": "typography"
+      },
+      {
+        "name": "The walls",
+        "body": "On phones zones stack full width (8px side padding) and tags sit two to a row. From 720px the homepage wall is a six-column grid: Image, PDF and AI two columns each on top, Video two and Developer four below. The /developer/ wall is two columns from 720px and three from 1100px. Inside a zone, tags auto-fill at a 9.5rem minimum. The wall head is the headline over its subhead, 32px above the wall.",
+        "section": "layout"
+      },
+      {
+        "name": "The header",
+        "body": "One line: the wordmark left, \"Your files never leave your device\" in small muted text right, wrapping on narrow screens. The footer is one muted line over a hairline.",
+        "section": "layout"
+      },
+      {
+        "name": "The Every Tool Is In View Rule",
+        "body": "A wall shows every tool it holds at once; there is no carousel, tab or \"show more\" on a wall.",
+        "section": "layout"
+      },
+      {
+        "name": "The Hairline Lift Rule",
+        "body": "A tag shows it is live by its border turning from hairline to ink and its name underlining, over 120ms. Nothing moves, lifts or casts a shadow. Under reduced motion the change is instant.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do put every tool in exactly one zone and show it as a white tag.",
+      "Do keep zone colour to washes (16% or less) and the 10px dot, and keep every control ink.",
+      "Do show In → Out on every tool's bench before the tool runs.",
+      "Do give every tool page the breadcrumb, the icon tile on its zone's wash, and the bench.",
+      "Do use 8px corners on controls and tags, 16px on zones, tiles and benches.",
+      "Do write plain copy in sentence case (\"Your files never leave your device\").",
+      "Do draw icons as inline Lucide SVG at 1.8 stroke in ink, and status marks as drawn SVG masks.",
+      "Do keep tap targets at 44px or more and check every new colour pair for WCAG AA."
+    ],
+    "donts": [
+      "Don't fill a surface with a saturated zone colour; the bright version was rejected as stressful.",
+      "Don't give a developer group its own colour; every developer tool is amber.",
+      "Don't add a display or web font, uppercase labels, tape labels or stamped codes.",
+      "Don't add drop shadows, glows, gradients, background patterns or decorative motion; a tag never moves.",
+      "Don't colour a button, link, border or focus ring with a zone colour.",
+      "Don't use text glyphs (↑ ↓ ✕ ⚠) for icons; draw them."
+    ]
+  }
+}

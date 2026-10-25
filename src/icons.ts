@@ -1,3 +1,4 @@
+import type { ZoneId } from './wall';
 import type { ToolSlug } from './tools';
 
 /** The Lucide icon each tool card and tool header draws (lucide-static 1.52.0, ISC). */
@@ -95,5 +96,37 @@ export const ICONS: Record<ToolSlug, string> = {
   'subnet-calculator': '<rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/>',
 };
 
-/** The /developer/ hub card on the homepage (lucide-static 1.52.0, terminal). */
-export const HUB_ICON = '<path d="M12 19h8"/><path d="m4 17 6-6-6-6"/>';
+/** The IN → OUT arrow and the link to every developer tool (lucide-static 1.52.0, arrow-right). */
+export const ARROW_RIGHT = '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>';
+
+/** The homepage's three promises (lucide-static 1.52.0, check). */
+export const CHECK = '<path d="M20 6 9 17l-5-5"/>';
+
+/** The search box (lucide-static 1.52.0, search). */
+export const SEARCH = '<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>';
+
+/** Each zone's mark beside its name (lucide-static 1.52.0). */
+export const ZONE_ICON_NAME: Record<ZoneId, string> = {
+  image: 'image',
+  pdf: 'file-text',
+  ai: 'sparkles',
+  video: 'film',
+  developer: 'code',
+  security: 'shield-check',
+  encoding: 'binary',
+  convert: 'arrow-left-right',
+  text: 'type',
+  code: 'braces',
+};
+export const ZONE_ICONS: Record<ZoneId, string> = {
+  image: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
+  pdf: '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+  ai: '<path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/>',
+  video: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/>',
+  developer: '<path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/>',
+  security: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+  encoding: '<rect x="14" y="14" width="4" height="6" rx="2"/><rect x="6" y="4" width="4" height="6" rx="2"/><path d="M6 20h4"/><path d="M14 10h4"/><path d="M6 14h2v6"/><path d="M14 4h2v6"/>',
+  convert: '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
+  text: '<path d="M12 4v16"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 20h6"/>',
+  code: '<path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/>',
+};
