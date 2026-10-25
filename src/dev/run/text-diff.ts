@@ -3,9 +3,12 @@ import type { Runner } from '../form';
 
 type Line = { op: '+' | '-' | ' '; text: string };
 
+/** End a non-empty text with one line break, so "three" and "three\n" are the same last line. */
+const terminated = (s: string) => (s === '' || s.endsWith('\n') ? s : `${s}\n`);
+
 export function diff(a: string, b: string, ignoreWhitespace: boolean): Line[] {
   const lines: Line[] = [];
-  for (const part of diffLines(a, b, { ignoreWhitespace })) {
+  for (const part of diffLines(terminated(a), terminated(b), { ignoreWhitespace })) {
     const op = part.added ? '+' : part.removed ? '-' : ' ';
     const text = part.value.endsWith('\n') ? part.value.slice(0, -1) : part.value;
     for (const l of text.split('\n')) lines.push({ op, text: l });

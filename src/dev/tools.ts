@@ -472,8 +472,8 @@ export const DEV_TOOLS: DevEntry[] = [
     form: {
       run: 'live',
       fields: [
-        { id: 'a', label: 'Original', type: 'textarea', rows: 8, placeholder: 'Original text' },
-        { id: 'b', label: 'Changed', type: 'textarea', rows: 8, placeholder: 'Changed text' },
+        { id: 'a', label: 'Original', type: 'textarea', rows: 5, placeholder: 'Original text' },
+        { id: 'b', label: 'Changed', type: 'textarea', rows: 5, placeholder: 'Changed text' },
         { id: 'ws', label: 'Ignore whitespace', type: 'checkbox', checked: false },
       ],
       outputs: [{ id: 'diff', label: 'Changes', type: 'diff' }],

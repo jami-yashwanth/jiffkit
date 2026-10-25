@@ -28,6 +28,13 @@ describe('text diff', () => {
       { op: ' ', text: 'a' }, { op: '-', text: 'b' }, { op: '+', text: 'B' }, { op: ' ', text: 'c' }, { op: '+', text: 'd' },
     ]);
   });
+  it('does not count the last line as changed just because one text ends without a line break', async () => {
+    expect(diff('one\ntwo\nthree', 'one\n2\nthree\nfour', false)).toEqual([
+      { op: ' ', text: 'one' }, { op: '-', text: 'two' }, { op: '+', text: '2' }, { op: ' ', text: 'three' }, { op: '+', text: 'four' },
+    ]);
+    expect((await diffRun({ a: 'one\ntwo\nthree', b: 'one\n2\nthree\nfour', ws: false })).status).toBe('2 lines added, 1 line removed.');
+  });
+
   it('can ignore whitespace, and says when there is no difference', async () => {
     expect((await diffRun({ a: 'x\n  y', b: 'x\ny', ws: true })).status).toBe('No differences.');
     expect((await diffRun({ a: 'x\ny', b: 'x\nz\nw', ws: false })).status).toBe('2 lines added, 1 line removed.');
