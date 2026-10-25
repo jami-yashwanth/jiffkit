@@ -81,7 +81,8 @@ function serve(dir) {
     res.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream' });
     createReadStream(file).pipe(res);
   });
-  return new Promise((ok) => server.listen(0, '127.0.0.1', () => ok({ server, origin: `http://127.0.0.1:${server.address().port}` })));
+  // A fixed port: the model bucket's CORS rule has to name this origin (README, "AI tools and model hosting").
+  return new Promise((ok) => server.listen(4410, '127.0.0.1', () => ok({ server, origin: 'http://127.0.0.1:4410' })));
 }
 
 function photos() {
