@@ -1,0 +1,135 @@
+{
+  "title": "Choose jiffkit's new look",
+  "question": "New hand: the roll landed on The Tool Wall. Keep it, take an alternate, or re-roll. Each card's picture is the homepage layout.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "The Tool Wall",
+      "kicker": "THE ROLL",
+      "lineage": "workshop pegboards with painted tool outlines",
+      "thesis": "Every tool hangs in its own painted outline on one wall, so you always know where it lives and that it never leaves the workshop.",
+      "palette": ["#f1f1ee", "#121212", "#ff6b1a", "#1f5eff", "#c9c9c4"],
+      "materials": ["pegboard dot grid", "painted outline shadows (large Lucide line icons)", "zone tape labels", "stencilled lettering"],
+      "viewport": "Homepage: a full-width pegboard with a dot grid; each tool hangs in its outline inside a taped zone (Image, PDF, AI, Video, Developer); a stencilled line reads NOTHING LEAVES THE WORKSHOP. Tool page: that tool lifted off the wall onto a bench mat that is the drop zone.",
+      "risk": "Can tip into cute skeuomorphism, and a dot grid behind 42 tools can feel busy without strict zones.",
+      "raised": [
+        { "from": "challenger-bass", "raise": "Colour at page scale: each zone owns a full flat field of its tape colour, not a sprinkle of accents." },
+        { "from": "challenger-film", "raise": "Edge codes: every tool carries a stamped code (IMG-01, PDF-03) used in its URL hint and on its page." },
+        { "from": "challenger-tower", "raise": "Banded steps: each tool page stacks its steps as horizontal courses, one per action." },
+        { "from": "challenger-algorave", "raise": "Visible before it happens: the bench shows what will come out (format, size) before you run it." }
+      ],
+      "wireframe": {
+        "cols": 10,
+        "rows": 10,
+        "regions": [
+          { "label": "jiffkit · NOTHING LEAVES THE WORKSHOP", "x": 0, "y": 0, "w": 10, "h": 1 },
+          { "label": "IMAGE zone: outlines", "x": 0, "y": 1, "w": 4, "h": 3, "accent": true },
+          { "label": "PDF zone", "x": 4, "y": 1, "w": 3, "h": 3 },
+          { "label": "AI zone", "x": 7, "y": 1, "w": 3, "h": 3 },
+          { "label": "VIDEO zone", "x": 0, "y": 4, "w": 3, "h": 2 },
+          { "label": "DEVELOPER zone (29 outlines)", "x": 3, "y": 4, "w": 7, "h": 6 },
+          { "label": "bench: drop a file here", "x": 0, "y": 6, "w": 3, "h": 4 }
+        ]
+      }
+    },
+    {
+      "id": "model-pick",
+      "label": "The Line Map",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "metro maps and transit wayfinding signage",
+      "thesis": "Every tool is a station on a coloured line (Image, PDF, AI, Video, Developer), so finding one is reading a map you already know how to read.",
+      "palette": ["#ffffff", "#151515", "#e03a3e", "#0072ce", "#00a650", "#8e3e97", "#f5a800"],
+      "materials": ["coloured line strokes", "station dots and interchange rings", "station-sign typography", "platform-style tool headers"],
+      "viewport": "Homepage: a full-width route map, five coloured lines with every tool as a labelled station and interchanges where tools connect (HEIC → JPG to PDF). Tool page: a station sign header with its line colour and 'next stations' as related tools.",
+      "risk": "Familiar: the subway-map metaphor is a well-worn infographic, and 42 stations must stay legible on a phone.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 10,
+        "regions": [
+          { "label": "jiffkit · line legend", "x": 0, "y": 0, "w": 12, "h": 1 },
+          { "label": "Image line ●──●──●", "x": 0, "y": 2, "w": 12, "h": 1, "accent": true },
+          { "label": "PDF line ●──●──●──●", "x": 0, "y": 3, "w": 12, "h": 1 },
+          { "label": "AI line ●──●──●──●", "x": 0, "y": 4, "w": 12, "h": 1 },
+          { "label": "Video line ●──●", "x": 0, "y": 5, "w": 12, "h": 1 },
+          { "label": "Developer line: 29 stations in two loops", "x": 0, "y": 6, "w": 12, "h": 4 }
+        ]
+      }
+    },
+    {
+      "id": "challenger-passport",
+      "label": "The Passport",
+      "verdict": "competitive",
+      "lineage": "well-travelled passports: visa pages, entry stamps, security paper",
+      "thesis": "Every file you process gets an official stamp: PROCESSED ON THIS DEVICE, dated, never sent.",
+      "palette": ["#5a1a2b", "#c9a227", "#f2d8dc", "#dbeee0", "#2a2a2a"],
+      "materials": ["guilloché security paper", "rubber-stamp ink at angles", "OCR-B machine lines"],
+      "viewport": "Homepage: a passport data page as the hero (jiffkit's 'holder' details: 42 tools, 0 uploads, in OCR-B), with visa pages below as tool categories.",
+      "case": "Holds audience identification (a passport means trust and officialdom, which answers 'not trustworthy enough') but loses product clarity: stamps and visas don't say which tool does what.",
+      "risk": "Ornamental if the stamps are decoration; security-paper patterns are heavy to render well."
+    },
+    {
+      "id": "challenger-bass",
+      "label": "Cut-paper Title Cards",
+      "verdict": "declined",
+      "lineage": "1950s–60s film title sequences",
+      "thesis": "One idea per full-bleed colour card, told in cut-paper shapes.",
+      "palette": ["#e2562b", "#111111", "#efe8dc"],
+      "materials": ["cut paper", "jittering hand line"],
+      "viewport": "Timed full-bleed cards, one per tool group.",
+      "case": "Strong brand, but cards hide 42 tools behind a sequence; neither audience can scan it.",
+      "kept": "Colour at page scale: each zone owns a full flat field.",
+      "risk": "Style over findability."
+    },
+    {
+      "id": "challenger-film",
+      "label": "Hand-processed Film",
+      "verdict": "declined",
+      "lineage": "scratched 16 mm film strips",
+      "thesis": "Every conversion as a strip of frames.",
+      "palette": ["#9a9a96", "#0d0d0d", "#ff7a1a"],
+      "materials": ["emulsion grain", "sprocket holes", "edge codes"],
+      "viewport": "A film strip of tool frames.",
+      "case": "Only the video tools relate; it says nothing about privacy.",
+      "kept": "Edge codes: every tool carries a stamped code.",
+      "risk": "Grainy textures fight readability."
+    },
+    {
+      "id": "challenger-tower",
+      "label": "Coiled Earth Tower",
+      "verdict": "declined",
+      "lineage": "hand-built coiled clay architecture",
+      "thesis": "The site as courses of clay rising.",
+      "palette": ["#b5562e", "#5b3a24", "#efe3d3"],
+      "materials": ["coil bands", "slip seams"],
+      "viewport": "Horizontal courses stacked upward.",
+      "case": "Neither audience sees tools or privacy in clay.",
+      "kept": "Banded steps: tool pages stack their steps as courses.",
+      "risk": "Earthy cliché, slow to scan."
+    },
+    {
+      "id": "challenger-algorave",
+      "label": "Live-code Floor",
+      "verdict": "declined",
+      "lineage": "algorave live-coding performances",
+      "thesis": "The page as a projected code buffer.",
+      "palette": ["#0a0a0a", "#39ff88", "#ff3fb4", "#ffb000"],
+      "materials": ["projected terminal", "syntax colour"],
+      "viewport": "A code buffer as the homepage.",
+      "case": "Developers might connect; everyday visitors would leave. It is also the dark neon rut.",
+      "kept": "Visible before it happens: the bench shows the output before you run it.",
+      "risk": "Excludes half the audience."
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "buildPath": { "value": "code" },
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "What iLovePDF and Smallpdf ship: a clean grid of coloured tool cards, executed impeccably.",
+    "palette": ["#ffffff", "#111827", "#e5322d"],
+    "materials": ["icon card grid", "category chips", "big red Select button"],
+    "viewport": "A headline, category chips and a grid of icon cards: the arrangement visitors already expect.",
+    "risk": "Indistinguishable from the competition by design, which is the problem you named."
+  },
+  "steer": true
+}
