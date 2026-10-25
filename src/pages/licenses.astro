@@ -259,6 +259,14 @@ const libs = [
     source: `https://github.com/mattdesl/gifenc/tree/v${pkgVersion('gifenc')}`,
     texts: [{ label: 'LICENSE', text: licenceText('gifenc/LICENSE.md') }],
   },
+  {
+    name: 'Lucide',
+    version: pkgVersion('lucide-static'),
+    licence: 'ISC',
+    note: 'The tool icons, copied into the page as inline SVG.',
+    source: `https://github.com/lucide-icons/lucide/tree/${pkgVersion('lucide-static')}`,
+    texts: [{ label: 'LICENSE', text: licenceText('lucide-static/LICENSE') }],
+  },
   ...(
     [
       ['zlibjs', 'MIT', 'LICENSE', 'Gunzip'],

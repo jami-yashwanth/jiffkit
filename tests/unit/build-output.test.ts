@@ -216,26 +216,14 @@ describe('site', () => {
     expect(walk('dist').some((f) => /\.onnx$|asyncify[^/]*\.wasm$/.test(f))).toBe(false);
   });
 
-  it('homepage links to all tools and the filter', () => {
-    const h = html('');
-    for (const t of TOOLS) expect(h).toContain(`href="/${t.slug}/"`);
-    expect(h).toContain('type="search"');
-  });
-
-  it('homepage groups tools under 6 category headings in order', () => {
+  it('homepage is a grid of 17 tool cards in category order', () => {
     const h = html('');
     const order: Category[] = ['image', 'pdf', 'ai', 'video', 'developer', 'qr'];
-    const heads = [...h.matchAll(/<h2[^>]*>([^<]*)<\/h2>/g)].map((m) => m[1]);
-    expect(heads).toEqual(order.map((c) => CATEGORY_LABEL[c]));
-    const pos = (needle: string) => h.indexOf(needle);
-    order.forEach((c, i) => {
-      const start = pos(`>${CATEGORY_LABEL[c]}</h2>`);
-      const end = i + 1 < order.length ? pos(`>${CATEGORY_LABEL[order[i + 1]]}</h2>`) : h.length;
-      for (const t of TOOLS.filter((t) => t.category === c)) {
-        const at = pos(`href="/${t.slug}/"`);
-        expect(at > start && at < end, `${t.slug} under ${c}`).toBe(true);
-      }
-    });
+    const expected = order.flatMap((c) => TOOLS.filter((t) => t.category === c));
+    const cards = [...h.matchAll(/<a class="card" href="\/([^"]+)\/"/g)].map((m) => m[1]);
+    expect(cards).toEqual(expected.map((t) => t.slug));
+    const cats = [...h.matchAll(/<li data-category="([a-z]+)"/g)].map((m) => m[1]);
+    expect(cats).toEqual(expected.map((t) => t.category));
     expect(h).toContain('<h1>Tools that never upload your files</h1>');
     expect(h).toContain('<title>jiffkit - Private Image, PDF, Video and AI Tools</title>');
   });
@@ -251,6 +239,49 @@ describe('site', () => {
     for (const t of TOOLS) expect(html(`${t.slug}/`)).toContain(`<title>${t.title}</title>`);
     expect(html('licenses/')).toContain('<title>Open-source licences - jiffkit</title>');
     expect(readFileSync('dist/404.html', 'utf8')).toContain('<title>Page not found - jiffkit</title>');
+  });
+
+  it('homepage chips start hidden with All pressed, and the old search is gone', () => {
+    const h = html('');
+    const group = h.match(/<div class="chips"[^>]*>([\s\S]*?)<\/div>/)!;
+    expect(group[0]).toMatch(/^<div class="chips"[^>]* hidden/);
+    const chips = [...group[1].matchAll(/<button type="button"[^>]*aria-pressed="(true|false)"[^>]*>([^<]*)<\/button>/g)];
+    expect(chips.map((m) => m[2])).toEqual(['All', 'Image', 'PDF', 'AI', 'Video', 'Developer']);
+    expect(chips.map((m) => m[1])).toEqual(['true', 'false', 'false', 'false', 'false', 'false']);
+    expect(h).not.toContain('type="search"');
+    expect(h).not.toContain('id="no-match"');
+    expect(h).not.toMatch(/<h2/);
+  });
+
+  it('every tool page opens with a centred icon header', () => {
+    for (const t of TOOLS) {
+      const h = html(`${t.slug}/`);
+      const head = h.match(/<header class="tool-head">([\s\S]*?)<\/header>/);
+      expect(head, t.slug).not.toBeNull();
+      expect(head![1], t.slug).toMatch(/^<span class="tool-tile"><svg width="28" height="28"[^>]*>[\s\S]*?<\/svg><\/span><h1>[^<]+<\/h1><p class="subhead">/);
+    }
+  });
+
+  it('related tools are cards, in registry order', () => {
+    for (const t of TOOLS) {
+      const h = html(`${t.slug}/`);
+      const list = h.match(/<ul class="card-grid related">([\s\S]*?)<\/ul>/);
+      expect(list, t.slug).not.toBeNull();
+      const cards = [...list![1].matchAll(/<a class="card" href="\/([^"]+)\/"/g)].map((m) => m[1]);
+      expect(cards, t.slug).toEqual(t.related);
+      expect(h, t.slug).not.toContain('class="tool-list"');
+    }
+  });
+
+  it('the 404 page lists every tool as a card', () => {
+    const h = readFileSync('dist/404.html', 'utf8');
+    expect([...h.matchAll(/<a class="card" href="/g)]).toHaveLength(TOOLS.length);
+    expect(h).not.toContain('class="tool-list"');
+  });
+
+  it('homepage uses the wide page container; tool pages keep the measure', () => {
+    expect(html('')).toContain('<div class="page page-wide">');
+    expect(html('merge-pdf/')).toContain('<div class="page">');
   });
 
   it('homepage declares the WebSite name for search results', () => {
@@ -281,6 +312,11 @@ describe('site', () => {
     expect(h).toContain('Telecom ParisTech');
     expect(h).toContain(`Vanilagy/mp4-muxer/tree/v${version('mp4-muxer')}`);
     expect(h).toContain('Copyright (c) 2023 Vanilagy');
+  });
+
+  it('licences page lists Lucide (ISC), version-tagged', () => {
+    const h = html('licenses/');
+    for (const s of ['Lucide', 'ISC', 'lucide-icons/lucide/tree/1.52.0', 'Lucide Icons and Contributors']) expect(h).toContain(s);
   });
 
   it('licences page lists gifenc (MIT), version-tagged, with its licence text', () => {

@@ -6,6 +6,8 @@ import AiTool from '../components/AiTool.astro';
 import VideoTool from '../components/VideoTool.astro';
 import TextTool from '../components/TextTool.astro';
 import QrTool from '../components/QrTool.astro';
+import Icon from '../components/Icon.astro';
+import ToolCard from '../components/ToolCard.astro';
 import { getTool, type Tool } from '../tools';
 
 interface Props { tool: Tool }
@@ -23,8 +25,7 @@ const jsonLd = {
 };
 ---
 <Base title={tool.title} description={tool.description} path={`/${tool.slug}/`} jsonLd={jsonLd}>
-  <h1>{tool.h1}</h1>
-  <p class="subhead">{tool.subhead}</p>
+  <header class="tool-head"><span class="tool-tile"><Icon slug={tool.slug} size={28} /></span><h1>{tool.h1}</h1><p class="subhead">{tool.subhead}</p></header>
 
   {tool.kind === 'image' && <ImageTool tool={tool} />}
   {tool.kind === 'pdf' && <PdfTool tool={tool} />}
@@ -47,10 +48,8 @@ const jsonLd = {
 
   <section>
     <h2>Related tools</h2>
-    <ul class="tool-list">
-      {related.map((r) => (
-        <li><a href={`/${r.slug}/`}><strong>{r.h1}</strong>{r.subhead}</a></li>
-      ))}
+    <ul class="card-grid related">
+      {related.map((r) => <li><ToolCard tool={r} /></li>)}
     </ul>
   </section>
 </Base>

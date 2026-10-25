@@ -157,13 +157,10 @@ for (const vp of VIEWPORTS) {
 
     test('home', async ({ page }) => {
       await page.goto('/');
-      await shot(page, 'home-grouped', true);
-      await page.locator('#filter').fill('pdf');
-      await expect(page.locator('.category:not([hidden])')).toHaveCount(1);
-      await shot(page, 'home-filtered');
-      await page.locator('#filter').fill('zzzz');
-      await expect(page.locator('#no-match')).toBeVisible();
-      await shot(page, 'home-no-match');
+      await shot(page, 'home-all', true);
+      await page.locator('.chips').getByRole('button', { name: 'PDF', exact: true }).click();
+      await expect(page.locator('#tools li:visible')).toHaveCount(4);
+      await shot(page, 'home-pdf');
     });
 
     test('heic: empty, hover, focus, drag-over, options', async ({ page }) => {
