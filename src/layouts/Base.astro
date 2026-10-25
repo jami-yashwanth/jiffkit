@@ -4,14 +4,17 @@ import { jsonLdString } from '../json-ld';
 import Search from '../components/Search.astro';
 import geist from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url';
 import geistMono from '@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2?url';
+import bungee from '@fontsource/bungee/files/bungee-latin-400-normal.woff2?url';
 
 // Geist and Geist Mono, self-hosted: Latin only, every weight in one variable file each. Geist is preloaded so the
-// first paint uses it; Geist Mono downloads only on pages that show code.
+// first paint uses it; Geist Mono downloads only on pages that show code. Bungee sets the wordmark, and only that, so it
+// is preloaded too (14 KB).
 const LATIN = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
 const fontFaces = [
   ['Geist', geist],
   ['Geist Mono', geistMono],
-].map(([family, url]) => `@font-face{font-family:'${family}';font-style:normal;font-display:swap;font-weight:100 900;src:url(${url}) format('woff2');unicode-range:${LATIN}}`).join('');
+].map(([family, url]) => `@font-face{font-family:'${family}';font-style:normal;font-display:swap;font-weight:100 900;src:url(${url}) format('woff2');unicode-range:${LATIN}}`).join('') +
+  `@font-face{font-family:'Bungee';font-style:normal;font-display:swap;font-weight:400;src:url(${bungee}) format('woff2');unicode-range:${LATIN}}`;
 
 interface Props {
   title: string;
@@ -33,6 +36,7 @@ const canonical = new URL(path, Astro.site).href;
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <link rel="preload" href={geist} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={bungee} as="font" type="font/woff2" crossorigin />
     <style is:inline set:html={fontFaces} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -41,6 +45,7 @@ const canonical = new URL(path, Astro.site).href;
     <meta property="og:site_name" content="jiffkit" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     {
       plausibleDomain && (
         <>
@@ -58,7 +63,7 @@ const canonical = new URL(path, Astro.site).href;
          measure on tool and reading pages. -->
     <header class="topbar">
       <div class="frame topbar-in">
-        <a class="wordmark" href="/"><span class="mark" aria-hidden="true">j</span>jiffkit</a>
+        <a class="wordmark" href="/">jiffkit</a>
         <Search />
       </div>
     </header>

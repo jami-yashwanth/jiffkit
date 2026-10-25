@@ -250,11 +250,25 @@ describe('site', () => {
     expect(h).toContain('<body>');
   });
 
+  it('the brand: the wordmark in Bungee, preloaded, and the Bungee J as favicon, ico and phone icon', () => {
+    const h = html('');
+    expect(h).toMatch(/<link rel="preload" href="\/_astro\/bungee-latin-400-normal\.[\w-]+\.woff2" as="font" type="font\/woff2" crossorigin>/);
+    expect(h).toContain("font-family:'Bungee'");
+    expect(h).toContain('<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">');
+    expect(h).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png">');
+    const svg = readFileSync('dist/favicon.svg', 'utf8');
+    expect(svg).toMatch(/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 1000 1000"><rect[^>]*fill="#fff"\/><path fill="#141414" d="M/);
+    const ico = readFileSync('dist/favicon.ico');
+    expect([ico.readUInt16LE(2), ico.readUInt16LE(4)]).toEqual([1, 3]); // an icon file holding three sizes
+    const png = readFileSync('dist/apple-touch-icon.png');
+    expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([180, 180]);
+  });
+
   it('brands every page as jiffkit: wordmark, og:site_name, and the titles with room for it', () => {
     const pages = ['', 'licenses/', ...TOOLS.map((t) => `${t.slug}/`)];
     for (const p of pages) {
       const h = html(p);
-      expect(h, p).toMatch(/<header class="topbar"><div class="frame topbar-in"><a class="wordmark" href="\/"><span class="mark" aria-hidden="true">j<\/span>jiffkit<\/a><form class="search"/);
+      expect(h, p).toMatch(/<header class="topbar"><div class="frame topbar-in"><a class="wordmark" href="\/">jiffkit<\/a><form class="search"/);
       expect(h, p).toContain('<meta property="og:site_name" content="jiffkit">');
     }
     // Tool titles keep their keywords (60-char budget); the brand goes where there is room.

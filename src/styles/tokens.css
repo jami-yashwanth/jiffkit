@@ -132,9 +132,9 @@ section ol > li::marker { color: var(--ink); font-weight: 700; font-variant-nume
 /* --- the top bar: one white strip on every page, the mark and name on the left, the quiet search on the right --- */
 .topbar { background: var(--paper); border-bottom: 1px solid var(--line); }
 .topbar-in { display: flex; align-items: center; gap: var(--s2) var(--s4); flex-wrap: wrap; padding-block: 10px; }
-.wordmark { display: inline-flex; align-items: center; gap: var(--s2); font-size: 1.1875rem; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); text-decoration: none; }
+/* The wordmark: "jiffkit" set in Bungee, shown in capitals (the text stays lowercase for screen readers). */
+.wordmark { font: 400 1.5rem/1 'Bungee', var(--font-body); letter-spacing: 0.01em; text-transform: uppercase; color: var(--ink); text-decoration: none; }
 .wordmark:hover { color: var(--ink); }
-.mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--ink); color: var(--paper); font-size: 1rem; font-weight: 800; letter-spacing: 0; }
 main { padding-top: var(--s5); }
 
 /* --- the tool wall ---
