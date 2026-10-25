@@ -457,6 +457,49 @@ textarea.text-input.prose { font-family: inherit; font-size: 1rem; }
 .pdf-inline legend { width: 100%; }
 .pdf-mode .error { margin: var(--s2) 0 0; }
 
+/* --- developer tools: a declared form (DevTool.astro), options in one wrapping row, outputs as panes or tables --- */
+.dev-options { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s4); align-items: flex-end; margin-bottom: var(--s3); }
+.opt { display: flex; flex-direction: column; gap: var(--s1); font-weight: 600; font-size: 0.9375rem; }
+.opt select.text-input { width: auto; min-height: 44px; padding-block: 0; padding-right: var(--s5); }
+.opt .opt-number { width: 6.5rem; min-height: 44px; }
+.opt-check { flex-direction: row; align-items: center; gap: var(--s2); min-height: 44px; font-weight: 500; cursor: pointer; }
+.opt-check input, .opt-range input { accent-color: var(--accent); margin: 0; }
+.opt-check input { width: 18px; height: 18px; }
+.opt-range input { width: min(16rem, 70vw); min-height: 44px; }
+.opt-range output { color: var(--accent); font-variant-numeric: tabular-nums; }
+.opt-color { width: 56px; height: 44px; padding: 2px; border: 1px solid var(--edge); border-radius: var(--radius); background: var(--paper); cursor: pointer; }
+[data-kind='dev'] .status { font-size: 1rem; font-weight: 500; letter-spacing: 0; margin-bottom: var(--s2); }
+[data-kind='dev'] .status.is-error::before {
+  content: ''; display: inline-block; width: 1em; height: 1em; margin-right: 0.4em; vertical-align: -0.15em;
+  background: var(--icon-alert) center / contain no-repeat;
+}
+.dev-out { margin-top: var(--s4); }
+.dev-out .pane-title { margin: 0; font-size: 1rem; letter-spacing: 0; }
+.kv { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
+.kv tr + tr { border-top: 1px solid var(--line); }
+.kv th { text-align: left; font-weight: 600; color: var(--ink-muted); padding: var(--s2) var(--s3) var(--s2) 0; vertical-align: top; white-space: pre; width: 1%; }
+.kv td { padding: var(--s2) 0; vertical-align: top; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.kv td:nth-child(3) { width: 1%; padding-left: var(--s2); white-space: nowrap; text-align: right; font-family: inherit; }
+.btn-small { min-height: 44px; padding: 8px var(--s3); font-size: 0.875rem; line-height: 1.5; }
+.diff span { display: block; }
+.diff-add { background: #dcefe3; }
+.diff-del { background: #f8e1de; }
+.diff-same { color: var(--ink-muted); }
+[data-kind='dev'] mark { background: var(--tint-strong); color: var(--ink); box-shadow: 0 0 0 1px var(--edge); border-radius: 2px; }
+.dev-preview { display: block; width: 100%; height: 20rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+[data-kind='dev'] input.text-input[type='text'] { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9375rem; }
+@media (max-width: 600px) {
+  /* On a phone each row stacks: the label on top, the value full width with its Copy button beside it. */
+  .kv tr { display: grid; grid-template-columns: 1fr auto; column-gap: var(--s2); padding: var(--s2) 0; }
+  .kv th { grid-column: 1 / -1; width: auto; white-space: normal; padding: 0 0 var(--s1); }
+  .kv td { padding: 0; }
+  .kv td:nth-child(3) { width: auto; padding-left: 0; align-self: start; }
+  .dev-out .pane-head .btn { display: inline-block; width: auto; }
+  .dev-out .pane-head .pane-title { flex: 1 1 auto; } /* title and Copy share the line, unlike the JWT panes */
+  .opt-range input { width: 100%; }
+  .opt-range { flex-basis: 100%; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .spinner, [data-kind='pdf'] .status::before { animation-duration: 2.4s; }
   *, *::before, *::after { transition: none !important; }

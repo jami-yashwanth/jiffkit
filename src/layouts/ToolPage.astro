@@ -6,6 +6,7 @@ import AiTool from '../components/AiTool.astro';
 import VideoTool from '../components/VideoTool.astro';
 import TextTool from '../components/TextTool.astro';
 import QrTool from '../components/QrTool.astro';
+import DevTool from '../components/DevTool.astro';
 import Icon from '../components/Icon.astro';
 import ToolCard from '../components/ToolCard.astro';
 import { getTool, type Tool } from '../tools';
@@ -33,6 +34,7 @@ const jsonLd = {
   {tool.kind === 'video' && <VideoTool tool={tool} />}
   {tool.kind === 'text' && <TextTool tool={tool} />}
   {tool.kind === 'qr' && <QrTool tool={tool} />}
+  {tool.kind === 'dev' && <DevTool tool={tool} />}
 
   <section>
     <h2>How it works</h2>

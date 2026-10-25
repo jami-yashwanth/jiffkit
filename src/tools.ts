@@ -1,3 +1,6 @@
+import { DEV_TOOLS, type DevSlug } from './dev/tools';
+import type { DevForm, DevGroup } from './dev/form';
+
 export type ToolSlug =
   | 'heic-to-jpg'
   | 'compress-image'
@@ -15,7 +18,8 @@ export type ToolSlug =
   | 'pdf-to-jpg'
   | 'jpg-to-pdf'
   | 'compress-video'
-  | 'video-to-gif';
+  | 'video-to-gif'
+  | DevSlug;
 export type ImageSlug = 'heic-to-jpg' | 'compress-image' | 'webp-to-jpg';
 export type Category = 'image' | 'pdf' | 'ai' | 'video' | 'developer' | 'qr';
 export type OutFormat = 'jpg' | 'png' | 'webp';
@@ -51,7 +55,9 @@ export type AiTool = ToolBase & {
 export type VideoTool = ToolBase & { kind: 'video'; op: 'compress' | 'gif' };
 export type TextTool = ToolBase & { kind: 'text'; transform: 'json' | 'base64' | 'jwt' };
 export type QrTool = ToolBase & { kind: 'qr' };
-export type Tool = ImageTool | PdfTool | AiTool | VideoTool | TextTool | QrTool;
+/** The developer tools: a declared form run by src/ui/dev.ts. Listed on /developer/, not on the homepage. */
+export type DevTool = ToolBase & { kind: 'dev'; slug: DevSlug; group: DevGroup; form: DevForm };
+export type Tool = ImageTool | PdfTool | AiTool | VideoTool | TextTool | QrTool | DevTool;
 
 export const CATEGORY_LABEL: Record<Category, string> = {
   image: 'Image',
@@ -751,7 +757,11 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
   },
 ];
 
-export const TOOLS: Tool[] = [...IMAGE_TOOLS, ...OTHER_TOOLS, ...ROUND_3_TOOLS];
+const DEVELOPER_TOOLS: DevTool[] = DEV_TOOLS.map((t) => ({ ...t, kind: 'dev', category: 'developer' }));
+
+export const TOOLS: Tool[] = [...IMAGE_TOOLS, ...OTHER_TOOLS, ...ROUND_3_TOOLS, ...DEVELOPER_TOOLS];
+/** The tools the homepage lists: everything but the developer tools, which live on /developer/. */
+export const HOME_TOOLS: Tool[] = TOOLS.filter((t) => t.kind !== 'dev');
 
 export function getTool(slug: ToolSlug): Tool {
   const tool = TOOLS.find((t) => t.slug === slug);

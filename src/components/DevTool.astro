@@ -1,0 +1,89 @@
+---
+import type { DevTool } from '../tools';
+import type { Field } from '../dev/form';
+
+// Static markup for any developer tool, from its declared form (src/dev/tools.ts). src/ui/dev.ts reads the fields
+// back by data-field and renders into the data-out sections; no copy or form spec is shipped in the script.
+interface Props { tool: DevTool }
+const { tool } = Astro.props;
+const { form } = tool;
+const fid = (f: Field) => `f-${f.id}`;
+const isOption = (f: Field) => f.type !== 'textarea' && f.type !== 'text';
+
+// Consecutive small controls (selects, checkboxes, sliders, numbers, colour) share one wrapping row.
+const blocks: (Field | Field[])[] = [];
+for (const f of form.fields) {
+  const last = blocks[blocks.length - 1];
+  if (isOption(f) && Array.isArray(last)) last.push(f);
+  else blocks.push(isOption(f) ? [f] : f);
+}
+---
+<div data-kind="dev" data-tool={tool.slug} data-run={form.run}>
+  {blocks.map((b) =>
+    Array.isArray(b) ? (
+      <div class="dev-options">
+        {b.map((f) =>
+          f.type === 'checkbox' ? (
+            <label class="opt opt-check"><input type="checkbox" data-field={f.id} checked={f.checked} />{f.label}</label>
+          ) : f.type === 'select' ? (
+            <label class="opt">{f.label}
+              <select class="text-input" data-field={f.id}>
+                {f.options!.map(([v, l]) => <option value={v} selected={v === f.value}>{l}</option>)}
+              </select>
+            </label>
+          ) : f.type === 'range' ? (
+            <label class="opt opt-range">
+              <span>{f.label} <output data-range-out={f.id}>{f.value}</output></span>
+              <input type="range" data-field={f.id} min={f.min} max={f.max} step={f.step} value={f.value} />
+            </label>
+          ) : f.type === 'number' ? (
+            <label class="opt">{f.label}
+              <input type="number" class="text-input opt-number" data-field={f.id} min={f.min} max={f.max} value={f.value} inputmode="numeric" />
+            </label>
+          ) : (
+            <label class="opt">{f.label}
+              <input type="color" class="opt-color" data-field={f.id} value={f.value} />
+            </label>
+          ),
+        )}
+      </div>
+    ) : b.type === 'textarea' ? (
+      <div class="field">
+        <label for={fid(b)}>{b.label}</label>
+        <textarea id={fid(b)} class:list={['text-input', { prose: b.prose }]} rows={b.rows} placeholder={b.placeholder} spellcheck="false" autocomplete="off" data-field={b.id}>{b.value}</textarea>
+      </div>
+    ) : (
+      <div class="field">
+        <label for={fid(b)}>{b.label}</label>
+        <input id={fid(b)} type="text" class="text-input" placeholder={b.placeholder} value={b.value} spellcheck="false" autocomplete="off" autocapitalize="off" data-field={b.id} />
+      </div>
+    ),
+  )}
+  {form.button && (
+    <div class="actions">
+      <button type="button" class="btn" data-run-button>{form.button}</button>
+    </div>
+  )}
+  <p class="status" role="status" aria-live="polite" data-status></p>
+  {form.outputs.map((o) => (
+    <section class="dev-out" data-out={o.id} data-type={o.type} hidden>
+      <div class="pane-head">
+        <h2 class="pane-title" id={`o-${o.id}`}>{o.label}</h2>
+        {o.copy && o.type === 'text' && <button type="button" class="btn btn-quiet" data-copy>Copy</button>}
+      </div>
+      {o.type === 'table' ? (
+        <table class="kv" aria-labelledby={`o-${o.id}`} data-copy-rows={o.copy ? '' : undefined}><tbody data-target></tbody></table>
+      ) : o.type === 'preview' ? (
+        <iframe class="dev-preview" sandbox="" title={o.label} data-target></iframe>
+      ) : (
+        <pre class:list={['pane', { diff: o.type === 'diff' }]} aria-labelledby={`o-${o.id}`} tabindex="0" data-target></pre>
+      )}
+    </section>
+  ))}
+</div>
+
+<script>
+  import { mount } from '../ui/dev';
+  const el = document.querySelector<HTMLElement>('[data-kind="dev"]');
+  if (el) mount(el);
+</script>

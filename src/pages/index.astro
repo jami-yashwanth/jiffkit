@@ -1,10 +1,12 @@
 ---
 import Base from '../layouts/Base.astro';
 import ToolCard from '../components/ToolCard.astro';
-import { TOOLS, type Category } from '../tools';
+import HubCard from '../components/HubCard.astro';
+import Chips from '../components/Chips.astro';
+import { HOME_TOOLS, type Category } from '../tools';
 
 const order: Category[] = ['image', 'pdf', 'ai', 'video', 'developer', 'qr'];
-const tools = order.flatMap((c) => TOOLS.filter((t) => t.category === c));
+const tools = order.flatMap((c) => HOME_TOOLS.filter((t) => t.category === c));
 // A chip shows these categories; Developer also covers the one QR tool.
 const chips: [string, string][] = [['All', ''], ['Image', 'image'], ['PDF', 'pdf'], ['AI', 'ai'], ['Video', 'video'], ['Developer', 'developer qr']];
 // The site name search engines show next to the result, in place of a brand suffix on every title.
@@ -22,28 +24,10 @@ const website = { '@context': 'https://schema.org', '@type': 'WebSite', name: 'j
     <p class="subhead">Remove backgrounds, transcribe audio, compress video, merge PDFs and convert photos right in your browser. Free,&nbsp;no&nbsp;sign-up.</p>
   </div>
 
-  <!-- Hidden until the script below runs: without JavaScript every card shows and no chip does nothing. -->
-  <div class="chips" role="group" aria-label="Filter tools" hidden>
-    {chips.map(([label, cats], i) => (
-      <button type="button" aria-pressed={i === 0 ? 'true' : 'false'} data-cats={cats}>{label}</button>
-    ))}
-  </div>
+  <Chips chips={chips} />
 
   <ul id="tools" class="card-grid">
     {tools.map((t) => <li data-category={t.category}><ToolCard tool={t} /></li>)}
+    <li data-category="developer"><HubCard /></li>
   </ul>
-
-  <script is:inline>
-    (function () {
-      var g = document.querySelector('.chips'), bs = g.querySelectorAll('button'), lis = document.querySelectorAll('#tools li');
-      g.hidden = false;
-      bs.forEach(function (b) {
-        b.addEventListener('click', function () {
-          var cats = b.dataset.cats ? b.dataset.cats.split(' ') : null;
-          bs.forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
-          lis.forEach(function (li) { li.hidden = !!cats && cats.indexOf(li.dataset.category) < 0; });
-        });
-      });
-    })();
-  </script>
 </Base>
