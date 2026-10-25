@@ -55,7 +55,8 @@ export function parseCron(expr: string): Cron | { error: string } {
     if (typeof s === 'string') return { error: s };
     sets.push(s);
   }
-  return { sets, domAll: parts[2] === '*', dowAll: parts[4] === '*' };
+  // As in Vixie cron, a day field starting with * (also */2) counts as unrestricted when combining the two.
+  return { sets, domAll: parts[2].startsWith('*'), dowAll: parts[4].startsWith('*') };
 }
 
 /** The next `n` run times after `from`, in the device's local time. Fewer if the schedule never comes round. */
@@ -66,7 +67,7 @@ export function nextRuns({ sets: [min, hour, dom, mon, dow], domAll, dowAll }: C
   d.setMinutes(d.getMinutes() + 1);
   const dayOk = () => {
     const a = dom.has(d.getDate()), b = dow.has(d.getDay());
-    return domAll && dowAll ? true : domAll ? b : dowAll ? a : a || b;
+    return domAll || dowAll ? a && b : a || b; // a field starting with * holds every day it allows, so AND is exact
   };
   for (let guard = 0; runs.length < n && guard < 200_000; guard++) {
     if (!mon.has(d.getMonth() + 1)) {

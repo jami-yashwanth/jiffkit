@@ -34,6 +34,8 @@ const RUNNERS: Record<string, () => Promise<{ run: Runner }>> = {
   'subnet-calculator': () => import('../dev/run/subnet-calculator'),
 };
 
+const LOAD_FAILED = 'Couldn’t load this tool. Check your connection, then try again.';
+const WORKING_AFTER_MS = 200; // a run slower than this (bcrypt at a high cost) shows "Working…" until it finishes
 const DEBOUNCE_MS = 150;
 const DEBOUNCE_LARGE_MS = 400; // over 200,000 characters, wait for a longer pause in typing
 const COPIED_MS = 1500;
@@ -47,6 +49,16 @@ const PREVIEW_STYLE =
 
 type FieldEl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
+/**
+ * The preview's HTML without <meta>, <base> or <link>: a meta refresh is not governed by CSP and could send the preview
+ * frame to another site, and a <base> could redirect its links. Parsed in an inert document; nothing renders or runs.
+ */
+function inert(html: string): string {
+  const doc = new DOMParser().parseFromString(`<!doctype html><body>${html}`, 'text/html');
+  doc.querySelectorAll('meta, base, link').forEach((el) => el.remove());
+  return doc.body.innerHTML;
+}
+
 export function mount(root: HTMLElement): void {
   const slug = root.dataset.tool!;
   const mode = root.dataset.run as 'live' | 'load' | 'button';
@@ -56,7 +68,15 @@ export function mount(root: HTMLElement): void {
   const button = root.querySelector<HTMLButtonElement>('[data-run-button]');
 
   let runner: Promise<Runner> | undefined;
-  const load = () => (runner ??= RUNNERS[slug]().then((m) => m.run));
+  // A failed download (offline, or a new deploy replaced the file) is not remembered: the next try fetches again.
+  const load = () =>
+    (runner ??= RUNNERS[slug]().then(
+      (m) => m.run,
+      () => {
+        runner = undefined;
+        throw new Error(LOAD_FAILED);
+      },
+    ));
   let seq = 0;
   let timer: number | undefined;
   let used = false;
@@ -72,12 +92,18 @@ export function mount(root: HTMLElement): void {
 
   async function go(changed?: string) {
     const mine = ++seq;
+    const working = window.setTimeout(() => {
+      if (mine !== seq) return;
+      status.textContent = 'Working…';
+      status.classList.remove('is-error');
+    }, WORKING_AFTER_MS);
     let result: Result;
     try {
       result = await (await load())(values(), changed);
     } catch (e) {
       result = { error: e instanceof Error ? e.message : String(e) };
     }
+    clearTimeout(working);
     if (mine === seq) render(result); // a slower, older run never overwrites a newer one
   }
 
@@ -96,7 +122,7 @@ export function mount(root: HTMLElement): void {
     const empty = v === undefined || v === '' || (typeof v === 'object' && Object.values(v)[0]?.length === 0);
     section.hidden = empty;
     if (target instanceof HTMLIFrameElement) {
-      target.srcdoc = empty || typeof v !== 'object' || !('html' in v) ? '' : `<!doctype html><meta charset="utf-8">${PREVIEW_CSP}${PREVIEW_STYLE}${v.html}`;
+      target.srcdoc = empty || typeof v !== 'object' || !('html' in v) ? '' : `<!doctype html><meta charset="utf-8">${PREVIEW_CSP}${PREVIEW_STYLE}${inert(v.html)}`;
       return;
     }
     target.replaceChildren();
@@ -179,7 +205,8 @@ export function mount(root: HTMLElement): void {
     };
     f.addEventListener('input', onChange);
     if (f instanceof HTMLSelectElement || (f instanceof HTMLInputElement && f.type === 'checkbox')) f.addEventListener('change', onChange);
-    f.addEventListener('focus', () => void load(), { once: true }); // fetch the tool's code while the user starts typing
+    // Fetch the tool's code while the user starts typing. A failure here is quiet: the run itself retries and reports.
+    f.addEventListener('focus', () => load().catch(() => {}), { once: true });
     if (mode === 'button' && f instanceof HTMLInputElement && f.type === 'text')
       f.addEventListener('keydown', (e) => e.key === 'Enter' && button?.click());
   }

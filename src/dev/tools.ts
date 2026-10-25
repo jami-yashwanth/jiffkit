@@ -83,9 +83,9 @@ export const DEV_TOOLS: DevEntry[] = [
     subhead: 'Strong random passwords, made on your device. Nothing is sent anywhere.',
     howTo: ['Choose the length and which characters to use.', 'A new password appears; select Generate for another.', 'Copy it into your password manager.'],
     faq: [
-      { q: 'Are the passwords really random?', a: 'Yes. They come from your browser’s cryptographic random number generator (crypto.getRandomValues), with no bias towards any character.' },
+      { q: 'Are the passwords really random?', a: 'Yes. Each character comes from your browser’s cryptographic random number generator (crypto.getRandomValues), drawn without bias. At least one of each kind you chose is always included.' },
       { q: 'Is the password sent or stored anywhere?', a: 'No. It is made in this tab and exists only on your screen until you copy it. Nothing is logged or saved.' },
-      { q: 'How long should a password be?', a: 'At least 16 characters for accounts that matter. The bits shown under the password measure its strength: 80 bits and up is very hard to guess.' },
+      { q: 'How long should a password be?', a: 'At least 16 characters for accounts that matter. The bits shown above the password estimate its strength: 80 bits and up is very hard to guess.' },
       { q: 'What does “avoid look-alike characters” do?', a: 'It leaves out characters that are easy to misread, such as l, 1, I, O and 0, which helps when a password has to be typed by hand.' },
     ],
     related: ['uuid-generator', 'bcrypt-generator', 'hash-generator'],
@@ -270,7 +270,7 @@ export const DEV_TOOLS: DevEntry[] = [
     howTo: ['Choose the base of your number.', 'Type or paste the number.', 'Copy it in any other base.'],
     faq: [
       { q: 'How big can the number be?', a: 'Any size. Numbers are converted as whole integers with no rounding, so a 256-bit hex value comes out exact.' },
-      { q: 'Can I paste prefixes like 0x or 0b?', a: 'Yes. 0x, 0o and 0b are removed, and so are spaces and underscores used to group digits.' },
+      { q: 'Can I paste prefixes like 0x or 0b?', a: 'Yes. A 0x, 0o or 0b prefix sets the base by itself, whatever the menu says. Spaces and underscores used to group digits are ignored.' },
       { q: 'Are negative numbers or fractions supported?', a: 'A leading minus sign is kept. Fractions are not: they rarely convert exactly between bases.' },
       { q: 'Is my number sent anywhere?', a: `No. ${LOCAL}` },
     ],
@@ -321,9 +321,9 @@ export const DEV_TOOLS: DevEntry[] = [
     howTo: ['Paste your JSON.', 'The YAML appears as you type.', 'Copy the YAML.'],
     faq: [
       { q: 'Is my JSON sent to a server?', a: `No. ${LOCAL}` },
-      { q: 'Are strings quoted?', a: 'Only when they must be, for example a string that would otherwise read as a number or as true, so the YAML means exactly what the JSON did.' },
+      { q: 'Are strings quoted?', a: 'Only when they must be, for example a string that would otherwise read as a number or as true, so the YAML keeps the JSON’s meaning. Whole numbers over 2^53 are the exception: JavaScript rounds them, and we say so when it happens.' },
       { q: 'What indent is used?', a: 'Two spaces, the usual style for YAML files such as Kubernetes manifests and GitHub workflows.' },
-      { q: 'Does the key order change?', a: 'No. Keys keep the order they have in your JSON.' },
+      { q: 'Does the key order change?', a: 'Keys keep the order they have in your JSON, except keys that are whole numbers (such as "2"), which JavaScript always puts first.' },
     ],
     related: ['yaml-to-json', 'json-formatter', 'json-to-csv'],
     form: {
@@ -344,7 +344,7 @@ export const DEV_TOOLS: DevEntry[] = [
     faq: [
       { q: 'What JSON can be converted?', a: 'An array of objects (each key becomes a column) or an array of arrays (each one becomes a row). A single object becomes one row.' },
       { q: 'What if objects have different keys?', a: 'Every key found becomes a column, in the order first seen; a row without that key gets an empty cell.' },
-      { q: 'How are nested objects handled?', a: 'They are written into their cell as JSON text, so no data is lost.' },
+      { q: 'How are nested objects handled?', a: 'They are written into their cell as JSON text, so nothing is dropped. Whole numbers over 2^53 are rounded by JavaScript; we say so when that happens.' },
       { q: 'Is my data sent anywhere?', a: `No. ${LOCAL}` },
     ],
     related: ['csv-to-json', 'json-formatter', 'json-to-yaml'],
@@ -395,7 +395,7 @@ export const DEV_TOOLS: DevEntry[] = [
     faq: [
       { q: 'Which formats can I type?', a: 'HEX (#0e6b52, #0e6b52cc, #fff), rgb() and rgba(), and hsl() and hsla(), in the old comma style or the modern space style.' },
       { q: 'Is transparency kept?', a: 'Yes. An alpha value is carried into every format; the picker itself has no alpha, so picking sets it back to opaque.' },
-      { q: 'Why is HSL rounded?', a: 'Hue, saturation and lightness are rounded to whole numbers for readability, which can shift the color by at most one step per channel.' },
+      { q: 'Why is HSL rounded?', a: 'Hue, saturation and lightness are rounded to whole numbers for readability, so HSL is a close match rather than an exact one. HEX and RGB are exact.' },
       { q: 'Is anything sent anywhere?', a: `No. ${LOCAL}` },
     ],
     related: ['number-base-converter', 'case-converter', 'qr-code-generator'],
@@ -466,7 +466,7 @@ export const DEV_TOOLS: DevEntry[] = [
       { q: 'Is my text sent to a server?', a: `No. The comparison runs in your browser, which makes it safe for contracts and code. ${LOCAL}` },
       { q: 'What does “ignore whitespace” do?', a: 'Lines that differ only in spaces or tabs at the start or end are treated as the same, which hides indentation-only changes.' },
       { q: 'Does it compare words or lines?', a: 'Lines, like git diff: a changed line shows as one line removed and one line added.' },
-      { q: 'How big can the texts be?', a: 'There is no fixed limit, but very large texts with many changes take longer, on your device.' },
+      { q: 'How big can the texts be?', a: 'There is no fixed limit. If two large texts differ in so many places that comparing them would take more than a second or two, we say so instead of freezing the page.' },
     ],
     related: ['word-counter', 'json-formatter', 'case-converter'],
     form: {
@@ -651,7 +651,7 @@ export const DEV_TOOLS: DevEntry[] = [
     faq: [
       { q: 'Is my XML sent to a server?', a: `No. ${LOCAL}` },
       { q: 'How is it validated?', a: 'Your browser’s XML parser checks that the document is well-formed: tags closed and nested, attributes quoted. It does not check it against a schema (XSD).' },
-      { q: 'Is text inside elements changed?', a: 'No. Text, CDATA sections and comments are kept; only the spaces between tags change.' },
+      { q: 'Is text inside elements changed?', a: 'An element that holds only text keeps it exactly, and CDATA sections and comments are kept. Where text and tags are mixed, the spaces around the text are tidied along with the indent.' },
       { q: 'Does it work for SVG and HTML?', a: 'SVG, yes: it is XML. HTML only if it is written as XHTML, with every tag closed.' },
     ],
     related: ['json-formatter', 'sql-formatter', 'html-entities'],

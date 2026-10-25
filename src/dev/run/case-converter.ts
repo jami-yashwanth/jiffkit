@@ -5,8 +5,9 @@ import type { Runner } from '../form';
  * upper change (userId → user, Id) and at the end of an acronym (HTTPResponse → HTTP, Response).
  */
 export function words(s: string): string[] {
-  return (s.match(/[\p{L}\p{N}]+/gu) ?? []).flatMap((run) =>
-    run.split(/(?<=[\p{Ll}\p{N}])(?=\p{Lu})|(?<=\p{Lu})(?=\p{Lu}\p{Ll})/u),
+  // Marks (\p{M}) belong to their letter: Devanagari vowel signs, decomposed accents.
+  return (s.match(/[\p{L}\p{M}\p{N}]+/gu) ?? []).flatMap((run) =>
+    run.split(/(?<=[\p{Ll}\p{N}]\p{M}*)(?=\p{Lu})|(?<=\p{Lu}\p{M}*)(?=\p{Lu}\p{Ll})/u),
   );
 }
 

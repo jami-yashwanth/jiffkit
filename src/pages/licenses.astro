@@ -285,6 +285,15 @@ const libs = [
     source: `${repo}${pkgVersion(name)}`,
     texts: [{ label: 'LICENSE', text: licenceText(`${name}/LICENSE`) }],
   })),
+  {
+    name: 'nearley',
+    version: pkgVersion('nearley'),
+    licence: 'MIT',
+    note: 'The parser sql-formatter is built on, bundled with it (SQL formatter).',
+    // nearley publishes no version tags, so the source link is the exact package as published.
+    source: `https://registry.npmjs.org/nearley/-/nearley-${pkgVersion('nearley')}.tgz`,
+    texts: [{ label: 'LICENSE', text: licenceText('nearley/LICENSE.txt') }],
+  },
   ...(
     [
       ['zlibjs', 'MIT', 'LICENSE', 'Gunzip'],

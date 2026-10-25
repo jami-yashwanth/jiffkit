@@ -9,7 +9,8 @@ const hue = (s: string) => {
   const m = /^(-?[\d.]+)(deg|turn|rad|grad)?$/.exec(s);
   if (!m) return NaN;
   const v = parseFloat(m[1]);
-  return { deg: v, turn: v * 360, rad: (v * 180) / Math.PI, grad: v * 0.9 }[m[2] ?? 'deg']!;
+  const deg = { deg: v, turn: v * 360, rad: (v * 180) / Math.PI, grad: v * 0.9 }[m[2] ?? 'deg']!;
+  return ((deg % 360) + 360) % 360; // -120deg is 240deg, 480deg is 120deg
 };
 
 /** Parse #rgb, #rgba, #rrggbb, #rrggbbaa, rgb()/rgba() and hsl()/hsla(), in comma or space syntax. */

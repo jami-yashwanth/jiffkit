@@ -480,7 +480,7 @@ textarea.text-input.prose { font-family: inherit; font-size: 1rem; }
 .kv th { text-align: left; font-weight: 600; color: var(--ink-muted); padding: var(--s2) var(--s3) var(--s2) 0; vertical-align: top; white-space: pre; width: 1%; }
 .kv td { padding: var(--s2) 0; vertical-align: top; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .kv td:nth-child(3) { width: 1%; padding-left: var(--s2); white-space: nowrap; text-align: right; font-family: inherit; }
-.btn-small { min-height: 40px; padding: 6px var(--s3); font-size: 0.875rem; line-height: 1.5; }
+.btn-small { min-height: 44px; padding: 8px var(--s3); font-size: 0.875rem; line-height: 1.5; }
 .diff span { display: block; }
 .diff-add { background: #dcefe3; }
 .diff-del { background: #f8e1de; }

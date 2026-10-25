@@ -135,6 +135,35 @@ test('regex: highlights matches, and a catastrophic pattern is stopped without f
   await expect(status(page)).toHaveText('32 matches.');
 });
 
+test('regex: fixing a runaway pattern before its time limit is not reported as too slow', async ({ page }) => {
+  await page.goto('/regex-tester/');
+  await field(page, 'text').fill(`${'a'.repeat(32)}b`);
+  await field(page, 'pattern').fill('(a+)+$');
+  await page.waitForTimeout(400); // the runaway run is in the worker now
+  await field(page, 'pattern').fill('a');
+  await expect(status(page)).toHaveText('32 matches.', { timeout: 5000 });
+});
+
+test('markdown preview: a meta refresh cannot send the preview to another site', async ({ page }) => {
+  await page.goto('/markdown-to-html/');
+  await field(page, 'text').fill('# Readme\n\n<meta http-equiv="refresh" content="0;url=https://example.com/">\n<base href="https://example.com/">');
+  await expect(page.frameLocator('[data-out="preview"] iframe').locator('h1')).toHaveText('Readme');
+  await page.waitForTimeout(800);
+  await expect(page.frameLocator('[data-out="preview"] iframe').locator('h1')).toHaveText('Readme'); // still our document
+});
+
+test('a tool whose code fails to download says so, and works on the next try', async ({ page }) => {
+  // Two failures: the prefetch when the box gets focus, then the run itself. The third download works.
+  let failures = 2;
+  await page.route(/\/_astro\/slugify[^/]*\.js$/, (r) => (failures-- > 0 ? r.abort() : r.continue()));
+  await page.goto('/slugify/');
+  await field(page, 'text').fill('Hello World');
+  await expect(status(page)).toHaveText('Couldn’t load this tool. Check your connection, then try again.');
+  await field(page, 'text').fill('Hello World!');
+  await expect(out(page, 'slug')).toHaveText('hello-world');
+  await expect(status(page)).toHaveText('');
+});
+
 test('markdown preview is sandboxed: no script in it runs and it loads nothing from other sites', async ({ page }) => {
   await page.goto('/markdown-to-html/');
   await field(page, 'text').fill('# Safe\n\n![tracker](https://example.com/pixel.png)\n\n<script>parent.pwned = 1</script><img src="x:" onerror="parent.pwned = 2">');

@@ -26,5 +26,5 @@ export const run: Runner = ({ text, delimiter }) => {
   const rows = jsonToRows(parsed.value);
   if (typeof rows === 'string') return { error: rows };
   const items = Array.isArray(parsed.value) ? parsed.value.length : 1;
-  return { out: { result: toCsv(rows, delimiterOf(String(delimiter))) }, status: `${items} ${items === 1 ? 'row' : 'rows'}.` };
+  return { out: { result: toCsv(rows, delimiterOf(String(delimiter))) }, status: `${items} ${items === 1 ? 'row' : 'rows'}.${parsed.warning ? ` ${parsed.warning}` : ''}` };
 };

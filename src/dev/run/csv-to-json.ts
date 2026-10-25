@@ -18,7 +18,7 @@ export function csvToJson(text: string, delimiter: string, header: boolean): { v
   if ('unclosedAt' in parsed) return { error: `A quoted field starting on line ${parsed.unclosedAt} is never closed.` };
   const rows = parsed.rows.filter((r) => !(r.length === 1 && r[0] === ''));
   if (!header) return { value: rows };
-  const width = Math.max(0, ...rows.map((r) => r.length));
+  const width = rows.reduce((w, r) => Math.max(w, r.length), 0); // not Math.max(...rows): 300k arguments overflow the stack
   const names = headerNames(rows[0] ?? [], width);
   return { value: rows.slice(1).map((r) => Object.fromEntries(names.map((k, i) => [k, r[i] ?? '']))) };
 }

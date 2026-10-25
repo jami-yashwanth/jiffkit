@@ -344,6 +344,13 @@ describe('site', () => {
     expect(h).toContain('Copyright (c) 2023 Vanilagy');
   });
 
+  it('licences page lists nearley (MIT), which sql-formatter bundles into the SQL formatter', () => {
+    const h = html('licenses/');
+    const version = JSON.parse(readFileSync('node_modules/nearley/package.json', 'utf8')).version;
+    expect(h).toContain(`registry.npmjs.org/nearley/-/nearley-${version}.tgz`); // no version tags upstream: the exact published source
+    expect(h).toContain('Kartik Chandra, Tim Radvan');
+  });
+
   it('licences page lists Lucide (ISC), version-tagged', () => {
     const h = html('licenses/');
     for (const s of ['Lucide', 'ISC', 'lucide-icons/lucide/tree/1.52.0', 'Lucide Icons and Contributors']) expect(h).toContain(s);

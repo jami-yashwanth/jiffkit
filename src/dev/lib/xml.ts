@@ -1,7 +1,8 @@
 // Re-indents XML without changing its content: tags, text, comments, CDATA and processing instructions are kept as
 // written; only the whitespace between tags changes. An element holding only text stays on one line.
 
-const TOKEN = /<!\[CDATA\[[\s\S]*?\]\]>|<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<![^>]*>|<\/?[^>]+>|[^<]+/g;
+// Tags are read with quote awareness, so a > inside an attribute value does not end the tag.
+const TOKEN = /<!\[CDATA\[[\s\S]*?\]\]>|<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<!(?:[^>"'\[]|"[^"]*"|'[^']*'|\[[\s\S]*?\])*>|<\/?(?:[^>"']|"[^"]*"|'[^']*')+>|[^<]+/g;
 
 export function formatXml(xml: string, indent: string): string {
   const tokens = xml.match(TOKEN) ?? [];
@@ -18,7 +19,7 @@ export function formatXml(xml: string, indent: string): string {
     }
     const next = tokens[i + 1], after = tokens[i + 2];
     if (isOpen(t) && next !== undefined && !next.startsWith('<') && after !== undefined && isClose(after)) {
-      lines.push(pad() + t + next.trim() + after);
+      lines.push(pad() + t + next + after); // a text-only element keeps its text exactly
       i += 2;
     } else if (isOpen(t) && next !== undefined && isClose(next)) {
       lines.push(pad() + t + next);

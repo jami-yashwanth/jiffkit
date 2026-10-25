@@ -61,7 +61,7 @@ describe('slugify', () => {
     expect(slugify('Crème brûlée: 10 tips & tricks!', '-', true)).toBe('creme-brulee-10-tips-tricks');
     expect(slugify('  Straße -- Øresund  ', '_', true)).toBe('strasse_oresund');
     expect(slugify('Hello World', '-', false)).toBe('Hello-World');
-    expect(slugify('東京 Ελλάδα', '-', true)).toBe('東京-ελλαδα');
+    expect(slugify('東京 Ελλάδα', '-', true)).toBe('東京-ελλάδα'); // accents come off Latin letters only
   });
 });
 
