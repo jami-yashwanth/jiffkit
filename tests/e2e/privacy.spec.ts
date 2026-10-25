@@ -1,28 +1,28 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page, type Request } from '@playwright/test';
-import { stubPlausible, PLAUSIBLE_STUB, type PlausibleEvent } from './plausible';
+import { stubAnalytics, ANALYTICS_STUB, eventOf, type AnalyticsEvent } from './analytics';
 import { modelBytes, routeModels } from './models';
 import { holdResults, installResultHold } from './pdf-hold';
 import { WHISPER_FILES, WHISPER_GPU_FILES } from '../../src/ai/whisper/files';
 
 // The privacy promise, checked on the wire: during a real 3-file conversion plus a ZIP download, nothing
-// leaves the device except same-origin GETs for our own assets and Plausible's tiny event beacons.
-// The build has PUBLIC_PLAUSIBLE_DOMAIN set (see playwright.config.ts).
+// leaves the device except same-origin GETs for our own assets and Umami's tiny event beacons.
+// The build has PUBLIC_UMAMI_WEBSITE_ID set (see playwright.config.ts).
 
 const FILES = ['rotated-6.heic', 'multi.heic', 'iphone-12mp.heic'];
 const head64 = (name: string) => readFileSync(`tests/fixtures/${name}`).subarray(0, 64);
 
-test('a 3-file HEIC batch and ZIP send nothing but pages, our assets and two Plausible events', async ({ page }) => {
+test('a 3-file HEIC batch and ZIP send nothing but pages, our assets and two analytics events', async ({ page }) => {
   const requests: { method: string; url: string; body: Buffer | null; origin: string }[] = [];
   const events: { n: string; p: Record<string, unknown> }[] = [];
   const base = new URL(test.info().project.use.baseURL ?? 'http://localhost:4399');
 
-  await page.context().route('https://plausible.io/**', async (route) => {
+  await page.context().route('https://cloud.umami.is/**', async (route) => {
     const req = route.request();
     if (req.url().endsWith('.js')) {
-      return route.fulfill({ status: 200, contentType: 'text/javascript', body: PLAUSIBLE_STUB });
+      return route.fulfill({ status: 200, contentType: 'text/javascript', body: ANALYTICS_STUB });
     }
-    events.push(JSON.parse(req.postData() ?? '{}'));
+    events.push(eventOf(req));
     await route.fulfill({ status: 202, body: 'ok' });
   });
   page.context().on('request', (r: Request) => {
@@ -40,10 +40,10 @@ test('a 3-file HEIC batch and ZIP send nothing but pages, our assets and two Pla
   await expect.poll(() => events.length).toBeGreaterThan(0);
   await page.waitForTimeout(500); // room for a stray second event
 
-  // Every request is a same-origin GET, or goes to plausible.io (its script, then event POSTs).
+  // Every request is a same-origin GET, or goes to Umami (its script, then event POSTs).
   expect(requests.length).toBeGreaterThan(0);
   for (const r of requests) {
-    if (r.origin === 'https://plausible.io') continue;
+    if (r.origin === 'https://cloud.umami.is') continue;
     if (r.url.startsWith('blob:') || r.url.startsWith('data:')) continue; // never leaves the browser
     expect(r.origin, r.url).toBe(base.origin);
     expect(r.method, r.url).toBe('GET');
@@ -64,7 +64,7 @@ test('a 3-file HEIC batch and ZIP send nothing but pages, our assets and two Pla
   }
   expect(events.length).toBeGreaterThan(0);
 
-  // Plausible sees only the tool, a count, or a reason.
+  // Umami sees only the tool, a count, or a reason.
   for (const e of events) {
     expect(['convert_success', 'convert_error']).toContain(e.n);
     for (const key of Object.keys(e.p)) expect(['tool', 'count', 'reason']).toContain(key);
@@ -77,10 +77,10 @@ test('a 3-file HEIC batch and ZIP send nothing but pages, our assets and two Pla
 
 test('a wrong-type file fires convert_error with only tool and reason', async ({ page }) => {
   const events: { n: string; p: Record<string, unknown> }[] = [];
-  await page.context().route('https://plausible.io/**', async (route) => {
+  await page.context().route('https://cloud.umami.is/**', async (route) => {
     const req = route.request();
-    if (req.url().endsWith('.js')) return route.fulfill({ status: 200, contentType: 'text/javascript', body: PLAUSIBLE_STUB });
-    events.push(JSON.parse(req.postData() ?? '{}'));
+    if (req.url().endsWith('.js')) return route.fulfill({ status: 200, contentType: 'text/javascript', body: ANALYTICS_STUB });
+    events.push(eventOf(req));
     await route.fulfill({ status: 202, body: 'ok' });
   });
   await page.goto('/heic-to-jpg/');
@@ -113,9 +113,9 @@ const JSON_TEXT = '{"secret":"s3cr3t-json"}';
 const QR_TEXT = 'qr-needle-123';
 const B64_TEXT = 'b64-needle-789';
 
-/** Watch a page: every request it makes, and every Plausible event it posts. */
+/** Watch a page: every request it makes, and every analytics event it posts. */
 async function watch(page: Page) {
-  const events = await stubPlausible(page.context());
+  const events = await stubAnalytics(page.context());
   const requests: Seen[] = [];
   page.context().on('request', (r: Request) => {
     requests.push({ method: r.method(), url: r.url(), body: r.postDataBuffer(), origin: new URL(r.url()).origin });
@@ -126,13 +126,13 @@ async function watch(page: Page) {
 // The model host (PUBLIC_MODEL_BASE_URL in playwright.config.ts). In the E2E build it is this server's /test-models/.
 const isModel = (url: string) => new URL(url).pathname.startsWith('/test-models/');
 
-/** Nothing but same-origin GETs, model-host GETs and plausible.io; no URL or body carries any needle. */
+/** Nothing but same-origin GETs, model-host GETs and Umami; no URL or body carries any needle. */
 function expectClean(requests: Seen[], needles: Buffer[], baseURL: string | undefined) {
   const base = new URL(baseURL ?? 'http://localhost:4399');
   expect(requests.length).toBeGreaterThan(0);
   for (const r of requests) {
     if (r.url.startsWith('blob:') || r.url.startsWith('data:')) continue; // never leaves the browser
-    if (r.origin !== 'https://plausible.io') {
+    if (r.origin !== 'https://cloud.umami.is') {
       expect(r.origin, r.url).toBe(base.origin);
       expect(r.method, r.url).toBe('GET'); // the model host too: GET only, never a body
       if (isModel(r.url)) expect(r.body, r.url).toBeNull();
@@ -145,8 +145,8 @@ function expectClean(requests: Seen[], needles: Buffer[], baseURL: string | unde
   }
 }
 
-/** Plausible sees only known event names, and props limited to tool, count and reason. */
-function expectOnlyAllowedProps(events: PlausibleEvent[]) {
+/** Umami sees only known event names, and props limited to tool, count and reason. */
+function expectOnlyAllowedProps(events: AnalyticsEvent[]) {
   for (const e of events) {
     expect(['convert_success', 'convert_error', 'tool_used']).toContain(e.n);
     for (const key of Object.keys(e.p)) expect(['tool', 'count', 'reason']).toContain(key);
@@ -399,11 +399,11 @@ test.describe('AI tools', () => {
 const REASONS = ['network', 'cancelled', 'unsupported', 'too-large', 'too-long', 'corrupt', 'wrong-type', 'device', 'encrypted'];
 
 /** Props are only tool/count/reason, and a reason is one of the known ones. */
-function expectKnownReasons(events: PlausibleEvent[]) {
+function expectKnownReasons(events: AnalyticsEvent[]) {
   expectOnlyAllowedProps(events);
   for (const e of events) if ('reason' in e.p) expect(REASONS).toContain(e.p.reason);
 }
-const only = (events: PlausibleEvent[]) => events.map((e) => [e.n, e.p]);
+const only = (events: AnalyticsEvent[]) => events.map((e) => [e.n, e.p]);
 const aiInput = (page: Page) => page.locator('[data-kind="ai"] input[type=file]');
 const videoInput = (page: Page) => page.locator('[data-kind="video"] input[type=file]');
 const noGpu = (page: Page) => page.addInitScript(() => Object.defineProperty(navigator, 'gpu', { value: undefined }));

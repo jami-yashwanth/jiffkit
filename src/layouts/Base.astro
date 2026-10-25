@@ -21,7 +21,9 @@ interface Props {
   wide?: boolean; // the homepage grid; every other page keeps the reading measure
 }
 const { title, description, path, jsonLd, wide = false } = Astro.props;
-const plausibleDomain = import.meta.env.PUBLIC_PLAUSIBLE_DOMAIN;
+// Umami Cloud analytics, only on builds that set the website ID (production). Cookieless; events carry only a tool name
+// and a count or reason (src/ui/track.ts). Do Not Track is respected.
+const umamiWebsiteId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID;
 const canonical = new URL(path, Astro.site).href;
 ---
 <!doctype html>
@@ -42,12 +44,17 @@ const canonical = new URL(path, Astro.site).href;
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     {
-      plausibleDomain && (
+      umamiWebsiteId && (
         <>
-          <script defer data-domain={plausibleDomain} src="https://plausible.io/js/script.tagged-events.js" />
-          <script is:inline>
-            window.plausible = window.plausible || function () {(window.plausible.q = window.plausible.q || []).push(arguments)}
-          </script>
+          <script is:inline>window.umamiQ = window.umamiQ || [];</script>
+          <script
+            is:inline
+            defer
+            src="https://cloud.umami.is/script.js"
+            data-website-id={umamiWebsiteId}
+            data-do-not-track="true"
+            onload="window.umamiQ.splice(0).forEach(function (e) { window.umami.track(e[0], e[1]); })"
+          />
         </>
       )
     }

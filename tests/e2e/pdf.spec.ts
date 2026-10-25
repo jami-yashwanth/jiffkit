@@ -3,15 +3,15 @@ import { expect, test, type Locator, type Page, type Route } from '@playwright/t
 import { unzipSync } from 'fflate';
 import { PDFDocument } from 'pdf-lib';
 import { holdResults, installResultHold, releaseResults } from './pdf-hold';
-import { stubPlausible, type PlausibleEvent } from './plausible';
+import { stubAnalytics, type AnalyticsEvent } from './analytics';
 
 // Spec §4 Merge PDF and Split PDF states, with the exact copy. Runs against `astro build` + `astro preview`.
 
-// Analytics are counted as stubbed Plausible requests: the one reporting path the real site uses.
-let events: PlausibleEvent[];
+// Analytics are counted as stubbed Umami requests: the one reporting path the real site uses.
+let events: AnalyticsEvent[];
 
 test.beforeEach(async ({ context, page }) => {
-  events = await stubPlausible(context);
+  events = await stubAnalytics(context);
   await installResultHold(page);
 });
 

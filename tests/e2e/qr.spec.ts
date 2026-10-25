@@ -6,7 +6,7 @@ import jsQR from 'jsqr';
 // Spec §4 states for the QR code generator, with the exact copy.
 
 test.beforeEach(async ({ context, page }) => {
-  await context.route('https://plausible.io/**', (r) => r.fulfill({ status: 202, body: '' }));
+  await context.route('https://cloud.umami.is/**', (r) => r.fulfill({ status: 202, body: '' }));
   await page.goto('/qr-code-generator/');
 });
 

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { stubPlausible } from './plausible';
+import { stubAnalytics } from './analytics';
 import { panelSeen, recordPanel } from './panel';
 import { holdResults, installResultHold } from './pdf-hold';
 
@@ -64,7 +64,7 @@ function gifInfo(b: Buffer): GifInfo {
 }
 
 async function open(page: Page, path = '/video-to-gif/') {
-  await stubPlausible(page.context());
+  await stubAnalytics(page.context());
   await recordPanel(page);
   await page.goto(path);
   await expect(page.locator('[data-kind="video"][data-ready]')).toBeAttached(); // the island has mounted

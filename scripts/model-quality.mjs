@@ -188,7 +188,7 @@ async function whisper(context, origin, workDir) {
 async function main() {
   const env = { ...process.env };
   delete env.PUBLIC_AI_STUB; // the real models, not the test stand-ins
-  delete env.PUBLIC_PLAUSIBLE_DOMAIN; // no analytics from a quality run
+  delete env.PUBLIC_UMAMI_WEBSITE_ID; // no analytics from a quality run
   console.log(`Building the site without stubs into ${OUT}/ (models from ${env.PUBLIC_MODEL_BASE_URL || 'the default host'})…`);
   execSync(`npx astro build --outDir ${OUT}`, { stdio: 'inherit', env });
 

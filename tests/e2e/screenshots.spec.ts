@@ -10,7 +10,7 @@ import { tone, wav } from './wav';
 // Run: npx playwright test tests/e2e/screenshots.spec.ts --project=chromium
 
 test.skip(({ browserName }) => browserName !== 'chromium', 'screenshots are reviewed in one engine');
-test.beforeEach(({ context }) => context.route('https://plausible.io/**', (r) => r.fulfill({ status: 202, body: '' })));
+test.beforeEach(({ context }) => context.route('https://cloud.umami.is/**', (r) => r.fulfill({ status: 202, body: '' })));
 
 const VIEWPORTS = [
   { width: 390, height: 844 },

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 // The tool search: large under the homepage headline, compact in every other header.
-test.beforeEach(({ context }) => context.route('https://plausible.io/**', (r) => r.fulfill({ status: 202, body: '' })));
+test.beforeEach(({ context }) => context.route('https://cloud.umami.is/**', (r) => r.fulfill({ status: 202, body: '' })));
 
 const box = (page: Page) => page.getByRole('combobox', { name: 'Search tools' });
 const options = (page: Page) => page.getByRole('option');

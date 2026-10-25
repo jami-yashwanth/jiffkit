@@ -15,7 +15,7 @@ const html = (p: string) => readFileSync(`dist/${p}index.html`, 'utf8');
 beforeAll(() => {
   // Hermetic: the default build has no analytics and no AI stubs, whatever the shell exports.
   const env = { ...process.env };
-  delete env.PUBLIC_PLAUSIBLE_DOMAIN;
+  delete env.PUBLIC_UMAMI_WEBSITE_ID;
   delete env.PUBLIC_AI_STUB;
   delete env.PUBLIC_MODEL_BASE_URL;
   execSync('npx astro build', { stdio: 'pipe', env });
@@ -150,9 +150,9 @@ describe.each(TOOLS)('tool page $slug', (tool) => {
 });
 
 describe('site', () => {
-  it('a build without PUBLIC_PLAUSIBLE_DOMAIN ships no plausible markup', () => {
-    // Pages: no tag, no queue stub, no mention at all. Scripts: the optional-call `window.plausible?.()` in the
-    // dropzone is inert without the tag, so JS may name it, but must never carry the plausible.io host.
+  it('a build without PUBLIC_UMAMI_WEBSITE_ID ships no analytics markup', () => {
+    // Pages: no tag, no queue, no mention at all. Scripts: track() in src/ui/track.ts names `umami` but is inert
+    // without the tag, so JS may name it, but must never carry the Umami host.
     const walk = (dir: string): string[] =>
       readdirSync(dir, { withFileTypes: true }).flatMap((d) =>
         d.isDirectory() ? walk(`${dir}/${d.name}`) : [`${dir}/${d.name}`],
@@ -160,9 +160,9 @@ describe('site', () => {
     const files = walk('dist');
     const pages = files.filter((f) => f.endsWith('.html'));
     expect(pages.length).toBeGreaterThan(3); // the scan is not vacuous
-    for (const f of pages) expect(/plausible/i.test(readFileSync(f, 'utf8')), f).toBe(false);
+    for (const f of pages) expect(/umami|plausible/i.test(readFileSync(f, 'utf8')), f).toBe(false);
     for (const f of files.filter((f) => /\.(js|mjs|css|xml|txt)$/.test(f))) {
-      expect(/plausible\.io/i.test(readFileSync(f, 'utf8')), f).toBe(false);
+      expect(/cloud\.umami\.is|plausible\.io/i.test(readFileSync(f, 'utf8')), f).toBe(false);
     }
   });
 
