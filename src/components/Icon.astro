@@ -2,7 +2,8 @@
 import { ICONS } from '../icons';
 import type { ToolSlug } from '../tools';
 
-interface Props { slug: ToolSlug; size: number }
-const { slug, size } = Astro.props;
+// A tool's icon by slug, or any other Lucide icon's markup (the /developer/ hub card).
+type Props = { size: number } & ({ slug: ToolSlug; svg?: never } | { svg: string; slug?: never });
+const { slug, svg, size } = Astro.props;
 ---
-<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={ICONS[slug]} />
+<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={slug ? ICONS[slug] : svg} />

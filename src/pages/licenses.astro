@@ -267,6 +267,24 @@ const libs = [
     source: `https://github.com/lucide-icons/lucide/tree/${pkgVersion('lucide-static')}`,
     texts: [{ label: 'LICENSE', text: licenceText('lucide-static/LICENSE') }],
   },
+  // The developer tools' libraries, each loaded only on its own tool's page when the tool is first used.
+  ...(
+    [
+      ['yaml', 'ISC', 'Reads and writes YAML (YAML to JSON, JSON to YAML).', 'https://github.com/eemeli/yaml/tree/v'],
+      ['marked', 'MIT', 'Converts Markdown to HTML (Markdown to HTML).', 'https://github.com/markedjs/marked/tree/v'],
+      ['sql-formatter', 'MIT', 'Formats SQL (SQL formatter).', 'https://github.com/sql-formatter-org/sql-formatter/tree/v'],
+      ['bcryptjs', 'BSD-3-Clause', 'Hashes and checks bcrypt passwords (Bcrypt hash and verify).', 'https://github.com/dcodeIO/bcrypt.js/tree/v'],
+      ['cronstrue', 'MIT', 'Describes cron expressions in English (Cron expression explainer).', 'https://github.com/bradymholt/cRonstrue/tree/v'],
+      ['diff', 'BSD-3-Clause', 'Compares texts line by line (Text diff).', 'https://github.com/kpdecker/jsdiff/tree/v'],
+    ] as const
+  ).map(([name, licence, note, repo]) => ({
+    name,
+    version: pkgVersion(name),
+    licence,
+    note,
+    source: `${repo}${pkgVersion(name)}`,
+    texts: [{ label: 'LICENSE', text: licenceText(`${name}/LICENSE`) }],
+  })),
   ...(
     [
       ['zlibjs', 'MIT', 'LICENSE', 'Gunzip'],

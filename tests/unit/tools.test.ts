@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { TOOLS, CATEGORY_LABEL, getTool, getImageTool, toolForType } from '../../src/tools';
+import { TOOLS, HOME_TOOLS, CATEGORY_LABEL, getTool, getImageTool, toolForType } from '../../src/tools';
+import { DEV_TOOLS } from '../../src/dev/tools';
 
 describe('tool registry', () => {
   it('JSON formatter FAQ is honest about what formatting rewrites', () => {
@@ -16,8 +17,10 @@ describe('tool registry', () => {
     expect(`${t.title} ${t.description} ${t.subhead}`).not.toMatch(/nothing is tracked|Private, No Tracking/i);
   });
 
-  it('has exactly the 17 unique slugs', () => {
+  it('has exactly the 17 unique slugs on the homepage, plus the 25 developer tools', () => {
     const slugs = TOOLS.map((t) => t.slug);
+    expect(TOOLS.filter((t) => t.kind === 'dev').map((t) => t.slug)).toEqual(DEV_TOOLS.map((t) => t.slug));
+    expect(DEV_TOOLS).toHaveLength(25);
     expect(new Set(slugs).size).toBe(slugs.length);
     expect([...slugs].sort()).toEqual(
       [
@@ -38,8 +41,10 @@ describe('tool registry', () => {
         'jpg-to-pdf',
         'compress-video',
         'video-to-gif',
+        ...DEV_TOOLS.map((t) => t.slug),
       ].sort(),
     );
+    expect(HOME_TOOLS.map((t) => t.slug)).toHaveLength(17);
   });
 
   it('uses the spec H1s', () => {
@@ -118,7 +123,7 @@ describe('tool registry', () => {
     expect(w.kind === 'text' && w.transform).toBe('jwt');
     expect(getTool('qr-code-generator').kind).toBe('qr');
     for (const t of TOOLS) {
-      const expected = { image: 'image', pdf: 'pdf', ai: 'ai', video: 'video', text: 'developer', qr: 'qr' }[t.kind];
+      const expected = { image: 'image', pdf: 'pdf', ai: 'ai', video: 'video', text: 'developer', qr: 'qr', dev: 'developer' }[t.kind];
       expect(t.category).toBe(expected);
     }
     expect(CATEGORY_LABEL).toEqual({

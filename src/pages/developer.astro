@@ -1,0 +1,36 @@
+---
+import Base from '../layouts/Base.astro';
+import ToolCard from '../components/ToolCard.astro';
+import Chips from '../components/Chips.astro';
+import { TOOLS, type Tool, type ToolSlug } from '../tools';
+import { GROUP_LABEL, type DevGroup } from '../dev/form';
+
+// Every developer tool: the 25 dev tools plus the four text/QR tools from round 2, each in one group.
+const order: DevGroup[] = ['security', 'encoding', 'convert', 'text', 'code'];
+const OLDER: Partial<Record<ToolSlug, DevGroup>> = {
+  'jwt-decoder': 'security',
+  'base64-encode-decode': 'encoding',
+  'qr-code-generator': 'encoding',
+  'json-formatter': 'code',
+};
+const groupOf = (t: Tool): DevGroup | undefined => (t.kind === 'dev' ? t.group : OLDER[t.slug]);
+const tools = order.flatMap((g) => TOOLS.filter((t) => groupOf(t) === g));
+const chips: [string, string][] = [['All', ''], ...order.map((g): [string, string] => [GROUP_LABEL[g], g])];
+---
+<Base
+  title="Developer Tools - Free, Private, Run in Your Browser"
+  description={`${tools.length} free developer tools: hash, UUID, regex, cron, SQL, YAML, CSV, JWT and more. They run in your browser, so nothing you paste is ever uploaded.`}
+  path="/developer/"
+  wide
+>
+  <div class="home-hero">
+    <h1>Developer tools</h1>
+    <p class="subhead">{tools.length} everyday tools for code and data. Safe for tokens, keys and customer data: nothing you paste leaves your&nbsp;browser.</p>
+  </div>
+
+  <Chips chips={chips} />
+
+  <ul id="tools" class="card-grid">
+    {tools.map((t) => <li data-category={groupOf(t)}><ToolCard tool={t} /></li>)}
+  </ul>
+</Base>

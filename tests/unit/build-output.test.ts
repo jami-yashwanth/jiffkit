@@ -5,7 +5,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import config from '../../astro.config.mjs';
 import { MODELS } from '../../src/ai/config';
 import { WHISPER_SHA256 } from '../../src/ai/whisper/files';
-import { CATEGORY_LABEL, TOOLS, type Category } from '../../src/tools';
+import { CATEGORY_LABEL, HOME_TOOLS, TOOLS, type Category } from '../../src/tools';
+import { DEV_TOOLS } from '../../src/dev/tools';
 
 // The same value the build used: SITE_URL or the default in astro.config.mjs.
 const SITE = config.site as string;
@@ -103,6 +104,18 @@ describe.each(TOOLS)('tool page $slug', (tool) => {
       return;
     }
     expect(h).toMatch(new RegExp(`<div[^>]*data-kind="${tool.kind}"[^>]*data-tool="${tool.slug}"`));
+    if (tool.kind === 'dev') {
+      // A declared form: every field labelled and readable by the runtime, every output a labelled section, one status line.
+      expect(h).toContain(`data-run="${tool.form.run}"`);
+      for (const f of tool.form.fields) {
+        expect(h, f.id).toContain(`data-field="${f.id}"`);
+        expect(h, f.label).toContain(f.label.replace(/&/g, '&amp;'));
+      }
+      for (const o of tool.form.outputs) expect(h, o.id).toMatch(new RegExp(`data-out="${o.id}" data-type="${o.type}" hidden`));
+      expect(h).toMatch(/<p class="status" role="status" aria-live="polite" data-status>/);
+      if (tool.form.button) expect(h).toContain(`data-run-button>${tool.form.button}</button>`);
+      return;
+    }
     for (const copy of COPY[tool.slug as keyof typeof COPY]) expect(h, copy).toContain(copy);
     const statusAndResults = () => {
       expect(h).toMatch(/<[^>]*role="status"[^>]*aria-live="polite"[^>]*data-status|<[^>]*data-status[^>]*role="status"/);
@@ -216,14 +229,15 @@ describe('site', () => {
     expect(walk('dist').some((f) => /\.onnx$|asyncify[^/]*\.wasm$/.test(f))).toBe(false);
   });
 
-  it('homepage is a grid of 17 tool cards in category order', () => {
+  it('homepage is a grid of 17 tool cards in category order, then the developer tools card', () => {
     const h = html('');
     const order: Category[] = ['image', 'pdf', 'ai', 'video', 'developer', 'qr'];
-    const expected = order.flatMap((c) => TOOLS.filter((t) => t.category === c));
+    const expected = order.flatMap((c) => HOME_TOOLS.filter((t) => t.category === c));
     const cards = [...h.matchAll(/<a class="card" href="\/([^"]+)\/"/g)].map((m) => m[1]);
-    expect(cards).toEqual(expected.map((t) => t.slug));
+    expect(cards).toEqual([...expected.map((t) => t.slug), 'developer']);
     const cats = [...h.matchAll(/<li data-category="([a-z]+)"/g)].map((m) => m[1]);
-    expect(cats).toEqual(expected.map((t) => t.category));
+    expect(cats).toEqual([...expected.map((t) => t.category), 'developer']);
+    expect(h).toContain('<strong>All developer tools</strong><span class="card-sub">29 tools:');
     expect(h).toContain('<h1>Tools that never upload your files</h1>');
     expect(h).toContain('<title>jiffkit - Private Image, PDF, Video and AI Tools</title>');
   });
@@ -273,10 +287,26 @@ describe('site', () => {
     }
   });
 
-  it('the 404 page lists every tool as a card', () => {
+  it('the 404 page lists the homepage tools and the developer tools card', () => {
     const h = readFileSync('dist/404.html', 'utf8');
-    expect([...h.matchAll(/<a class="card" href="/g)]).toHaveLength(TOOLS.length);
+    expect([...h.matchAll(/<a class="card" href="/g)]).toHaveLength(HOME_TOOLS.length + 1);
+    expect(h).toContain('href="/developer/"');
     expect(h).not.toContain('class="tool-list"');
+  });
+
+  it('the developer hub lists all 29 developer tools under group chips', () => {
+    const h = html('developer/');
+    const cards = [...h.matchAll(/<li data-category="([a-z]+)"><a class="card" href="\/([^"]+)\/"/g)];
+    expect(cards).toHaveLength(29);
+    expect(new Set(cards.map((m) => m[2]))).toEqual(new Set([...DEV_TOOLS.map((t) => t.slug), 'json-formatter', 'base64-encode-decode', 'jwt-decoder', 'qr-code-generator']));
+    expect([...new Set(cards.map((m) => m[1]))]).toEqual(['security', 'encoding', 'convert', 'text', 'code']);
+    const chips = [...h.match(/<div class="chips"[^>]*>([\s\S]*?)<\/div>/)![1].matchAll(/>([^<]+)<\/button>/g)].map((m) => m[1]);
+    expect(chips).toEqual(['All', 'Security', 'Encoding', 'Convert', 'Text', 'Code']);
+    expect(h).toContain('<title>Developer Tools - Free, Private, Run in Your Browser</title>');
+    const description = h.match(/<meta name="description" content="([^"]*)"/)![1];
+    expect(description.length).toBeGreaterThanOrEqual(120);
+    expect(description.length).toBeLessThanOrEqual(160);
+    expect(h).toContain('<div class="page page-wide">');
   });
 
   it('homepage uses the wide page container; tool pages keep the measure', () => {
@@ -435,10 +465,11 @@ describe('site', () => {
     );
   });
 
-  it('sitemap lists all 9 tool pages', () => {
+  it('sitemap lists every tool page and the developer hub', () => {
     const xml = readFileSync('dist/sitemap-0.xml', 'utf8');
     for (const t of TOOLS) expect(xml).toContain(`<loc>${SITE}/${t.slug}/</loc>`);
-    expect(TOOLS).toHaveLength(17);
+    expect(xml).toContain(`<loc>${SITE}/developer/</loc>`);
+    expect(TOOLS).toHaveLength(42);
   });
 
   it('has sitemap index and robots.txt', () => {

@@ -1,0 +1,9 @@
+---
+import Icon from './Icon.astro';
+import { HUB_ICON } from '../icons';
+import { TOOLS } from '../tools';
+
+// The homepage's way into /developer/: a tool card in the Developer category.
+const count = TOOLS.filter((t) => t.category === 'developer' || t.category === 'qr').length;
+---
+<a class="card" href="/developer/"><span class="card-tile"><Icon svg={HUB_ICON} size={22} /></span><strong>All developer tools</strong><span class="card-sub">{count} tools: hashes, UUIDs, regex, cron, SQL, YAML, CSV and more. Nothing is uploaded.</span></a>

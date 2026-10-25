@@ -1,17 +1,19 @@
 ---
 import Base from '../layouts/Base.astro';
 import ToolCard from '../components/ToolCard.astro';
-import { TOOLS, type Category } from '../tools';
+import HubCard from '../components/HubCard.astro';
+import { HOME_TOOLS, type Category } from '../tools';
 
 // Cloudflare Pages serves this with a 404 status for any unknown path. Without it, Pages falls back to the homepage
 // with a 200, which search engines count as a soft 404.
 const order: Category[] = ['image', 'pdf', 'ai', 'video', 'developer', 'qr'];
-const tools = order.flatMap((c) => TOOLS.filter((t) => t.category === c));
+const tools = order.flatMap((c) => HOME_TOOLS.filter((t) => t.category === c));
 ---
 <Base title="Page not found - jiffkit" description="There is no page at this address." path="/404/">
   <h1>Page not found</h1>
   <p class="subhead">There's no page at this address. Every tool is listed below.</p>
   <ul class="card-grid related">
     {tools.map((t) => <li><ToolCard tool={t} /></li>)}
+    <li><HubCard /></li>
   </ul>
 </Base>
