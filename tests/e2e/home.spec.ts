@@ -24,10 +24,12 @@ test('homepage chips filter the grid', async ({ page }) => {
   await expect(visible(page).getByRole('link', { name: /QR code generator/ })).toBeVisible();
 });
 
-test('chips work from the keyboard', async ({ page }) => {
+test('chips work from the keyboard', async ({ page, browserName }) => {
   await page.goto('/');
   await chip(page, 'All').focus();
-  await page.keyboard.press('Tab');
+  // WebKit on macOS tabs only between text fields unless the system's keyboard navigation is on (it is off on CI
+  // runners); Option+Tab is Safari's key for every focusable element.
+  await page.keyboard.press(browserName === 'webkit' ? 'Alt+Tab' : 'Tab');
   await expect(chip(page, 'Image')).toBeFocused();
   await page.keyboard.press('Space');
   await expect(visible(page)).toHaveCount(3);
