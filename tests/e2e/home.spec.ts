@@ -8,14 +8,14 @@ const visible = (page: Page) => page.locator('#tools li:visible');
 test('homepage chips filter the grid', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('.chips')).toBeVisible();
-  await expect(visible(page)).toHaveCount(17);
+  await expect(visible(page)).toHaveCount(18); // 17 tools and the developer tools card
 
   await chip(page, 'PDF').click();
   await expect(visible(page)).toHaveCount(4);
   const hrefs = await visible(page).getByRole('link').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
   expect(hrefs.sort()).toEqual(['/jpg-to-pdf/', '/merge-pdf/', '/pdf-to-jpg/', '/split-pdf/']);
 
-  for (const [name, count] of [['Developer', 4], ['AI', 4], ['Video', 2], ['Image', 3], ['All', 17]] as const) {
+  for (const [name, count] of [['Developer', 5], ['AI', 4], ['Video', 2], ['Image', 3], ['All', 18]] as const) {
     await chip(page, name).click();
     await expect(visible(page)).toHaveCount(count);
     await expect(page.locator('.chips [aria-pressed="true"]')).toHaveText(name);
@@ -38,7 +38,7 @@ test('chips work from the keyboard', async ({ page }) => {
 test('no sideways scroll on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
-  await expect(page.locator('a.card')).toHaveCount(17);
+  await expect(page.locator('a.card')).toHaveCount(18);
   const { scroll, width, widest } = await page.evaluate(() => ({
     scroll: document.documentElement.scrollWidth,
     width: innerWidth,
