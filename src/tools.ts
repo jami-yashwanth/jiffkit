@@ -5,6 +5,7 @@ export type ToolSlug =
   | 'heic-to-jpg'
   | 'compress-image'
   | 'resize-image'
+  | 'compress-image-to-kb'
   | 'webp-to-jpg'
   | 'png-to-jpg'
   | 'jpg-to-png'
@@ -26,7 +27,7 @@ export type ToolSlug =
   | 'compress-video'
   | 'video-to-gif'
   | DevSlug;
-export type ImageSlug = 'heic-to-jpg' | 'compress-image' | 'resize-image' | 'webp-to-jpg' | 'png-to-jpg' | 'jpg-to-png';
+export type ImageSlug = 'heic-to-jpg' | 'compress-image' | 'resize-image' | 'compress-image-to-kb' | 'webp-to-jpg' | 'png-to-jpg' | 'jpg-to-png';
 export type Category = 'image' | 'pdf' | 'ai' | 'video' | 'developer' | 'qr';
 export type OutFormat = 'jpg' | 'png' | 'webp';
 export type InType = 'heic' | 'jpg' | 'png' | 'webp';
@@ -203,6 +204,24 @@ const IMAGE_TOOLS: ImageTool[] = [
       },
     ],
     related: ['compress-image', 'upscale-image', 'jpg-to-pdf'],
+  },
+  {
+    // Task 2 stub: Task 3 writes the page.
+    kind: 'image',
+    category: 'image',
+    slug: 'compress-image-to-kb',
+    title: 'Compress Image to KB',
+    description: 'stub',
+    h1: 'Compress image to KB',
+    subhead: '',
+    accepts: ['jpg', 'png', 'webp', 'heic'],
+    acceptAttr: '.jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif',
+    outputs: ['jpg'],
+    defaults: { format: 'jpg', quality: 92 },
+    emptyCopy: 'Drop images here',
+    howTo: ['', '', ''],
+    faq: [],
+    related: [],
   },
   {
     kind: 'image',

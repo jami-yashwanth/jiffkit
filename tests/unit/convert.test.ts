@@ -109,6 +109,51 @@ describe('convert: PNG to JPG and JPG to PNG', () => {
   });
 });
 
+describe('convert: target size', () => {
+  it('a 1600 × 1200 JPG to 20 KB is a JPG of at most 20,000 bytes', async () => {
+    const d = await done(job('photo.jpg', 'compress-image-to-kb', { target: { maxKB: 20 } }));
+    expect(await magic(d.blob, 2)).toEqual([0xff, 0xd8]);
+    expect(d.name).toBe('photo.jpg');
+    expect(d.outBytes).toBeLessThanOrEqual(20_000);
+    expect(d.quality).toBeGreaterThanOrEqual(40);
+    expect(d.quality).toBeLessThanOrEqual(92);
+  }, 60_000);
+
+  it('a HEIC to 50 KB is a JPG with no GPS, made smaller to fit', async () => {
+    const d = await done(job('iphone-12mp.heic', 'compress-image-to-kb', { target: { maxKB: 50 } }));
+    expect(await magic(d.blob, 2)).toEqual([0xff, 0xd8]);
+    expect(d.name).toBe('iphone-12mp.jpg');
+    expect(d.outBytes).toBeLessThanOrEqual(50_000);
+    expect(d.notes).toContain('shrunk-to-fit');
+    expect(await exifr.gps(await bytes(d.blob))).toBeUndefined();
+  }, 120_000);
+
+  it('a transparent PNG becomes a JPG on white', async () => {
+    const d = await done(job('alpha.png', 'compress-image-to-kb', { target: { maxKB: 20 } }));
+    expect(await magic(d.blob, 2)).toEqual([0xff, 0xd8]);
+    expect(d.notes).toContain('transparency-filled');
+  });
+
+  it('re-encodes a JPG that already fits and strips GPS', async () => {
+    const j = job('photo.jpg', 'compress-image-to-kb', { target: { maxKB: 5000 } });
+    const d = await done(j);
+    expect(d.blob).not.toBe(j.file);
+    expect(d.notes).toContain('gps-removed');
+    expect(d.notes).not.toContain('shrunk-to-fit');
+    expect(await exifr.gps(await bytes(d.blob))).toBeUndefined();
+  }, 60_000);
+
+  it('a small image under a 10 KB minimum is reported, not padded', async () => {
+    const d = await done(job('grey.png', 'compress-image-to-kb', { target: { maxKB: 20, minKB: 10 } }));
+    expect(d.notes).toContain('under-minimum');
+    expect(d.outBytes).toBeLessThan(10_240);
+  });
+
+  it('an impossible target is cannot-fit', async () => {
+    expect((await failed(job('photo.jpg', 'compress-image-to-kb', { target: { maxKB: 0.05 } }))).reason).toBe('cannot-fit');
+  }, 60_000);
+});
+
 describe('convert: Resize image', () => {
   it('fits a JPG to a width, keeping its format and proportions', async () => {
     const d = await done(job('photo.jpg', 'resize-image', { resize: { width: 400 } }));
