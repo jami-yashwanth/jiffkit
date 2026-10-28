@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "bungee",
+        "createdAt": "2026-10-28T19:32:28.834Z",
+        "reason": "Wordmark typeface shipped in PR #11 (feat: Bungee wordmark), listed on /licenses/; brand choice predates this change"
+      }
+    ]
+  }
+}

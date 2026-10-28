@@ -150,8 +150,10 @@ describe.each(TOOLS)('tool page $slug', (tool) => {
     if (tool.kind === 'text') expect(h).toContain(`data-transform="${tool.transform}"`);
   });
 
-  it('links the licences page from the footer', () => {
+  it('links the licences page, the privacy page and the source code from the footer', () => {
     expect(page()).toContain('href="/licenses/"');
+    expect(page()).toContain('href="/privacy/"');
+    expect(page()).toContain('href="https://github.com/jami-yashwanth/jiffkit"');
   });
 });
 
@@ -271,7 +273,7 @@ describe('site', () => {
   });
 
   it('brands every page as jiffkit: wordmark, og:site_name, and the titles with room for it', () => {
-    const pages = ['', 'licenses/', ...TOOLS.map((t) => `${t.slug}/`)];
+    const pages = ['', 'licenses/', 'privacy/', ...TOOLS.map((t) => `${t.slug}/`)];
     for (const p of pages) {
       const h = html(p);
       expect(h, p).toMatch(/<header class="topbar"><div class="frame topbar-in"><a class="wordmark" href="\/">jiffkit<\/a><form class="search"/);
@@ -280,11 +282,12 @@ describe('site', () => {
     // Tool titles keep their keywords (60-char budget); the brand goes where there is room.
     for (const t of TOOLS) expect(html(`${t.slug}/`)).toContain(`<title>${t.title}</title>`);
     expect(html('licenses/')).toContain('<title>Open-source licences - jiffkit</title>');
+    expect(html('privacy/')).toContain('<title>Privacy - jiffkit</title>');
     expect(readFileSync('dist/404.html', 'utf8')).toContain('<title>Page not found - jiffkit</title>');
   });
 
   it('every page has one tool search, in the top bar, and the list of every tool is a file', () => {
-    const pages = ['', 'developer/', 'licenses/', ...TOOLS.map((t) => `${t.slug}/`)];
+    const pages = ['', 'developer/', 'licenses/', 'privacy/', ...TOOLS.map((t) => `${t.slug}/`)];
     for (const p of pages) {
       const h = html(p);
       expect([...h.matchAll(/<form class="search" role="search" action="\/" method="get" data-search>/g)], p).toHaveLength(1);
