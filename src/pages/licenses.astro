@@ -269,15 +269,16 @@ const libs = [
   },
   ...(
     [
-      ['@fontsource-variable/geist', 'Geist', 'The typeface of every page, served from this site.'],
-      ['@fontsource-variable/geist-mono', 'Geist Mono', 'The typeface of code and data in the developer tools, served from this site.'],
+      ['@fontsource-variable/geist', 'Geist', 'The typeface of every page, served from this site.', 'https://github.com/vercel/geist-font'],
+      ['@fontsource-variable/geist-mono', 'Geist Mono', 'The typeface of code and data in the developer tools, served from this site.', 'https://github.com/vercel/geist-font'],
+      ['@fontsource/bungee', 'Bungee', 'The typeface of the jiffkit wordmark and favicon, served from this site.', 'https://github.com/djrrb/Bungee'],
     ] as const
-  ).map(([pkg, name, note]) => ({
+  ).map(([pkg, name, note, source]) => ({
     name: `${name} (${pkg})`,
     version: pkgVersion(pkg),
     licence: 'OFL-1.1',
     note,
-    source: 'https://github.com/vercel/geist-font',
+    source,
     texts: [{ label: 'LICENSE', text: licenceText(`${pkg}/LICENSE`) }],
   })),
   // The developer tools' libraries, each loaded only on its own tool's page when the tool is first used.
