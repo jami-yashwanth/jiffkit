@@ -55,3 +55,22 @@ test('no sideways scroll on a phone, and tags hang two to a row', async ({ page 
   expect(widest).toBeLessThanOrEqual(width);
   expect(perRow).toBe(2);
 });
+
+for (const width of [390, 820, 1280]) {
+  test(`at ${width} px every tag is one height and zones side by side are one height`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    const { tags, rows } = await page.evaluate(() => {
+      const tags = new Set([...document.querySelectorAll('.wall-home .tag')].map((t) => Math.round(t.getBoundingClientRect().height)));
+      // Zones that start on the same line form a row of the wall; each row's zones must end on the same line too.
+      const byTop = new Map<number, Set<number>>();
+      for (const z of document.querySelectorAll('.wall-home .zone')) {
+        const r = z.getBoundingClientRect();
+        byTop.set(Math.round(r.top), (byTop.get(Math.round(r.top)) ?? new Set()).add(Math.round(r.height)));
+      }
+      return { tags: [...tags], rows: [...byTop.values()].map((s) => s.size) };
+    });
+    expect(tags).toHaveLength(1);
+    for (const heights of rows) expect(heights).toBe(1);
+  });
+}
