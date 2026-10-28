@@ -12,6 +12,8 @@ export interface AiProgress {
   partial?: unknown;
 }
 export type AiWorkerResponse<Res> =
+  /** Posted once, as soon as the worker's script has run: it loaded, so a later death is not the network's. */
+  | { kind: 'started' }
   | ({ kind: 'progress'; id: string } & AiProgress)
   | { kind: 'done'; id: string; result: Res }
   | ({ kind: 'failed'; id: string; reason: AiFail } & Pick<AiErrorDetail, 'badModel' | 'detectedType'>);
@@ -33,8 +35,10 @@ interface Pending<Req, Res> {
 
 /**
  * Main-thread wrapper around one AI tool's worker, after src/pdf/client.ts. A worker that dies before its first
- * message never loaded (network: its script or model could not be fetched); one that dies after it crashed mid-job
- * (corrupt). Either way the next job gets a fresh worker. Aborting a running job terminates the worker.
+ * message (`started`, posted as its script runs) never loaded (network: its script could not be fetched); one that
+ * dies after it ran out of memory (device: its own errors are caught and posted as `failed`, so what kills a loaded
+ * worker is the browser stopping it, as when a big photo is decoded on a small phone). Either way the next job gets a
+ * fresh worker. Aborting a running job terminates the worker.
  */
 export function createAiEngine<Req, Res>(workerFactory: () => Worker): AiEngine<Req, Res> {
   const queue: Pending<Req, Res>[] = [];
@@ -90,7 +94,7 @@ export function createAiEngine<Req, Res>(workerFactory: () => Worker): AiEngine<
 
   function handle(m: AiWorkerResponse<Res>): void {
     const job = inFlight;
-    if (!job || m.id !== job.id) return;
+    if (m.kind === 'started' || !job || m.id !== job.id) return;
     if (m.kind === 'progress') {
       try {
         job.onProgress?.({ stage: m.stage, done: m.done, total: m.total, ...(m.partial !== undefined ? { partial: m.partial } : {}) });
@@ -110,7 +114,7 @@ export function createAiEngine<Req, Res>(workerFactory: () => Worker): AiEngine<
   }
 
   function crash(): void {
-    const reason: AiFail = heardFromWorker ? 'corrupt' : 'network';
+    const reason: AiFail = heardFromWorker ? 'device' : 'network';
     retire();
     if (inFlight) finish(inFlight, { reason });
     else next();

@@ -1,5 +1,5 @@
 import { track } from './track';
-import { makeQr, maxBytes, toSvg, QUIET, type Level, type QrResult } from '../qr/qr';
+import { makeQr, maxBytes, toSvg, tooMuchText, QUIET, type Level, type QrResult } from '../qr/qr';
 
 // Enhances the static markup from QrTool.astro. The preview holds only SVG we generate from the matrix; user text never reaches innerHTML.
 
@@ -75,7 +75,7 @@ export function mount(root: HTMLElement): void {
         preview.firstElementChild!.setAttribute('aria-label', 'QR code preview');
       } else {
         preview.replaceChildren(placeholder);
-        status.textContent = `Too much text for a QR code (${r.max.toLocaleString('en-US')} characters max at level ${level()}).`;
+        status.textContent = tooMuchText(r.max, level());
         input.setAttribute('aria-invalid', 'true');
       }
     }

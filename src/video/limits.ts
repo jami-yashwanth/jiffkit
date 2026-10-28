@@ -32,15 +32,14 @@ export function checkLimits(meta: { durationS: number; bytes: number }, op: Vide
   return 'ok';
 }
 
-/** Bits per pixel per frame, at 30 fps: about 2.2 Mbit/s for 720p and 5 Mbit/s for 1080p at Balanced. */
+/** Bits per pixel per frame: at 30 fps, about 2.2 Mbit/s for 720p and 5 Mbit/s for 1080p at Balanced. */
 const BITS_PER_PIXEL: Record<Preset, number> = { small: 0.05, balanced: 0.08, better: 0.12 };
-const FPS = 30;
 /** Below this even a tiny picture looks broken. */
 const MIN_BITRATE = 100_000;
 
-/** The bitrate (bits per second) asked of the H.264 encoder. */
-export function targetBitrate(preset: Preset, w: number, h: number): number {
-  return Math.max(MIN_BITRATE, Math.round(w * h * FPS * BITS_PER_PIXEL[preset]));
+/** The bitrate (bits per second) asked of the H.264 encoder: the same bits per frame whatever the frame rate. */
+export function targetBitrate(preset: Preset, w: number, h: number, fps: number): number {
+  return Math.max(MIN_BITRATE, Math.round(w * h * fps * BITS_PER_PIXEL[preset]));
 }
 
 const even = (n: number) => Math.max(2, Math.floor(n / 2) * 2);

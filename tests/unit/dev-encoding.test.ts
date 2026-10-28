@@ -68,6 +68,12 @@ describe('number base converter', () => {
     expect(rows('2', '0b1010 1010').Decimal).toBe('170');
     expect(rows('10', '-42').Hex).toBe('-2a');
   });
+  it('reads 0b in hex as hex digits, not a binary prefix', () => {
+    const r = baseRun({ base: '16', value: '0b1f' }) as { out: { bases: { rows: [string, string][] } }; status?: string };
+    expect(Object.fromEntries(r.out.bases.rows).Decimal).toBe('2847');
+    expect(r.status).toBeUndefined();
+    expect((baseRun({ base: '10', value: '0b11' }) as { status: string }).status).toMatch(/binary/);
+  });
   it('names the first character that is not a digit of the base', () => {
     expect(parseBase('12a', '10')).toEqual({ bad: 'a' });
     expect((baseRun({ base: '2', value: '1021' }) as { error: string }).error).toBe('“2” is not a binary digit.');

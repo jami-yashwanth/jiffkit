@@ -8,7 +8,10 @@ export interface Sniffed {
 }
 
 const HEAD_BYTES = 64 * 1024;
-const HEIC_BRANDS = new Set(['heic', 'heix', 'mif1', 'msf1', 'hevc']);
+/** ftyp brands that say HEVC coded images (HEIC). */
+const HEVC_BRANDS = new Set(['heic', 'heix', 'heim', 'heis', 'hevc', 'hevx']);
+/** Brands any HEIF file may lead with, AVIF too: HEIC only when a compatible brand says HEVC. */
+const HEIF_BRANDS = new Set(['mif1', 'msf1']);
 
 const ascii = (b: Uint8Array, at: number, len: number): string =>
   String.fromCharCode(...b.subarray(at, at + len));
@@ -27,10 +30,20 @@ export async function sniff(file: Blob): Promise<Sniffed> {
   if (b.length >= 12 && ascii(b, 0, 4) === 'RIFF' && ascii(b, 8, 4) === 'WEBP') {
     return { type: 'webp', ...safe(() => webpInfo(b, v)) };
   }
-  if (b.length >= 12 && ascii(b, 4, 4) === 'ftyp' && HEIC_BRANDS.has(ascii(b, 8, 4))) {
+  if (b.length >= 12 && ascii(b, 4, 4) === 'ftyp' && isHeic(b, v)) {
     return { type: 'heic', ...safe(() => heicSize(b, v)) };
   }
   return { type: 'unknown' };
+}
+
+/** The ftyp box's major brand says HEVC, or it is a plain HEIF brand and a compatible brand says HEVC. */
+function isHeic(b: Uint8Array, v: DataView): boolean {
+  const major = ascii(b, 8, 4);
+  if (HEVC_BRANDS.has(major)) return true;
+  if (!HEIF_BRANDS.has(major)) return false;
+  const end = Math.min(v.getUint32(0), b.length); // compatible brands run from byte 16 to the box's end
+  for (let i = 16; i + 4 <= end; i += 4) if (HEVC_BRANDS.has(ascii(b, i, 4))) return true;
+  return false;
 }
 
 /** Dimension parsing is best effort: malformed input must never make sniff() reject. */

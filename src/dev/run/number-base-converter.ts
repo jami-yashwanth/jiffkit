@@ -19,8 +19,10 @@ const PREFIXED: Record<string, string> = { '0x': '16', '0o': '8', '0b': '2' };
 
 export const run: Runner = ({ base, value }) => {
   if (!String(value).trim()) return {};
-  // A 0x, 0o or 0b prefix says the base itself, whatever the menu is set to.
-  const prefix = /^\s*-?\s*(0[xob])/i.exec(String(value))?.[1].toLowerCase();
+  // A 0x, 0o or 0b prefix says the base itself, whatever the menu is set to. Except 0b in hex: b is a hex digit, so
+  // "0b1f" there is the hex number b1f.
+  let prefix = /^\s*-?\s*(0[xob])/i.exec(String(value))?.[1].toLowerCase();
+  if (prefix === '0b' && String(base) === '16') prefix = undefined;
   const b = prefix ? PREFIXED[prefix] : String(base);
   const parsed = parseBase(String(value), b);
   if ('bad' in parsed) return { error: parsed.bad ? `“${parsed.bad}” is not a ${NAMES[b]} digit.` : `Type a ${NAMES[b]} number.` };

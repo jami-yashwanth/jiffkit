@@ -73,7 +73,7 @@ export async function compressVideo(
 
   const size = outputSize(video.width, video.height, opts.resolution);
   const frameRate = Math.min(120, Math.max(1, video.frameRate));
-  const encoderConfig = await pickEncoder(size.width, size.height, frameRate, targetBitrate(opts.preset, size.width, size.height));
+  const encoderConfig = await pickEncoder(size.width, size.height, frameRate, targetBitrate(opts.preset, size.width, size.height, frameRate));
   if (!encoderConfig) throw new AiError('device');
 
   const sound = d.audio && isAac(d.audio.codec) && d.audio.sampleRate > 0 && d.audio.channels > 0 ? d.audio : undefined;

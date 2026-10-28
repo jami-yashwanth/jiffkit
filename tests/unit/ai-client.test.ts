@@ -117,16 +117,24 @@ describe('ai client', () => {
     expect(await b).toEqual({ doubled: 4 });
   });
 
-  it('a crash after the worker has spoken is corrupt, with a fresh worker afterwards', async () => {
+  it('a crash after the worker has spoken is the device (memory), with a fresh worker afterwards', async () => {
     const { engine, workers } = setup();
     const a = settle(engine.run({ n: 1 }));
     workers[0]!.reply({ kind: 'progress', id: workers[0]!.idAt(0), stage: 'work', done: 0, total: 1 });
     workers[0]!.crash();
-    expect(reason(await a)).toBe('corrupt');
+    expect(reason(await a)).toBe('device');
     const c = engine.run({ n: 3 });
     expect(workers).toHaveLength(2);
     workers[1]!.reply({ kind: 'done', id: workers[1]!.idAt(0), result: { doubled: 6 } });
     expect(await c).toEqual({ doubled: 6 });
+  });
+
+  it('a worker that loaded and then died before any progress (out of memory decoding) is the device, not network', async () => {
+    const { engine, workers } = setup();
+    const a = settle(engine.run({ n: 1 }));
+    workers[0]!.reply({ kind: 'started' });
+    workers[0]!.crash();
+    expect(reason(await a)).toBe('device');
   });
 
   it('ignores a stale crash from a replaced worker and replies for other jobs', async () => {

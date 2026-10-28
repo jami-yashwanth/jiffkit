@@ -60,3 +60,6 @@ scope.onmessage = async (e) => {
     scope.postMessage({ kind: 'failed', id, reason: reasonOf(err), ...(err.detectedType ? { detectedType: err.detectedType } : {}) });
   }
 };
+
+// Loaded: from here on, a death of this worker is not the network's (../ai/client.ts).
+scope.postMessage({ kind: 'started' });

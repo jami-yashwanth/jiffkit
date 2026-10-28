@@ -89,6 +89,8 @@ interface Plan {
 const runtimeKey = (webgpu: boolean): ModelKey => (webgpu ? 'ortWebgpu' : 'ortWasm');
 /** The files each set is quantised to, as transformers.js names it. */
 const DTYPE = { whisper: 'q8', whisperGpu: 'q4f16' } as const;
+/** Where a WebGPU plan falls back to: WebAssembly, with its own (q8) files. */
+const ON_CPU: Plan = { model: 'whisper', webgpu: false };
 
 /** Download (first use) the model's files and the runtime, through our loader. */
 async function loadAll(plan: Plan, progress: Progress): Promise<{ files: Map<string, ArrayBuffer>; plan: Plan }> {
@@ -100,7 +102,8 @@ async function loadAll(plan: Plan, progress: Progress): Promise<{ files: Map<str
     if (!plan.webgpu || reasonOf(err) !== 'network') throw err;
     const modelIn = await Promise.all(modelFiles(plan.model).map((f) => isCached(f.url)));
     if (!modelIn.every(Boolean)) throw err;
-    return { files: await loadModelFiles([plan.model, 'ortWasm'], report), plan: { ...plan, webgpu: false } };
+    // With the WebAssembly set of files too (first use): q4f16's 16-bit maths is for GPUs.
+    return { files: await loadModelFiles([ON_CPU.model, 'ortWasm'], report), plan: ON_CPU };
   }
 }
 
@@ -118,7 +121,9 @@ async function ready(webgpu: boolean, progress: Progress): Promise<{ slow: boole
     return (stubLoaded = { slow: !plan.webgpu });
   }
   progress('work', 0, 100);
-  pipe = await startPipeline(byName, files.get(modelUrl(runtimeKey(plan.webgpu)))!, plan);
+  const cpuFiles = async () =>
+    modelFilesByName(await loadModelFiles([ON_CPU.model], (done, total) => progress('download', done, total)), ON_CPU.model);
+  pipe = await startPipeline(byName, files.get(modelUrl(runtimeKey(plan.webgpu)))!, plan, cpuFiles);
   return pipe;
 }
 
@@ -148,6 +153,7 @@ async function startPipeline(
   byName: Map<string, ArrayBuffer>,
   wasm: ArrayBuffer,
   { model, webgpu }: Plan,
+  cpuFiles: () => Promise<Map<string, ArrayBuffer>>,
 ): Promise<{ run: Transcriber; tf: Transformers; slow: boolean }> {
   let ort: typeof import('onnxruntime-web');
   let glue: string;
@@ -173,16 +179,18 @@ async function startPipeline(
   }
   configure(tf, byName);
 
-  const create = (device: 'webgpu' | 'wasm') =>
-    tf.pipeline('automatic-speech-recognition', MODEL_ID, { device, dtype: DTYPE[model] }) as unknown as Promise<Transcriber>;
+  const create = ({ model, webgpu }: Plan) =>
+    tf.pipeline('automatic-speech-recognition', MODEL_ID, { device: webgpu ? 'webgpu' : 'wasm', dtype: DTYPE[model] }) as unknown as Promise<Transcriber>;
   try {
-    return { run: await create(webgpu ? 'webgpu' : 'wasm'), tf, slow: !webgpu };
+    return { run: await create({ model, webgpu }), tf, slow: !webgpu };
   } catch (err) {
     const failure = sessionFailure(err);
     if (webgpu && !failure.badModel) {
-      // WebGPU would not start here: the same runtime also runs on the CPU.
+      // WebGPU would not start here: the same runtime also runs on the CPU, on the WebAssembly set of files (q4f16's
+      // 16-bit maths is for GPUs), downloaded now on first use.
+      configure(tf, await cpuFiles());
       try {
-        return { run: await create('wasm'), tf, slow: true };
+        return { run: await create(ON_CPU), tf, slow: true };
       } catch (again) {
         throw await dropRuntime(sessionFailure(again), webgpu);
       }
@@ -334,3 +342,6 @@ scope.onmessage = async (e) => {
     });
   }
 };
+
+// Loaded: from here on, a death of this worker is not the network's (../client.ts).
+scope.postMessage({ kind: 'started' });

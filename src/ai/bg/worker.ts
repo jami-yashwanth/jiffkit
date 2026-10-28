@@ -10,9 +10,9 @@ import { MODEL_SIZE, composeRGBA, normaliseMask, prepareInput, toModelInput, ups
 // The Remove background worker. A `remove` job decodes the photo (upright, at most 25 MP), runs u2netp on it with
 // onnxruntime-web's WebAssembly backend, and answers with a transparent PNG and a small preview of the photo. The
 // photo and the model's 320² mask stay here, so a `compose` job can put the cut-out on another background without
-// running the model again. Protocol: ../client.ts.
+// running the model again, until a `forget` job (Start over) lets them go. Protocol: ../client.ts.
 
-export type BgRequest = { op: 'remove'; image: ArrayBuffer } | { op: 'compose'; bg: Background };
+export type BgRequest = { op: 'remove'; image: ArrayBuffer } | { op: 'compose'; bg: Background } | { op: 'forget' };
 
 export interface BgResult {
   png: ArrayBuffer;
@@ -95,6 +95,12 @@ async function compose(bg: Background): Promise<BgResult> {
   return { png: await encodeCutout(bg), width: pixels.width, height: pixels.height, downscaled };
 }
 
+/** Let go of the kept photo and mask. Answers with an empty result: there is nothing to show. */
+function forget(): BgResult {
+  kept = null;
+  return { png: new ArrayBuffer(0), width: 0, height: 0, downscaled: false };
+}
+
 /** The AiError a failure stands for: decode failures are a damaged photo, memory exhaustion is the device. */
 function toAiError(err: unknown, op: BgRequest['op']): AiError {
   if (err instanceof AiError) return err;
@@ -110,7 +116,7 @@ scope.onmessage = async (e) => {
   const { id, req } = e.data;
   const progress: Progress = (stage, done, total) => scope.postMessage({ kind: 'progress', id, stage, done, total });
   try {
-    const result = req.op === 'remove' ? await remove(req, progress) : await compose(req.bg);
+    const result = req.op === 'remove' ? await remove(req, progress) : req.op === 'compose' ? await compose(req.bg) : forget();
     scope.postMessage({ kind: 'done', id, result }, result.preview ? [result.png, result.preview] : [result.png]);
   } catch (raw) {
     const err = toAiError(raw, req.op);
@@ -123,3 +129,6 @@ scope.onmessage = async (e) => {
     });
   }
 };
+
+// Loaded: from here on, a death of this worker is not the network's (../client.ts).
+scope.postMessage({ kind: 'started' });

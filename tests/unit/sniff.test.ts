@@ -113,6 +113,20 @@ describe('sniff', () => {
     const ftyp = box('ftyp', [...[...'heic'].map((c) => c.charCodeAt(0)), 0, 0, 0, 0]);
     const blob = (bytes: number[]) => new Blob([new Uint8Array(bytes)]);
 
+    const brands = (...names: string[]) => names.flatMap((n) => [...n].map((c) => c.charCodeAt(0)));
+    const ftypOf = (major: string, ...compatible: string[]) => box('ftyp', [...brands(major), 0, 0, 0, 0, ...brands(...compatible)]);
+
+    it.each(['heic', 'heix', 'heim', 'heis', 'hevc', 'hevx'])('detects the HEVC major brand %s', async (major) => {
+      expect((await sniff(blob(ftypOf(major, 'mif1')))).type).toBe('heic');
+    });
+
+    it('detects a mif1/msf1 file as HEIC only when a compatible brand says HEVC', async () => {
+      expect((await sniff(blob(ftypOf('mif1', 'mif1', 'heic')))).type).toBe('heic');
+      expect((await sniff(blob(ftypOf('msf1', 'msf1', 'hevc')))).type).toBe('heic');
+      expect((await sniff(blob(ftypOf('mif1', 'mif1', 'avif', 'miaf')))).type).toBe('unknown');
+      expect((await sniff(blob(ftypOf('avif', 'mif1', 'miaf')))).type).toBe('unknown');
+    });
+
     it('survives a short ipma', async () => {
       const iprp = box('iprp', [...box('ipco', []), ...box('ipma', [])]);
       const pitm = box('pitm', [0, 0, 0, 0, 0, 1]);

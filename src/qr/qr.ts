@@ -19,6 +19,10 @@ qrcode.stringToBytes = (s: string) => Array.from(encoder.encode(s));
 
 export const byteLength = (text: string): number => encoder.encode(text).length;
 
+/** Why `makeQr` said no. The limit is in UTF-8 bytes, so it says what takes more than one. */
+export const tooMuchText = (max: number, level: Level): string =>
+  `Too much text for a QR code (${max.toLocaleString('en-US')} bytes max at level ${level}; accented letters and emoji take 2–4 bytes each).`;
+
 export function makeQr(text: string, level: Level): QrResult {
   const max = maxBytes(level);
   if (byteLength(text) > max) return { ok: false, max };
