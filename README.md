@@ -1,4 +1,4 @@
-# web-tools
+# jiffkit
 
 Free tools that run entirely in the browser. Files are decoded, converted and re-encoded on the visitor's device and nothing is uploaded. It is a static Astro site with one page per tool, built for search and for speed (under 15 KB of gzip JavaScript before a file is dropped).
 
@@ -111,3 +111,7 @@ These need the product owner (accounts and real devices), so they are not automa
 - Images over 50 MP are refused with an offer to resize to 24 MP first; the limit is a guess until it is tuned on real devices.
 - Animated WebP converts the first frame only.
 - The screenshot spec (`tests/e2e/screenshots.spec.ts`) runs on chromium only and writes to `review/` (gitignored). It is a design-review aid, not an assertion suite.
+
+## Licence
+
+The code is MIT (see `LICENSE`). Third-party libraries and models keep their own licences, listed on `/licenses/`.
