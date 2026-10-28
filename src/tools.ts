@@ -6,6 +6,11 @@ export type ToolSlug =
   | 'compress-image'
   | 'resize-image'
   | 'compress-image-to-kb'
+  | 'compress-image-to-20kb'
+  | 'compress-image-to-50kb'
+  | 'compress-image-to-100kb'
+  | 'compress-image-to-200kb'
+  | 'signature-resize-10-20kb'
   | 'webp-to-jpg'
   | 'png-to-jpg'
   | 'jpg-to-png'
@@ -27,7 +32,7 @@ export type ToolSlug =
   | 'compress-video'
   | 'video-to-gif'
   | DevSlug;
-export type ImageSlug = 'heic-to-jpg' | 'compress-image' | 'resize-image' | 'compress-image-to-kb' | 'webp-to-jpg' | 'png-to-jpg' | 'jpg-to-png';
+export type ImageSlug = 'heic-to-jpg' | 'compress-image' | 'resize-image' | 'compress-image-to-kb' | 'compress-image-to-20kb' | 'compress-image-to-50kb' | 'compress-image-to-100kb' | 'compress-image-to-200kb' | 'signature-resize-10-20kb' | 'webp-to-jpg' | 'png-to-jpg' | 'jpg-to-png';
 export type Category = 'image' | 'pdf' | 'ai' | 'video' | 'developer' | 'qr';
 export type OutFormat = 'jpg' | 'png' | 'webp';
 export type InType = 'heic' | 'jpg' | 'png' | 'webp';
@@ -42,6 +47,8 @@ interface ToolBase {
   howTo: [string, string, string];
   faq: { q: string; a: string }[];
   related: ToolSlug[];
+  /** A landing page: this tool again, with its own copy for a search. It has a page, but no tag on the homepage wall. */
+  landingOf?: ToolSlug;
 }
 
 export type ImageTool = ToolBase & {
@@ -51,6 +58,8 @@ export type ImageTool = ToolBase & {
   acceptAttr: string; // value for <input accept>
   outputs: OutFormat[] | 'same'; // 'same' = keep input format
   defaults: { format?: OutFormat; quality: number };
+  /** Compress to a size (src/engine/target.ts). `editable`: the page has a KB box. */
+  target?: { maxKB: number; minKB?: number; editable?: boolean };
   emptyCopy: string;
 };
 export type PdfTool = ToolBase & { kind: 'pdf'; op: 'merge' | 'split' | 'rotate' | 'to-images' | 'from-images' };
@@ -206,22 +215,256 @@ const IMAGE_TOOLS: ImageTool[] = [
     related: ['compress-image', 'upscale-image', 'jpg-to-pdf'],
   },
   {
-    // Task 2 stub: Task 3 writes the page.
     kind: 'image',
     category: 'image',
     slug: 'compress-image-to-kb',
-    title: 'Compress Image to KB',
-    description: 'stub',
+    title: 'Compress Image to KB - Any Size, Free, No Upload',
+    description:
+      'Compress a photo to any size in KB, like 20 KB or 100 KB, in your browser. You get a JPG under your limit, and nothing is uploaded. Free, no sign-up.',
     h1: 'Compress image to KB',
-    subhead: '',
+    subhead: 'Get a photo under the size an upload form allows. Nothing leaves your device.',
     accepts: ['jpg', 'png', 'webp', 'heic'],
     acceptAttr: '.jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif',
     outputs: ['jpg'],
     defaults: { format: 'jpg', quality: 92 },
+    target: { maxKB: 100, editable: true },
     emptyCopy: 'Drop images here',
-    howTo: ['', '', ''],
-    faq: [],
-    related: [],
+    howTo: [
+      'Drop your photos onto the page, or choose them from your device. JPG, PNG, WebP and HEIC all work.',
+      'Enter the size you need in KB. Change it any time and every image is compressed again.',
+      'Download each JPG, or download them all in one ZIP file.',
+    ],
+    faq: [
+      {
+        q: 'Are my photos uploaded anywhere?',
+        a: 'No. Compression runs entirely in your browser. Your photos, their names and their pixels never leave your device and are never sent to a server.',
+      },
+      {
+        q: 'How does it hit the size?',
+        a: 'It tries JPEG quality settings from high to low and keeps the best one that fits under your limit. If even a low quality is too big, the image is made smaller in pixels until it fits.',
+      },
+      {
+        q: 'Why is the result always a JPG?',
+        a: 'Upload forms almost always ask for JPG or JPEG, and only a lossy format can be squeezed to a set size. Transparent areas become white, and location data is removed from every file.',
+      },
+      {
+        q: 'Is a KB 1,000 or 1,024 bytes here?',
+        a: 'We count the safe way: a limit of 100 KB gives a file of at most 100,000 bytes, so it passes whichever way a form counts a kilobyte.',
+      },
+      {
+        q: 'What if a form also has a minimum size?',
+        a: 'For the common 10 to 20 KB signature range, use Resize signature, which checks both ends. Elsewhere, if a result is under the minimum, start from a larger or sharper original.',
+      },
+    ],
+    related: ['compress-image', 'resize-image', 'signature-resize-10-20kb'],
+  },
+  {
+    kind: 'image',
+    category: 'image',
+    slug: 'compress-image-to-20kb',
+    landingOf: 'compress-image-to-kb',
+    title: 'Compress Image to 20 KB - Free, No Upload',
+    description:
+      'Make a photo 20 KB or smaller for an online form, in your browser. You get a JPG that fits the limit, and nothing is uploaded. Works on phones too.',
+    h1: 'Compress image to 20 KB',
+    subhead: 'Get a photo under 20 KB for an upload form. Nothing leaves your device.',
+    accepts: ['jpg', 'png', 'webp', 'heic'],
+    acceptAttr: '.jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif',
+    outputs: ['jpg'],
+    defaults: { format: 'jpg', quality: 92 },
+    target: { maxKB: 20 },
+    emptyCopy: 'Drop a photo here',
+    howTo: [
+      'Drop your photo onto the page, or choose it from your device.',
+      'Wait a moment while it is compressed to 20 KB or less on your device.',
+      'Download the JPG and upload it to your form.',
+    ],
+    faq: [
+      {
+        q: 'Is my photo uploaded anywhere?',
+        a: 'No. Your photo is compressed in your browser and never leaves your device. That matters for ID photos and signatures, which are worth keeping off servers you do not know.',
+      },
+      {
+        q: 'Why did my photo get smaller in pixels?',
+        a: '20 KB is very little room. A phone photo has millions of pixels, so to fit, the image is made smaller, often a few hundred pixels across. Forms with a 20 KB limit expect a small image.',
+      },
+      {
+        q: 'Will it still look clear?',
+        a: 'Quality never drops to the point where faces and text break into blocks. Before that happens, the image is made smaller instead, which keeps it clean at its new size.',
+      },
+      {
+        q: 'What file do I get?',
+        a: 'A JPG of at most 20,000 bytes, so it passes a 20 KB limit whichever way the form counts a kilobyte. Location data is removed.',
+      },
+      {
+        q: 'What if the form asks for 10 to 20 KB?',
+        a: 'Signature uploads often set a minimum as well. Use Resize signature, which checks both ends and tells you if the result is under 10 KB.',
+      },
+    ],
+    related: ['compress-image-to-50kb', 'signature-resize-10-20kb', 'compress-image-to-kb'],
+  },
+  {
+    kind: 'image',
+    category: 'image',
+    slug: 'compress-image-to-50kb',
+    landingOf: 'compress-image-to-kb',
+    title: 'Compress Image to 50 KB - Free, Private, No Upload',
+    description:
+      'Shrink a photo to 50 KB or less for application forms, admit cards and job portals. It runs in your browser and nothing is uploaded. Free, no sign-up.',
+    h1: 'Compress image to 50 KB',
+    subhead: 'Fit a photo under a 50 KB upload limit. Your photo stays on your device.',
+    accepts: ['jpg', 'png', 'webp', 'heic'],
+    acceptAttr: '.jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif',
+    outputs: ['jpg'],
+    defaults: { format: 'jpg', quality: 92 },
+    target: { maxKB: 50 },
+    emptyCopy: 'Drop a photo here',
+    howTo: [
+      'Drop your photo onto the page, or choose it from your device.',
+      'It is compressed to 50 KB or less right away, on your device.',
+      'Download the JPG. Check it looks right, then upload it.',
+    ],
+    faq: [
+      {
+        q: 'Is my photo sent to a server?',
+        a: 'No. Everything happens in your browser. The photo and its name never leave your device, and there is no account to create.',
+      },
+      {
+        q: 'How much detail is kept at 50 KB?',
+        a: 'Enough for a clear face or a signed page at a modest size. The photo keeps the highest quality that fits, and a very large photo is also made smaller in pixels.',
+      },
+      {
+        q: 'Can I do several photos at once?',
+        a: 'Yes. Drop them together. Each one is compressed to 50 KB or less, and you can download them all as a ZIP.',
+      },
+      {
+        q: 'Why do I get a JPG?',
+        a: 'Most application portals accept only JPG or JPEG. PNG, WebP and HEIC photos are converted, transparent areas become white, and location data is removed.',
+      },
+    ],
+    related: ['compress-image-to-20kb', 'compress-image-to-100kb', 'compress-image-to-kb'],
+  },
+  {
+    kind: 'image',
+    category: 'image',
+    slug: 'compress-image-to-100kb',
+    landingOf: 'compress-image-to-kb',
+    title: 'Compress Image to 100 KB - Free, No Upload',
+    description:
+      'Bring a photo or document scan under 100 KB in your browser, keeping text readable. Nothing is uploaded, and location data is removed. Free, no sign-up.',
+    h1: 'Compress image to 100 KB',
+    subhead: 'Get an ID photo or a document scan under 100 KB. Nothing leaves your device.',
+    accepts: ['jpg', 'png', 'webp', 'heic'],
+    acceptAttr: '.jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif',
+    outputs: ['jpg'],
+    defaults: { format: 'jpg', quality: 92 },
+    target: { maxKB: 100 },
+    emptyCopy: 'Drop a photo or scan here',
+    howTo: [
+      'Drop your photo or scan onto the page, or choose it from your device.',
+      'It is compressed to 100 KB or less on your device, keeping as much detail as fits.',
+      'Download the JPG, and check the text is readable before you upload it.',
+    ],
+    faq: [
+      {
+        q: 'Is my document uploaded anywhere?',
+        a: 'No. The scan is compressed in your browser and never leaves your device. For ID documents, that means no copy is left on someone else’s server.',
+      },
+      {
+        q: 'Will the text on my scan stay readable?',
+        a: 'Usually, yes. 100 KB holds a page-sized scan at a sharp quality. A very large scan is made smaller in pixels first, so check the result before you upload it.',
+      },
+      {
+        q: 'Can I compress a screenshot or a PNG scan?',
+        a: 'Yes. PNG, WebP and HEIC work too. The result is always a JPG, because that is what upload forms accept, and transparent areas become white.',
+      },
+      {
+        q: 'Is location data removed?',
+        a: 'Yes. Photos taken on a phone often record where they were taken. The JPG is built from the pixels alone, so that location is left out.',
+      },
+    ],
+    related: ['compress-image-to-50kb', 'compress-image-to-200kb', 'compress-image-to-kb'],
+  },
+  {
+    kind: 'image',
+    category: 'image',
+    slug: 'compress-image-to-200kb',
+    landingOf: 'compress-image-to-kb',
+    title: 'Compress Image to 200 KB - Keep Detail, No Upload',
+    description:
+      'Reduce a photo or certificate to 200 KB or less while keeping fine detail, right in your browser. Nothing is uploaded. Free, and many images at once.',
+    h1: 'Compress image to 200 KB',
+    subhead: 'Shrink photos and certificates to 200 KB and keep the detail. Nothing is uploaded.',
+    accepts: ['jpg', 'png', 'webp', 'heic'],
+    acceptAttr: '.jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif',
+    outputs: ['jpg'],
+    defaults: { format: 'jpg', quality: 92 },
+    target: { maxKB: 200 },
+    emptyCopy: 'Drop images here',
+    howTo: [
+      'Drop your photos or certificates onto the page, or choose them from your device.',
+      'Each one is compressed to 200 KB or less on your device.',
+      'Download each JPG, or all of them in one ZIP file.',
+    ],
+    faq: [
+      {
+        q: 'Do my files leave my device?',
+        a: 'No. They are compressed in your browser and never leave your device. No file, name or pixel is sent to a server.',
+      },
+      {
+        q: 'Will a 200 KB photo look like the original?',
+        a: 'Close to it on a screen. 200 KB leaves room for a high quality setting, so most phone photos keep their look, at a smaller pixel size if they were very large.',
+      },
+      {
+        q: 'Is 200 KB small enough to email?',
+        a: 'Yes. A 200 KB image sends quickly on any connection and sits well under email attachment limits, even several at once.',
+      },
+      {
+        q: 'What about location and other photo data?',
+        a: 'The JPG holds the picture only. Location, camera details and other metadata are not copied over.',
+      },
+    ],
+    related: ['compress-image-to-100kb', 'compress-image-to-kb', 'jpg-to-pdf'],
+  },
+  {
+    kind: 'image',
+    category: 'image',
+    slug: 'signature-resize-10-20kb',
+    title: 'Resize Signature to 10-20 KB - Free, No Upload',
+    description:
+      'Resize a scanned signature to between 10 and 20 KB as a JPG, in your browser. Nothing is uploaded, and the size is checked at both ends. Free, no sign-up.',
+    h1: 'Resize signature to 10–20 KB',
+    subhead: 'Get a signature JPG between 10 and 20 KB for an online form. It never leaves your device.',
+    accepts: ['jpg', 'png', 'webp', 'heic'],
+    acceptAttr: '.jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif',
+    outputs: ['jpg'],
+    defaults: { format: 'jpg', quality: 92 },
+    target: { maxKB: 20, minKB: 10 },
+    emptyCopy: 'Drop a signature here',
+    howTo: [
+      'Sign on plain white paper and take a photo or scan, cropped close to the ink.',
+      'Drop it onto the page, or choose it from your device.',
+      'Download the JPG. The page tells you if it came out under 10 KB.',
+    ],
+    faq: [
+      {
+        q: 'Is my signature uploaded anywhere?',
+        a: 'No. It is resized in your browser and never leaves your device. A signature is worth keeping off servers you do not know.',
+      },
+      {
+        q: 'Why is my signature under 10 KB?',
+        a: 'A clean signature on white paper has little detail, so even at the highest quality it can be smaller than 10 KB. Take the photo closer or scan at a higher resolution, then try again. We never pad a file to look bigger.',
+      },
+      {
+        q: 'Should I crop it first?',
+        a: 'Yes. Crop close to the ink and leave a small white margin. Extra paper adds nothing and can make the signature look tiny on the form.',
+      },
+      {
+        q: 'What happens to a transparent PNG signature?',
+        a: 'A JPG cannot be transparent, so the background becomes white, which is what signature uploads expect. Location data is removed too.',
+      },
+    ],
+    related: ['compress-image-to-20kb', 'compress-image-to-kb', 'jpg-to-pdf'],
   },
   {
     kind: 'image',
@@ -875,6 +1118,7 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
     op: 'from-images',
     category: 'pdf',
     slug: 'png-to-pdf',
+    landingOf: 'jpg-to-pdf',
     title: 'PNG to PDF - Convert PNG Images to PDF, No Upload',
     description:
       'Turn PNG images and screenshots into one PDF in your browser, without losing quality. Choose the order and page size. Nothing is uploaded. Free, no sign-up.',
@@ -914,6 +1158,7 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
     op: 'from-images',
     category: 'pdf',
     slug: 'image-to-pdf',
+    landingOf: 'jpg-to-pdf',
     title: 'Image to PDF - Convert Photos to PDF, Free, No Upload',
     description:
       'Convert photos, scans and screenshots to PDF in your browser: JPG, PNG, WebP and iPhone HEIC. Pick the order and page size. Nothing is uploaded. Free.',
@@ -1031,8 +1276,8 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
 const DEVELOPER_TOOLS: DevTool[] = DEV_TOOLS.map((t) => ({ ...t, kind: 'dev', category: 'developer' }));
 
 export const TOOLS: Tool[] = [...IMAGE_TOOLS, ...OTHER_TOOLS, ...ROUND_3_TOOLS, ...DEVELOPER_TOOLS];
-/** The tools the homepage lists: everything but the developer tools, which live on /developer/. */
-export const HOME_TOOLS: Tool[] = TOOLS.filter((t) => t.kind !== 'dev');
+/** The tools the homepage lists: everything but the developer tools (on /developer/) and landing pages. */
+export const HOME_TOOLS: Tool[] = TOOLS.filter((t) => t.kind !== 'dev' && !t.landingOf);
 
 export function getTool(slug: ToolSlug): Tool {
   const tool = TOOLS.find((t) => t.slug === slug);

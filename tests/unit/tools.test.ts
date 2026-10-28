@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { TOOLS, HOME_TOOLS, CATEGORY_LABEL, getTool, getImageTool, toolForType } from '../../src/tools';
+import { placeOf } from '../../src/wall';
 import { DEV_TOOLS } from '../../src/dev/tools';
 
 describe('tool registry', () => {
@@ -27,6 +28,12 @@ describe('tool registry', () => {
         'base64-encode-decode',
         'compress-image',
         'resize-image',
+        'compress-image-to-kb',
+        'compress-image-to-20kb',
+        'compress-image-to-50kb',
+        'compress-image-to-100kb',
+        'compress-image-to-200kb',
+        'signature-resize-10-20kb',
         'png-to-jpg',
         'jpg-to-png',
         'rotate-pdf',
@@ -198,6 +205,58 @@ describe('tool registry', () => {
     expect(faq('png-to-jpg')).toMatch(/transparent areas become white/);
     expect(faq('resize-image')).toMatch(/only makes images smaller/);
     expect(faq('rotate-pdf')).toMatch(/every page turns the same way/);
+  });
+
+  it('the six target-size tools', () => {
+    const want = {
+      'compress-image-to-kb': { maxKB: 100, editable: true },
+      'compress-image-to-20kb': { maxKB: 20 },
+      'compress-image-to-50kb': { maxKB: 50 },
+      'compress-image-to-100kb': { maxKB: 100 },
+      'compress-image-to-200kb': { maxKB: 200 },
+      'signature-resize-10-20kb': { maxKB: 20, minKB: 10 },
+    } as const;
+    for (const [slug, target] of Object.entries(want)) {
+      const t = getImageTool(slug as keyof typeof want);
+      expect(t.target, slug).toEqual(target);
+      expect(t.outputs, slug).toEqual(['jpg']);
+      expect(t.accepts, slug).toEqual(['jpg', 'png', 'webp', 'heic']);
+    }
+  });
+
+  it('landing pages point at a real tool that is on the wall, and are not on it themselves', () => {
+    const landings = TOOLS.filter((t) => t.landingOf);
+    expect(landings.map((t) => t.slug).sort()).toEqual(
+      ['compress-image-to-100kb', 'compress-image-to-200kb', 'compress-image-to-20kb', 'compress-image-to-50kb', 'image-to-pdf', 'png-to-pdf'],
+    );
+    for (const t of landings) {
+      expect(HOME_TOOLS.some((h) => h.slug === t.landingOf), t.slug).toBe(true);
+      expect(HOME_TOOLS.some((h) => h.slug === t.slug), t.slug).toBe(false);
+    }
+  });
+
+  it('no two size pages share a title, a description or an FAQ answer', () => {
+    const pages = ['compress-image-to-20kb', 'compress-image-to-50kb', 'compress-image-to-100kb', 'compress-image-to-200kb', 'compress-image-to-kb'] as const;
+    const all = (f: (t: ReturnType<typeof getTool>) => string[]) => pages.flatMap((s) => f(getTool(s)));
+    for (const values of [all((t) => [t.title]), all((t) => [t.description]), all((t) => t.faq.map((q) => q.a))]) {
+      expect(new Set(values).size).toBe(values.length);
+    }
+  });
+
+  it('every tool, landing pages included, has a place', () => {
+    for (const t of TOOLS) expect(placeOf(t.slug), t.slug).toBeDefined();
+    expect(placeOf('compress-image-to-20kb').zone).toBe('image');
+    expect(placeOf('png-to-pdf').zone).toBe('pdf');
+  });
+
+  it('target-size pages never claim an exam spec, and say nothing is uploaded', () => {
+    for (const t of TOOLS) {
+      if (t.kind !== 'image' || !t.target) continue;
+      const text = [t.title, t.description, t.subhead, ...t.howTo, ...t.faq.flatMap((f) => [f.q, f.a])].join(' ');
+      expect(text, t.slug).not.toMatch(/\b(SSC|IBPS|UPSC|NSDL|PAN card|Aadhaar|GDS|NEET|JEE)\b/);
+      expect(t.faq.map((f) => f.a).join(' '), t.slug).toMatch(/never leaves? (your|this) device|never (sent|uploaded)|not uploaded/i);
+      expect(t.faq.map((f) => f.a).join(' '), t.slug).toMatch(/location/i);
+    }
   });
 
   it('maps input types to tools', () => {

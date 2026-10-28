@@ -7,11 +7,11 @@ const zone = (page: import('@playwright/test').Page, name: string) => page.getBy
 test('the homepage wall hangs every tool in its zone', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('a.tag')).toHaveCount(23);
-  for (const [name, count] of [['Image', 6], ['PDF', 7], ['AI', 4], ['Video', 2], ['Developer', 4]] as const) {
+  for (const [name, count] of [['Image', 8], ['PDF', 5], ['AI', 4], ['Video', 2], ['Developer', 4]] as const) {
     await expect(zone(page, name).locator('a.tag')).toHaveCount(count);
   }
   const hrefs = await zone(page, 'PDF').locator('a.tag').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
-  expect(hrefs).toEqual(['/merge-pdf/', '/split-pdf/', '/rotate-pdf/', '/pdf-to-jpg/', '/jpg-to-pdf/', '/png-to-pdf/', '/image-to-pdf/']);
+  expect(hrefs).toEqual(['/merge-pdf/', '/split-pdf/', '/rotate-pdf/', '/pdf-to-jpg/', '/jpg-to-pdf/']);
   await expect(zone(page, 'Developer').getByRole('link', { name: /QR code generator/ })).toBeVisible();
 });
 

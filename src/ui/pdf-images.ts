@@ -195,7 +195,8 @@ function createImageConverter() {
     async convert(id: string, file: File, type: 'heic' | 'webp'): Promise<Done> {
       const e = await get().catch(() => Promise.reject(new ImageFail('codec-load')));
       return new Promise<Done>((ok, no) => {
-        waiting.set(id, { ok, no: (reason) => no(new ImageFail(reason === 'wrong-type' ? 'corrupt' : reason)) });
+        // No target size here, so cannot-fit never comes back; a wrong type is a file we couldn't read.
+        waiting.set(id, { ok, no: (reason) => no(new ImageFail(reason === 'wrong-type' || reason === 'cannot-fit' ? 'corrupt' : reason)) });
         e.enqueue({ id, file, tool: type === 'heic' ? 'heic-to-jpg' : 'webp-to-jpg', options: type === 'heic' ? {} : { format: 'png' } });
       }).finally(() => waiting.delete(id));
     },

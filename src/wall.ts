@@ -43,6 +43,11 @@ export const PLACE = new Map<ToolSlug, { zone: ZoneId; label: string }>();
 for (const z of [...HOME_ZONES.filter((z) => z.id !== 'developer'), ...DEV_ZONES]) {
   for (const t of z.tools) PLACE.set(t.slug, { zone: z.id, label: z.label });
 }
+// A landing page has no tag of its own: it lives in its category's zone.
+for (const t of TOOLS) if (!PLACE.has(t.slug)) {
+  const z = HOME_ZONES.find((z) => z.id === t.category)!;
+  PLACE.set(t.slug, { zone: z.id, label: z.label });
+}
 export const placeOf = (slug: ToolSlug) => PLACE.get(slug)!;
 
 /** What goes in and what comes out, shown on every tool's bench before anything runs. */
@@ -50,6 +55,12 @@ export const IO: Record<ToolSlug, [string, string]> = {
   'heic-to-jpg': ['HEIC', 'JPG'],
   'compress-image': ['JPG · PNG · WebP', 'the same format, smaller'],
   'resize-image': ['JPG · PNG · WebP', 'the same format, a set size'],
+  'compress-image-to-kb': ['JPG · PNG · WebP · HEIC', 'a JPG under the size you set'],
+  'compress-image-to-20kb': ['JPG · PNG · WebP · HEIC', 'a JPG of 20 KB or less'],
+  'compress-image-to-50kb': ['JPG · PNG · WebP · HEIC', 'a JPG of 50 KB or less'],
+  'compress-image-to-100kb': ['JPG · PNG · WebP · HEIC', 'a JPG of 100 KB or less'],
+  'compress-image-to-200kb': ['JPG · PNG · WebP · HEIC', 'a JPG of 200 KB or less'],
+  'signature-resize-10-20kb': ['a signature photo or scan', 'a JPG between 10 and 20 KB'],
   'webp-to-jpg': ['WebP', 'JPG or PNG'],
   'png-to-jpg': ['PNG', 'JPG'],
   'jpg-to-png': ['JPG', 'PNG'],

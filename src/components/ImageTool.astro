@@ -25,6 +25,13 @@ const CODEC_SIZE: Record<ImageSlug, string> = {
   'heic-to-jpg': '0.8 MB',
   'compress-image': '0.5 MB',
   'resize-image': '0.5 MB',
+  // The JPG, PNG and WebP decoders and the JPG encoder; a HEIC loads the 0.8 MB HEIC codec as well.
+  'compress-image-to-kb': '0.3 MB',
+  'compress-image-to-20kb': '0.3 MB',
+  'compress-image-to-50kb': '0.3 MB',
+  'compress-image-to-100kb': '0.3 MB',
+  'compress-image-to-200kb': '0.3 MB',
+  'signature-resize-10-20kb': '0.3 MB',
   'webp-to-jpg': '0.3 MB',
   'png-to-jpg': '0.2 MB',
   'jpg-to-png': '0.2 MB',
