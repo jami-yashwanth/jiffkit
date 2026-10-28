@@ -57,10 +57,14 @@ async function bestQuality(p: Pixels, maxBytes: number, encode: Encode): Promise
   return best;
 }
 
-export async function fitToSize(p: Pixels, t: TargetBytes, encode: Encode): Promise<Fit | 'cannot-fit'> {
+/**
+ * `keepSize`: start from the image's own size, not the estimate. For a file that already fits, which should come back
+ * at its own size whenever a quality of at least 40 allows it.
+ */
+export async function fitToSize(p: Pixels, t: TargetBytes, encode: Encode, opts: { keepSize?: boolean } = {}): Promise<Fit | 'cannot-fit'> {
   // One bit per pixel is a generous estimate for a quality-40 JPEG: start no larger, so a 12 MP photo is not
   // encoded at full size again and again.
-  let pixels = downscaleTo(p, (t.maxBytes * 8) / 1e6);
+  let pixels = opts.keepSize ? p : downscaleTo(p, (t.maxBytes * 8) / 1e6);
   let shrunk = pixels !== p;
   for (let round = 0; round <= MAX_ROUNDS; round++) {
     let found = await bestQuality(pixels, t.maxBytes, encode);

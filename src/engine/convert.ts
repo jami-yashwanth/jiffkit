@@ -149,7 +149,7 @@ export async function convert(
     if (box) {
       const [w, h] = fitWithin(pixels.width, pixels.height, box);
       if (w < pixels.width || h < pixels.height) pixels = resizeBox(pixels, w, h);
-      else notes.push('not-enlarged');
+      else if (!sized) notes.push('not-enlarged'); // a size job reports its own shrinking
     }
     if (format === 'jpg' && pixels.hasAlpha) {
       pixels = flattenOnWhite(pixels);
@@ -158,7 +158,9 @@ export async function convert(
 
     progress('encoding');
     if (sized) {
-      const fit = await fitToSize(pixels, bytesFor(sized), (p, q) => encode(p, 'jpg', q));
+      const budget = bytesFor(sized);
+      const fits = file.size <= budget.maxBytes; // already small enough: keep its pixels if a quality of 40+ allows
+      const fit = await fitToSize(pixels, budget, (p, q) => encode(p, 'jpg', q), { keepSize: fits });
       if (fit === 'cannot-fit') return fail('cannot-fit');
       if (fit.shrunk) notes.push('shrunk-to-fit');
       if (fit.underMinimum) notes.push('under-minimum');

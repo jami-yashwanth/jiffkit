@@ -103,6 +103,12 @@ describe('fitToSize', () => {
     for (const c of calls) expect(c.w).toBeLessThanOrEqual(2000);
   });
 
+  it('keepSize starts from the original instead of the estimate', async () => {
+    const { encode, calls } = stub(0.1);
+    await fitToSize(image(2000, 1500), { maxBytes: 50_000 }, encode, { keepSize: true });
+    expect([calls[0]!.w, calls[0]!.h]).toEqual([2000, 1500]);
+  });
+
   it('retries quality 100 for a minimum, and never pads', async () => {
     // k = 0.05: quality 92 is 5,520 bytes and quality 100 is 6,000, both under a 10,240-byte minimum.
     const { encode, calls } = stub(0.05);

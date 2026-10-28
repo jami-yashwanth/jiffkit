@@ -149,6 +149,21 @@ describe('convert: target size', () => {
     expect(d.outBytes).toBeLessThan(10_240);
   });
 
+  it('a fit-within box larger than the image adds no "kept" note to a size job', async () => {
+    const d = await done(job('photo.jpg', 'compress-image-to-kb', { target: { maxKB: 5 }, resize: { width: 5000 } }));
+    expect(d.notes).toContain('shrunk-to-fit');
+    expect(d.notes).not.toContain('not-enlarged');
+  }, 60_000);
+
+  it('a JPG that already fits keeps its pixel size', async () => {
+    const j = job('photo.jpg', 'compress-image-to-kb');
+    j.options = { target: { maxKB: Math.ceil(j.file.size / 1000) + 1 } };
+    const d = await done(j);
+    expect([d.width, d.height]).toEqual([1600, 1200]);
+    expect(d.notes).not.toContain('shrunk-to-fit');
+    expect(d.outBytes).toBeLessThanOrEqual(j.options.target!.maxKB * 1000);
+  }, 60_000);
+
   it('an impossible target is cannot-fit', async () => {
     expect((await failed(job('photo.jpg', 'compress-image-to-kb', { target: { maxKB: 0.05 } }))).reason).toBe('cannot-fit');
   }, 60_000);
