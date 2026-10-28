@@ -174,12 +174,21 @@ main { padding-top: var(--s5); }
 .zone-mark { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; background: var(--paper); color: var(--zone-ink); } /* white, so it stands off the zone's own wash */
 .zone-head h2 small { font-size: inherit; font-weight: 500; color: var(--ink-muted); }
 .zone-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.9375rem; font-weight: 600; }
+/* The homepage wall, sized to what each zone holds (Image 6, PDF 7, AI 4, Video 2, Developer 4) so no zone is a
+   tall column beside a short one. A tablet stacks the zones as bands of four tags; a desktop sets them on seven
+   tracks, a zone taking one track per tag column: Image 3 + PDF 4 (two rows each), AI 4 + Video 3 (one row), then
+   Developer across. Adding a home tool means checking these counts. */
 @media (min-width: 720px) {
-  .wall-home { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .wall-home [data-zone='image'] { grid-column: span 2; } .wall-home [data-zone='pdf'] { grid-column: span 2; }
-  .wall-home [data-zone='ai'] { grid-column: span 2; } .wall-home [data-zone='video'] { grid-column: span 2; }
-  .wall-home [data-zone='developer'] { grid-column: span 4; }
+  .wall-home .pegs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .wall-dev { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1200px) { /* narrower, a one-track tag is too thin for "Base64 encode and decode" on two lines */
+  .wall-home { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .wall-home .zone { grid-column: span var(--tracks); }
+  .wall-home .pegs { grid-template-columns: repeat(var(--tracks), minmax(0, 1fr)); }
+  .wall-home [data-zone='image'], .wall-home [data-zone='video'] { --tracks: 3; }
+  .wall-home [data-zone='pdf'], .wall-home [data-zone='ai'] { --tracks: 4; }
+  .wall-home [data-zone='developer'] { --tracks: 7; }
 }
 @media (min-width: 1100px) { .wall-dev { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
@@ -189,6 +198,8 @@ main { padding-top: var(--s5); }
   background: #fff; border: 1px solid var(--line); border-radius: var(--radius); color: var(--ink); text-decoration: none;
   transition: border-color var(--ease);
 }
+/* Every tag on a wall is as tall as a two-line name, so tags line up across zones whatever their names. */
+.wall .tag { min-height: 7.75rem; }
 .tag-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--zone-tint); color: var(--zone-ink); line-height: 0; transition: transform 160ms var(--ease-out); }
 a.tag:hover .tag-icon { transform: translateY(-2px); }
 .tag-name { font-size: 1rem; font-weight: 650; line-height: 1.3; letter-spacing: -0.01em; }
