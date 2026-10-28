@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import jsQR from 'jsqr';
-import { makeQr, maxBytes, toSvg, type Level } from '../../src/qr/qr';
+import { makeQr, maxBytes, toSvg, tooMuchText, type Level } from '../../src/qr/qr';
 
 /** Render the matrix to RGBA (4-module quiet zone) so a real decoder can read it back. */
 function decode(text: string, level: Level) {
@@ -69,5 +69,15 @@ describe('toSvg', () => {
   it('offsets the first dark module by the 4-module quiet zone', () => {
     // The top-left finder pattern starts dark at module (0,0) -> drawn at (4,4).
     expect(svg).toMatch(/M4 4h\d+v1h-\d+z/);
+  });
+});
+
+describe('too much text', () => {
+  it('states the limit in bytes, as makeQr counts it', () => {
+    const r = makeQr('é'.repeat(maxBytes('L') / 2 + 1), 'L'); // 2 bytes each: fewer characters than the limit
+    expect(r.ok).toBe(false);
+    const message = tooMuchText((r as { max: number }).max, 'L');
+    expect(message).toContain('2,953 bytes max at level L');
+    expect(message).not.toContain('characters max');
   });
 });

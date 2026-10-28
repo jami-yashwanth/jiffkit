@@ -10,6 +10,8 @@ export interface EngineClient {
   pending(): number;
   /** Throw away the worker (and the codec modules it loaded) and continue with a fresh one. Used by "Try again". */
   restart(): void;
+  /** Drop every job not yet started ("Convert more"). The one running finishes; its answer is the caller's to ignore. */
+  clear(): void;
 }
 
 const defaultWorkerFactory = (): Worker => new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
@@ -132,6 +134,9 @@ export function createEngine(workerFactory: () => Worker = defaultWorkerFactory)
       if (inFlight) queue.unshift(inFlight);
       inFlight = null;
       next();
+    },
+    clear() {
+      queue.length = 0;
     },
   };
 }

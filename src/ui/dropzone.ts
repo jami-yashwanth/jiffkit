@@ -104,7 +104,10 @@ export function mount(el: HTMLElement): void {
     row.state = { kind: 'queued' };
     render(row);
     getEngine().then(
-      (e) => e.enqueue({ id: row.id, file: row.file, tool, options: row.options }),
+      (e) => {
+        // Not when "Convert more" cleared the row while the engine loaded.
+        if (rows.get(row.id) === row) e.enqueue({ id: row.id, file: row.file, tool, options: row.options });
+      },
       () => onFailed({ id: row.id, reason: 'codec-load' }),
     );
   }
@@ -227,6 +230,7 @@ export function mount(el: HTMLElement): void {
   let batch = 0; // bumped by "Convert more", so work started for an earlier batch can tell it is stale
   moreBtn.addEventListener('click', () => {
     batch++;
+    void engine?.then((e) => e.clear(), () => {}); // the files still waiting are not converted
     for (const row of rows.values()) {
       if (row.state.kind !== 'done') continue;
       URL.revokeObjectURL(row.state.url);

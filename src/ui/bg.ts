@@ -200,6 +200,9 @@ export function bgDef(): AiToolDef<BgOut> {
         clearTimeout(timer);
         pngs.clear();
         URL.revokeObjectURL(before);
+        // The worker keeps the photo and its mask for re-composing: let them go too. (Before a new photo this runs
+        // ahead of its `remove`, as jobs run in order.) A worker that is gone kept nothing.
+        bgEngine.run({ op: 'forget' }).catch(() => {});
       };
     },
   };

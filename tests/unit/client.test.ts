@@ -260,6 +260,21 @@ describe('engine client', () => {
     expect(events).toEqual(['done:a']);
   });
 
+  it('clear() drops the jobs not yet started; the running one still answers', () => {
+    const { engine, workers, events } = setup();
+    engine.enqueue(job('a'));
+    engine.enqueue(job('b'));
+    engine.enqueue(job('c'));
+    engine.clear();
+    expect(engine.pending()).toBe(1);
+    workers[0]!.reply(done('a'));
+    expect(events).toEqual(['done:a']);
+    expect(workers[0]!.jobIds).toEqual(['a']);
+    expect(engine.pending()).toBe(0);
+    engine.enqueue(job('d'));
+    expect(workers[0]!.jobIds).toEqual(['a', 'd']);
+  });
+
   it('forwards preload to the worker', () => {
     const { engine, workers } = setup();
     engine.preload(['heic']);

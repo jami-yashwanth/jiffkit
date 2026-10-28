@@ -77,3 +77,6 @@ scope.onmessage = async (e) => {
     });
   }
 };
+
+// Loaded: from here on, a death of this worker is not the network's (../client.ts).
+scope.postMessage({ kind: 'started' });

@@ -76,12 +76,12 @@ test('too much text names the limit for the level, and recovers', async ({ page 
   await page.getByText('Options').click();
   await page.getByLabel('L', { exact: true }).check();
   await input(page).fill('a'.repeat(2954));
-  await expect(status(page)).toHaveText('Too much text for a QR code (2,953 characters max at level L).');
+  await expect(status(page)).toHaveText('Too much text for a QR code (2,953 bytes max at level L; accented letters and emoji take 2–4 bytes each).');
   await expect(preview(page)).toHaveText('Your QR code appears here.');
   await expect(button(page, 'Download PNG')).toBeDisabled();
   // A higher level has a lower limit: the message follows the selection.
   await page.getByLabel('H', { exact: true }).check();
-  await expect(status(page)).toHaveText('Too much text for a QR code (1,273 characters max at level H).');
+  await expect(status(page)).toHaveText('Too much text for a QR code (1,273 bytes max at level H; accented letters and emoji take 2–4 bytes each).');
   await input(page).fill('short');
   await expect(status(page)).toHaveText('');
   await expect(button(page, 'Download PNG')).toBeEnabled();

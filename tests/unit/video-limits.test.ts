@@ -37,19 +37,25 @@ describe('Compress video: bitrate presets', () => {
       [1920, 1080],
       [3840, 2160],
     ] as const) {
-      const small = targetBitrate('small', w, h);
-      const balanced = targetBitrate('balanced', w, h);
-      const better = targetBitrate('better', w, h);
+      const small = targetBitrate('small', w, h, 30);
+      const balanced = targetBitrate('balanced', w, h, 30);
+      const better = targetBitrate('better', w, h, 30);
       expect(small).toBeLessThan(balanced);
       expect(balanced).toBeLessThan(better);
     }
   });
 
   it('grows with the picture, and stays within sensible bounds', () => {
-    expect(targetBitrate('balanced', 1280, 720)).toBeGreaterThan(targetBitrate('balanced', 640, 360));
-    expect(targetBitrate('balanced', 1920, 1080)).toBeGreaterThan(targetBitrate('balanced', 1280, 720));
-    expect(targetBitrate('small', 16, 16)).toBeGreaterThanOrEqual(100_000);
-    expect(Number.isInteger(targetBitrate('better', 1921, 1081))).toBe(true);
+    expect(targetBitrate('balanced', 1280, 720, 30)).toBeGreaterThan(targetBitrate('balanced', 640, 360, 30));
+    expect(targetBitrate('balanced', 1920, 1080, 30)).toBeGreaterThan(targetBitrate('balanced', 1280, 720, 30));
+    expect(targetBitrate('small', 16, 16, 30)).toBeGreaterThanOrEqual(100_000);
+    expect(Number.isInteger(targetBitrate('better', 1921, 1081, 30))).toBe(true);
+  });
+
+  it('scales with the frame rate: the same bits per frame at 60 fps as at 30', () => {
+    expect(targetBitrate('balanced', 1280, 720, 30)).toBe(2_211_840);
+    expect(targetBitrate('balanced', 1280, 720, 60)).toBe(2 * targetBitrate('balanced', 1280, 720, 30));
+    expect(targetBitrate('balanced', 1280, 720, 24)).toBeLessThan(targetBitrate('balanced', 1280, 720, 30));
   });
 });
 
