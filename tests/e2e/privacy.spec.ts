@@ -250,6 +250,39 @@ test.describe('PDF image tools', () => {
     expectClean(requests, [Buffer.from('photo.jpg'), Buffer.from('alpha.png')], info.project.use.baseURL);
   });
 
+  test('rotate: one convert_success {rotate-pdf, count: 1}, nothing else leaves the device', async ({ page }, info) => {
+    const { events, requests } = await watch(page);
+    await page.goto('/rotate-pdf/');
+    await page.locator('[data-kind="pdf"] input[type=file]').setInputFiles(pdf('three-pages.pdf'));
+    await expect(page.getByText('3 pages', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Rotate PDF', exact: true }).click();
+    await expect(page.getByText('three-pages-rotated.pdf', { exact: true })).toBeVisible();
+    await expect.poll(() => events.length).toBe(1);
+    await settle(page);
+    expect(events.map((e) => [e.n, e.p])).toEqual([['convert_success', { tool: 'rotate-pdf', count: 1 }]]);
+    expect(requests.some((r) => /pdf-lib/.test(r.url))).toBe(true); // the engine really loaded: the check isn't vacuous
+    expectOnlyAllowedProps(events);
+    expectClean(requests, needles, info.project.use.baseURL);
+  });
+
+  test('resize image, then resize again: convert_success {resize-image} only, no image or name leaves', async ({ page }, info) => {
+    const { events, requests } = await watch(page);
+    await page.goto('/resize-image/');
+    await page.locator('[data-tool] input[type=file]').setInputFiles('tests/fixtures/photo.jpg');
+    await expect(page.locator('[data-rows] > li.row-done')).toContainText('1200 × 900 px');
+    await page.getByLabel('Width').fill('400');
+    await page.getByLabel('Width').press('Enter');
+    await expect(page.locator('[data-rows] > li.row-done')).toContainText('400 × 300 px');
+    await expect.poll(() => events.length).toBe(2);
+    await settle(page);
+    expect(events.map((e) => [e.n, e.p])).toEqual([
+      ['convert_success', { tool: 'resize-image', count: 1 }],
+      ['convert_success', { tool: 'resize-image', count: 1 }],
+    ]);
+    expectOnlyAllowedProps(events);
+    expectClean(requests, [Buffer.from('photo.jpg'), readFileSync('tests/fixtures/photo.jpg').subarray(0, 64)], info.project.use.baseURL);
+  });
+
   test('an encrypted PDF in PDF to JPG: convert_error {pdf-to-jpg, encrypted}', async ({ page }, info) => {
     const { events, requests } = await watch(page);
     await page.goto('/pdf-to-jpg/');

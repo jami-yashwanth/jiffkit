@@ -4,9 +4,13 @@ import type { DevForm, DevGroup } from './dev/form';
 export type ToolSlug =
   | 'heic-to-jpg'
   | 'compress-image'
+  | 'resize-image'
   | 'webp-to-jpg'
+  | 'png-to-jpg'
+  | 'jpg-to-png'
   | 'merge-pdf'
   | 'split-pdf'
+  | 'rotate-pdf'
   | 'json-formatter'
   | 'base64-encode-decode'
   | 'jwt-decoder'
@@ -17,10 +21,12 @@ export type ToolSlug =
   | 'transcribe-audio'
   | 'pdf-to-jpg'
   | 'jpg-to-pdf'
+  | 'png-to-pdf'
+  | 'image-to-pdf'
   | 'compress-video'
   | 'video-to-gif'
   | DevSlug;
-export type ImageSlug = 'heic-to-jpg' | 'compress-image' | 'webp-to-jpg';
+export type ImageSlug = 'heic-to-jpg' | 'compress-image' | 'resize-image' | 'webp-to-jpg' | 'png-to-jpg' | 'jpg-to-png';
 export type Category = 'image' | 'pdf' | 'ai' | 'video' | 'developer' | 'qr';
 export type OutFormat = 'jpg' | 'png' | 'webp';
 export type InType = 'heic' | 'jpg' | 'png' | 'webp';
@@ -46,7 +52,7 @@ export type ImageTool = ToolBase & {
   defaults: { format?: OutFormat; quality: number };
   emptyCopy: string;
 };
-export type PdfTool = ToolBase & { kind: 'pdf'; op: 'merge' | 'split' | 'to-images' | 'from-images' };
+export type PdfTool = ToolBase & { kind: 'pdf'; op: 'merge' | 'split' | 'rotate' | 'to-images' | 'from-images' };
 export type AiTool = ToolBase & {
   kind: 'ai';
   model: 'bg' | 'ocr' | 'upscale' | 'whisper';
@@ -158,6 +164,49 @@ const IMAGE_TOOLS: ImageTool[] = [
   {
     kind: 'image',
     category: 'image',
+    slug: 'resize-image',
+    title: 'Resize Image - Change Image Size in Pixels, No Upload',
+    description:
+      'Resize JPG, PNG and WebP images to a width and height in pixels, in your browser. Proportions are kept and nothing is uploaded. Free, many at once.',
+    h1: 'Resize image',
+    subhead: 'Make images a set width or height in pixels. Your images stay on your device.',
+    accepts: ['jpg', 'png', 'webp'],
+    acceptAttr: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp',
+    outputs: 'same',
+    defaults: { quality: 90 },
+    emptyCopy: 'Drop images here',
+    howTo: [
+      'Drop your JPG, PNG or WebP images onto the page, or choose them from your device.',
+      'Enter the width or height you want, in pixels. Leave one blank to keep the proportions.',
+      'Download each resized image, or download them all in one ZIP file.',
+    ],
+    faq: [
+      {
+        q: 'Are my images uploaded anywhere?',
+        a: 'No. Resizing runs entirely in your browser. Your images never leave your device, and no file names or pixels are sent to a server.',
+      },
+      {
+        q: 'Will my image be stretched?',
+        a: 'No. Each image keeps its proportions and is made as large as fits inside the width and height you enter. Leave one box blank to set only the width or only the height.',
+      },
+      {
+        q: 'Can I make an image bigger?',
+        a: 'No. This tool only makes images smaller, because stretching pixels gives a blurry result. An image already smaller than the size you enter keeps its size. To enlarge a photo, use Upscale image.',
+      },
+      {
+        q: 'Does resizing reduce the quality?',
+        a: 'Fewer pixels means less detail, which is the point of resizing. JPG and WebP are saved at quality 90 and PNG without loss, so the result stays sharp at its new size.',
+      },
+      {
+        q: 'Can I change the size after adding images?',
+        a: 'Yes. Change the width or height and every image in the list is resized again.',
+      },
+    ],
+    related: ['compress-image', 'upscale-image', 'jpg-to-pdf'],
+  },
+  {
+    kind: 'image',
+    category: 'image',
     slug: 'webp-to-jpg',
     title: 'WebP to JPG or PNG Converter - Free, No Upload',
     description:
@@ -197,6 +246,92 @@ const IMAGE_TOOLS: ImageTool[] = [
       },
     ],
     related: ['compress-image', 'heic-to-jpg', 'qr-code-generator'],
+  },
+  {
+    kind: 'image',
+    category: 'image',
+    slug: 'png-to-jpg',
+    title: 'PNG to JPG Converter - Free, Private, No Upload',
+    description:
+      'Convert PNG images to smaller JPG files in your browser. Nothing is uploaded, transparent areas turn white, and it works on many images at once. Free.',
+    h1: 'PNG to JPG',
+    subhead: 'Turn PNG images into smaller JPG files. Nothing leaves your device.',
+    accepts: ['png'],
+    acceptAttr: '.png,image/png',
+    outputs: ['jpg'],
+    defaults: { format: 'jpg', quality: 85 },
+    emptyCopy: 'Drop PNG images here',
+    howTo: [
+      'Drop your PNG images onto the page, or choose them from your device.',
+      'Wait a moment while each image is converted on your device.',
+      'Download each JPG, or download them all in one ZIP file.',
+    ],
+    faq: [
+      {
+        q: 'Are my images uploaded anywhere?',
+        a: 'No. The conversion runs entirely in your browser. Your images never leave your device, and no file names or pixels are sent to a server.',
+      },
+      {
+        q: 'Will the JPG be smaller?',
+        a: 'For photos and detailed screenshots, usually much smaller. Simple graphics with flat colours, such as logos, can come out about the same size with softer edges. PNG suits those better.',
+      },
+      {
+        q: 'What happens to transparent areas?',
+        a: 'JPG cannot store transparency, so transparent areas become white. To keep them see-through, keep the PNG and use Compress image to make it smaller instead.',
+      },
+      {
+        q: 'Can I change the quality?',
+        a: 'Yes. Open Options and move the quality slider before you add images. The default, 85, keeps photos looking the same to the eye.',
+      },
+      {
+        q: 'Can I convert many images at once?',
+        a: 'Yes. Drop as many as you like. They are converted one at a time, and you can download them together as a ZIP.',
+      },
+    ],
+    related: ['jpg-to-png', 'compress-image', 'png-to-pdf'],
+  },
+  {
+    kind: 'image',
+    category: 'image',
+    slug: 'jpg-to-png',
+    title: 'JPG to PNG Converter - Free, Private, No Upload',
+    description:
+      'Convert JPG photos to lossless PNG in your browser. Nothing is uploaded, location data is removed, and it works on many images at once. Free, no sign-up.',
+    h1: 'JPG to PNG',
+    subhead: 'Turn JPG images into lossless PNG files. Your images stay on your device.',
+    accepts: ['jpg'],
+    acceptAttr: '.jpg,.jpeg,image/jpeg',
+    outputs: ['png'],
+    defaults: { format: 'png', quality: 85 },
+    emptyCopy: 'Drop JPG images here',
+    howTo: [
+      'Drop your JPG images onto the page, or choose them from your device.',
+      'Wait a moment while each image is converted on your device.',
+      'Download each PNG, or download them all in one ZIP file.',
+    ],
+    faq: [
+      {
+        q: 'Are my images uploaded anywhere?',
+        a: 'No. The conversion runs entirely in your browser. Your images never leave your device, and no file names or pixels are sent to a server.',
+      },
+      {
+        q: 'Will the PNG be larger?',
+        a: 'Usually, yes, often several times larger. PNG keeps every pixel without loss, while JPG drops detail to stay small. Convert when an app needs PNG, or when you will edit the image again.',
+      },
+      {
+        q: 'Does converting improve the quality?',
+        a: 'No. Detail a JPG lost when it was saved cannot come back. The PNG keeps the image exactly as it looks now, so later edits and saves do not make it worse.',
+      },
+      {
+        q: 'Will the PNG have a transparent background?',
+        a: 'No. A JPG has no transparency, so the PNG keeps the same solid background. To cut the background out, use Remove background.',
+      },
+      {
+        q: 'Can I convert many images at once?',
+        a: 'Yes. Drop as many as you like. They are converted one at a time, and you can download them together as a ZIP.',
+      },
+    ],
+    related: ['png-to-jpg', 'remove-background', 'compress-image'],
   },
 ];
 
@@ -278,6 +413,45 @@ const OTHER_TOOLS: (PdfTool | AiTool | VideoTool | TextTool | QrTool)[] = [
       },
     ],
     related: ['merge-pdf', 'compress-image'],
+  },
+  {
+    kind: 'pdf',
+    op: 'rotate',
+    category: 'pdf',
+    slug: 'rotate-pdf',
+    title: 'Rotate PDF - Turn PDF Pages Privately, No Upload',
+    description:
+      'Rotate every page of a PDF by 90 or 180 degrees in your browser. Nothing is uploaded and nothing is compressed again, so quality stays the same. Free.',
+    h1: 'Rotate PDF',
+    subhead: 'Turn the pages of a PDF the right way up. Your file never leaves your device.',
+    howTo: [
+      'Drop your PDF onto the page, or choose it from your device.',
+      'Pick which way to turn the pages: right, left or upside down.',
+      'Select Rotate PDF, then download the file.',
+    ],
+    faq: [
+      {
+        q: 'Is my PDF uploaded anywhere?',
+        a: 'No. The PDF is rotated in your browser. The file, its name and its pages never leave your device and are never sent to a server.',
+      },
+      {
+        q: 'Does rotating reduce the quality?',
+        a: 'No. Only the direction each page is shown in changes. Text, images and links are kept exactly as they are, and nothing is compressed again.',
+      },
+      {
+        q: 'Can I rotate only some pages?',
+        a: 'Not yet: every page turns the same way. To rotate a few pages, take them out with Split PDF, rotate them here, then join the files again with Merge PDF.',
+      },
+      {
+        q: 'Why can I not rotate a password-protected PDF?',
+        a: 'We cannot read the pages of an encrypted file, and we will not bypass the protection. Remove the password in the app you created it with, then try again.',
+      },
+      {
+        q: 'Will other apps show the new rotation?',
+        a: 'Yes. The rotation is saved in the PDF itself, so every PDF reader shows the pages the new way.',
+      },
+    ],
+    related: ['split-pdf', 'merge-pdf', 'pdf-to-jpg'],
   },
   {
     kind: 'text',
@@ -676,6 +850,84 @@ const ROUND_3_TOOLS: (PdfTool | AiTool | VideoTool)[] = [
       },
     ],
     related: ['pdf-to-jpg', 'merge-pdf', 'compress-image'],
+  },
+  {
+    kind: 'pdf',
+    op: 'from-images',
+    category: 'pdf',
+    slug: 'png-to-pdf',
+    title: 'PNG to PDF - Convert PNG Images to PDF, No Upload',
+    description:
+      'Turn PNG images and screenshots into one PDF in your browser, without losing quality. Choose the order and page size. Nothing is uploaded. Free, no sign-up.',
+    h1: 'PNG to PDF',
+    subhead: 'Put PNG images and screenshots into one PDF. Your images never leave your device.',
+    howTo: [
+      'Drop your PNG images onto the page, or choose them from your device. JPG, WebP and HEIC work too.',
+      'Put them in the order you want, and pick a page size.',
+      'Select Create PDF, then download the file.',
+    ],
+    faq: [
+      {
+        q: 'Are my images uploaded anywhere?',
+        a: 'No. The PDF is built in your browser. Your images, their names and their pixels never leave your device and are never sent to a server.',
+      },
+      {
+        q: 'Will my PNG images lose quality?',
+        a: 'No. PNG images go into the PDF without loss, pixel for pixel, so screenshots and text stay crisp. That also means the PDF is about as large as the images together.',
+      },
+      {
+        q: 'What happens to transparent areas?',
+        a: 'Transparency is kept in the PDF. Most PDF readers show transparent areas on a white page.',
+      },
+      {
+        q: 'Can I mix PNG with other images?',
+        a: 'Yes. JPG, WebP and HEIC images can go in the same PDF. Each image becomes one page, in the order shown in the list.',
+      },
+      {
+        q: 'What page sizes are there?',
+        a: 'Fit to image (the default) makes each page the size of its image. A4 and Letter place each image in the middle of a standard page with a margin around it.',
+      },
+    ],
+    related: ['jpg-to-pdf', 'png-to-jpg', 'merge-pdf'],
+  },
+  {
+    kind: 'pdf',
+    op: 'from-images',
+    category: 'pdf',
+    slug: 'image-to-pdf',
+    title: 'Image to PDF - Convert Photos to PDF, Free, No Upload',
+    description:
+      'Convert photos, scans and screenshots to PDF in your browser: JPG, PNG, WebP and iPhone HEIC. Pick the order and page size. Nothing is uploaded. Free.',
+    h1: 'Image to PDF',
+    subhead: 'Turn photos, scans and screenshots into one PDF. Your images never leave your device.',
+    howTo: [
+      'Drop your photos, scans or screenshots onto the page, or choose them from your device.',
+      'Put them in the order you want, and pick a page size.',
+      'Select Create PDF, then download the file.',
+    ],
+    faq: [
+      {
+        q: 'Are my images uploaded anywhere?',
+        a: 'No. The PDF is built in your browser. Your images, their names and their pixels never leave your device and are never sent to a server.',
+      },
+      {
+        q: 'Which image types can I use?',
+        a: 'JPG, PNG, WebP and HEIC, the format iPhones use for photos. You can mix them in one PDF. Each image becomes one page, in the order shown in the list.',
+      },
+      {
+        q: 'Can I turn photos of documents into one PDF?',
+        a: 'Yes. Photos of receipts, forms or pages become one PDF, a page per photo. On a phone, choosing images lets you pick them from your photo library.',
+      },
+      {
+        q: 'What page size should I pick?',
+        a: 'Fit to image (the default) makes each page the size of its image. Pick A4 or Letter to print: each image sits in the middle of a standard page with a margin.',
+      },
+      {
+        q: 'Will my images lose quality?',
+        a: 'JPG images are put into the PDF as they are, without being compressed again. Other types are stored losslessly, so the PDF can be larger than the originals.',
+      },
+    ],
+    related: ['jpg-to-pdf', 'merge-pdf', 'image-to-text'],
   },
   {
     kind: 'video',

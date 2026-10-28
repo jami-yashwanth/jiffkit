@@ -9,10 +9,10 @@ const options = (page: Page) => page.getByRole('option');
 test('typing shows matching tools; Enter opens the first', async ({ page }) => {
   await page.goto('/');
   await box(page).fill('png to jpg');
-  await expect(options(page).first()).toContainText('WebP to JPG or PNG');
+  await expect(options(page).first()).toContainText('PNG to JPG');
   await expect(box(page)).toHaveAttribute('aria-expanded', 'true');
   await box(page).press('Enter');
-  await expect(page).toHaveURL(/\/webp-to-jpg\/$/);
+  await expect(page).toHaveURL(/\/png-to-jpg\/$/);
 });
 
 test('each result shows its icon, its name with the typed part marked, what it does and its zone', async ({ page }) => {

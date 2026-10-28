@@ -21,7 +21,16 @@ const elsewhere = Object.fromEntries(
     }),
 );
 // Gzipped size of the codecs this tool downloads on first use (measured from the build; shown while they load).
-const CODEC_SIZE: Record<ImageSlug, string> = { 'heic-to-jpg': '0.8 MB', 'compress-image': '0.5 MB', 'webp-to-jpg': '0.3 MB' };
+const CODEC_SIZE: Record<ImageSlug, string> = {
+  'heic-to-jpg': '0.8 MB',
+  'compress-image': '0.5 MB',
+  'resize-image': '0.5 MB',
+  'webp-to-jpg': '0.3 MB',
+  'png-to-jpg': '0.2 MB',
+  'jpg-to-png': '0.2 MB',
+};
+// HEIC to JPG and PNG to JPG: one output, JPG, whose quality is the only setting, tucked under Options.
+const jpgOnly = Array.isArray(tool.outputs) && tool.outputs.length === 1 && tool.outputs[0] === 'jpg';
 ---
 <div
   data-tool={tool.slug}
@@ -40,7 +49,7 @@ const CODEC_SIZE: Record<ImageSlug, string> = { 'heic-to-jpg': '0.8 MB', 'compre
       {chooseLabel}
       <input type="file" multiple accept={tool.acceptAttr} />
     </label>
-    <p class="privacy">Converted on your device. Your {noun} are never uploaded.</p>
+    <p class="privacy">{tool.slug === 'resize-image' ? 'Resized' : 'Converted'} on your device. Your {noun} are never uploaded.</p>
   </div>
 
   {tool.slug === 'compress-image' && (
@@ -60,7 +69,15 @@ const CODEC_SIZE: Record<ImageSlug, string> = { 'heic-to-jpg': '0.8 MB', 'compre
       ))}
     </fieldset>
   )}
-  {isHeic && (
+  {tool.slug === 'resize-image' && (
+    <fieldset class="settings size-box" data-settings>
+      <legend>Fit within</legend>
+      <label>Width <input type="number" class="text-input" min="1" step="1" inputmode="numeric" value="1200" data-width-input /> px</label>
+      <label>Height <input type="number" class="text-input" min="1" step="1" inputmode="numeric" placeholder="Any" data-height-input /> px</label>
+      <p class="note">Leave one blank to keep the proportions. Images are never made bigger.</p>
+    </fieldset>
+  )}
+  {jpgOnly && (
     <details class="settings" data-settings>
       <summary>Options</summary>
       <label class="quality">
@@ -79,7 +96,7 @@ const CODEC_SIZE: Record<ImageSlug, string> = { 'heic-to-jpg': '0.8 MB', 'compre
       </div>
       <div class="actions" data-actions hidden>
         <button type="button" class="btn" data-zip hidden>Download all (ZIP)</button>
-        <button type="button" class="btn btn-quiet" data-more>Convert more</button>
+        <button type="button" class="btn btn-quiet" data-more>{tool.slug === 'resize-image' ? 'Resize more' : 'Convert more'}</button>
         <p class="gps" data-gps hidden>Location data removed</p>
       </div>
     </div>

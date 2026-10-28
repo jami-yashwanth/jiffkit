@@ -6,12 +6,12 @@ const zone = (page: import('@playwright/test').Page, name: string) => page.getBy
 
 test('the homepage wall hangs every tool in its zone', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('a.tag')).toHaveCount(17);
-  for (const [name, count] of [['Image', 3], ['PDF', 4], ['AI', 4], ['Video', 2], ['Developer', 4]] as const) {
+  await expect(page.locator('a.tag')).toHaveCount(23);
+  for (const [name, count] of [['Image', 6], ['PDF', 7], ['AI', 4], ['Video', 2], ['Developer', 4]] as const) {
     await expect(zone(page, name).locator('a.tag')).toHaveCount(count);
   }
   const hrefs = await zone(page, 'PDF').locator('a.tag').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
-  expect(hrefs).toEqual(['/merge-pdf/', '/split-pdf/', '/pdf-to-jpg/', '/jpg-to-pdf/']);
+  expect(hrefs).toEqual(['/merge-pdf/', '/split-pdf/', '/rotate-pdf/', '/pdf-to-jpg/', '/jpg-to-pdf/', '/png-to-pdf/', '/image-to-pdf/']);
   await expect(zone(page, 'Developer').getByRole('link', { name: /QR code generator/ })).toBeVisible();
 });
 
@@ -41,7 +41,7 @@ test('a tool page leads back to the wall from the logo', async ({ page }) => {
 test('no sideways scroll on a phone, and tags hang two to a row', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
-  await expect(page.locator('a.tag')).toHaveCount(17);
+  await expect(page.locator('a.tag')).toHaveCount(23);
   const { scroll, width, widest, perRow } = await page.evaluate(() => {
     const tags = [...document.querySelectorAll('a.tag')].map((a) => a.getBoundingClientRect());
     return {

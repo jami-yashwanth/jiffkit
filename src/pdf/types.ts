@@ -29,6 +29,9 @@ export interface ImageIn {
   height: number;
 }
 
+/** Rotate PDF: degrees clockwise (270 is a quarter turn left). */
+export type Rotation = 90 | 180 | 270;
+
 export type SplitMode = { kind: 'every' } | { kind: 'ranges'; ranges: [number, number][] };
 
 /** Page -> worker. File bytes travel as transferred ArrayBuffers. */
@@ -37,6 +40,7 @@ export type PdfRequest =
   | { kind: 'job'; id: string; op: 'count'; bytes: ArrayBuffer }
   | { kind: 'job'; id: string; op: 'merge'; files: ArrayBuffer[] }
   | { kind: 'job'; id: string; op: 'split'; bytes: ArrayBuffer; base: string; mode: SplitMode }
+  | { kind: 'job'; id: string; op: 'rotate'; bytes: ArrayBuffer; base: string; by: Rotation }
   | { kind: 'job'; id: string; op: 'rasterize'; bytes: ArrayBuffer; base: string; format: ImageFormat; dpi: 150 | 300 }
   | { kind: 'job'; id: string; op: 'images'; images: ImageIn[]; size: PageSize };
 

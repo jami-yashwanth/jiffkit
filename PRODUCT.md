@@ -17,7 +17,7 @@ The homepage and navigation must serve both without making either feel like the 
 
 ## Product Purpose
 
-jiffkit is a free collection of file and developer tools (42 today: image, PDF, on-device AI, video, developer) that run entirely in the visitor's browser. Files and text are processed on the visitor's device and never uploaded. There is no sign-up and no paywall. Success is a visitor finishing their task in one visit and trusting the site enough to come back.
+jiffkit is a free collection of file and developer tools (48 today: image, PDF, on-device AI, video, developer) that run entirely in the visitor's browser. Files and text are processed on the visitor's device and never uploaded. There is no sign-up and no paywall. Success is a visitor finishing their task in one visit and trusting the site enough to come back.
 
 ## Positioning
 
@@ -36,7 +36,7 @@ Open decision: the product owner has not chosen a single headline among "never u
 - Hard limits that every design must keep: under 15 KB of gzip JavaScript per page before interaction; no third-party requests (no web fonts from a CDN, no trackers; analytics is Umami Cloud only: cookieless, Do Not Track respected, events carry a tool name and a count or reason); WCAG AA; works at 390 px.
 - Light theme only today; dark mode is not built.
 - Tool pages carry SEO content (How it works, Questions, Related tools) that must stay.
-- Tools are listed from one registry (`src/tools.ts`, `src/dev/tools.ts`); 17 tools on the homepage plus a card for the 29 developer tools on `/developer/`.
+- Tools are listed from one registry (`src/tools.ts`, `src/dev/tools.ts`); 23 tools on the homepage plus a card for the 29 developer tools on `/developer/`.
 
 ## Brand Commitments
 
@@ -48,7 +48,7 @@ Open decision: the product owner has not chosen a single headline among "never u
 
 ## Evidence on Hand
 
-- 42 working tools, verified on the live site.
+- 48 tools: 42 verified on the live site, plus PNG to JPG, JPG to PNG, Resize image, Rotate PDF, PNG to PDF and Image to PDF (added 2026-10-29).
 - Open-source licences page (`/licenses/`) listing every library and model.
 - No testimonials, user counts, press, ratings or reviews exist. None may be invented.
 - No analytics yet: there is no usage data on which tools are popular.

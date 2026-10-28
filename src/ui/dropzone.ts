@@ -64,12 +64,20 @@ export function mount(el: HTMLElement): void {
   qualityInput?.addEventListener('input', () => {
     qualityInput.parentElement!.querySelector('output')!.textContent = qualityInput.value;
   });
+  // Resize: the box every image is fitted inside. A blank or invalid side is unbounded.
+  const widthInput = el.querySelector<HTMLInputElement>('[data-width-input]');
+  const heightInput = el.querySelector<HTMLInputElement>('[data-height-input]');
+  const side = (i: HTMLInputElement | null): number | undefined => {
+    const n = Math.round(Number(i?.value));
+    return i?.value.trim() && Number.isFinite(n) && n >= 1 ? n : undefined;
+  };
   const options = (): Job['options'] => {
     const o: Job['options'] = {};
     if (qualityInput) o.quality = Number(qualityInput.value);
     else if (el.dataset.quality) o.quality = Number(el.dataset.quality);
     const fmt = el.querySelector<HTMLInputElement>('[data-format-input]:checked')?.value ?? el.dataset.format;
     if (fmt && fmt !== 'same') o.format = fmt as OutFormat;
+    if (widthInput) o.resize = { width: side(widthInput), height: side(heightInput) };
     return o;
   };
 
@@ -226,6 +234,27 @@ export function mount(el: HTMLElement): void {
     add([...(e.dataTransfer?.files ?? [])]);
   });
 
+  // Resize: a new size applies to every image already in the list, not only to the ones added after it.
+  function resizeAgain(): void {
+    const o = options();
+    void engine?.then((e) => e.clear(), () => {}); // the waiting jobs carry the old size
+    for (const row of [...rows.values()]) {
+      row.options = { ...o };
+      if (!row.type) continue; // still being sniffed (it is enqueued with the new size), or never reached the engine
+      if (row.state.kind === 'done') {
+        URL.revokeObjectURL(row.state.url);
+        URL.revokeObjectURL(row.state.thumbUrl);
+      }
+      // A fresh id, so a result still on its way for the old size finds no row and is dropped.
+      rows.delete(row.id);
+      row.id = `f${nextId++}`;
+      rows.set(row.id, row);
+      enqueue(row);
+    }
+  }
+  widthInput?.addEventListener('change', resizeAgain);
+  heightInput?.addEventListener('change', resizeAgain);
+
   // --- header actions ---
   let batch = 0; // bumped by "Convert more", so work started for an earlier batch can tell it is stale
   moreBtn.addEventListener('click', () => {
@@ -307,14 +336,19 @@ export function mount(el: HTMLElement): void {
         ? "Already optimized. We couldn't make it smaller."
         : d.notes.includes('first-frame-only')
           ? 'Animated WebP: converted the first frame.'
-          : '';
+          : d.notes.includes('not-enlarged')
+            ? 'Already within that size, so it was kept.'
+            : '';
+      const size = row.options.resize
+        ? `${d.width} × ${d.height} px · ${formatBytes(d.outBytes)}`
+        : `${formatBytes(d.inBytes)} → ${formatBytes(d.outBytes)}`;
       body = [
         h('img', { class: 'thumb', src: s.thumbUrl, alt: '', width: '48', height: '48', decoding: 'async', loading: 'lazy' }),
         h(
           'div',
           { class: 'info' },
           name(d.name),
-          h('span', { class: 'size' }, `${formatBytes(d.inBytes)} → ${formatBytes(d.outBytes)}`),
+          h('span', { class: 'size' }, size),
           note && h('span', { class: 'note' }, note),
         ),
         h('a', { class: 'btn', href: s.url, download: d.name }, 'Download'),

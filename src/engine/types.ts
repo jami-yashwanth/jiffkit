@@ -1,13 +1,14 @@
 import type { ImageSlug, InType, OutFormat } from '../tools';
 
-export type Note = 'gps-removed' | 'first-frame-only' | 'already-optimized' | 'transparency-filled';
+export type Note = 'gps-removed' | 'first-frame-only' | 'already-optimized' | 'transparency-filled' | 'not-enlarged';
 export type FailReason = 'wrong-type' | 'corrupt' | 'too-large' | 'oom' | 'codec-load';
 
 export interface Job {
   id: string;
   file: File;
   tool: ImageSlug;
-  options: { format?: OutFormat; quality?: number; downscaleTo?: number };
+  /** `resize`: fit inside this box in pixels, keeping proportions and never enlarging; a missing side is unbounded. */
+  options: { format?: OutFormat; quality?: number; downscaleTo?: number; resize?: { width?: number; height?: number } };
 }
 
 export interface Done {

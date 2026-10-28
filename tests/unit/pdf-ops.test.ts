@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { PDFDocument } from 'pdf-lib';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { merge, pageCount, PdfError, split } from '../../src/pdf/ops';
+import { merge, pageCount, PdfError, rotate, split } from '../../src/pdf/ops';
 
 const fx = (name: string): ArrayBuffer => {
   const b = readFileSync(`tests/fixtures/pdf/${name}`);
@@ -20,6 +20,41 @@ const reasonOf = async (p: Promise<unknown>) => {
   }
   return null;
 };
+
+const rotations = async (bytes: Uint8Array) => (await PDFDocument.load(bytes)).getPages().map((p) => p.getRotation().angle);
+
+describe('rotate', () => {
+  it.each([
+    [90, [90, 90, 90]],
+    [180, [180, 180, 180]],
+    [270, [270, 270, 270]],
+  ] as const)('turns every page by %i degrees, keeping the pages and their order', async (by, angles) => {
+    const out = await rotate(fx('three-pages.pdf'), 'report', by);
+    expect(out.name).toBe('report-rotated.pdf');
+    expect(out.pages).toBe(3);
+    expect(await rotations(out.bytes)).toEqual(angles);
+    expect(await widths(out.bytes)).toEqual([201, 202, 203]); // the media box is untouched: only /Rotate changes
+  });
+
+  it('adds to the rotation a page already has, wrapping at 360', async () => {
+    const doc = await PDFDocument.create();
+    const { degrees } = await import('pdf-lib');
+    doc.addPage([100, 100]).setRotation(degrees(90));
+    doc.addPage([100, 100]).setRotation(degrees(270));
+    doc.addPage([100, 100]);
+    const bytes = await doc.save();
+    const out = await rotate(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer, 'x', 90);
+    expect(await rotations(out.bytes)).toEqual([180, 0, 90]);
+  });
+
+  it.each([
+    ['encrypted.pdf', 'encrypted'],
+    ['truncated.pdf', 'corrupt'],
+    ['not-a.pdf', 'corrupt'],
+  ])('%s is %s', async (name, reason) => {
+    expect(await reasonOf(rotate(fx(name), 'x', 90))).toBe(reason);
+  });
+});
 
 describe('pdf ops', () => {
   it('counts pages', async () => {

@@ -1,5 +1,5 @@
 import { imagesToPdf } from './images-to-pdf';
-import { loadLib, merge, pageCount, PdfError, split } from './ops';
+import { loadLib, merge, pageCount, PdfError, rotate, split } from './ops';
 import type { PdfOut, PdfRequest } from './types';
 import { serve } from './worker-host';
 
@@ -14,6 +14,8 @@ async function run(msg: PdfRequest): Promise<number | PdfOut | PdfOut[]> {
       return merge(msg.files);
     case 'split':
       return split(msg.bytes, msg.base, msg.mode);
+    case 'rotate':
+      return rotate(msg.bytes, msg.base, msg.by);
     case 'images': {
       const { bytes, pages } = await imagesToPdf(
         msg.images.map((i) => ({ ...i, bytes: new Uint8Array(i.bytes) })),

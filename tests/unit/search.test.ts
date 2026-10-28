@@ -23,7 +23,14 @@ describe('tool search', () => {
   });
 
   it('finds a tool by the words people actually type', () => {
-    expect(top('png to jpg')).toBe('webp-to-jpg');
+    expect(top('png to jpg')).toBe('png-to-jpg');
+    expect(top('jpg to png')).toBe('jpg-to-png');
+    expect(top('resize photo')).toBe('resize-image');
+    expect(top('image dimensions')).toBe('resize-image');
+    expect(top('rotate pdf')).toBe('rotate-pdf');
+    expect(top('turn pdf pages')).toBe('rotate-pdf');
+    expect(top('image to pdf')).toBe('image-to-pdf');
+    expect(top('png to pdf')).toBe('png-to-pdf');
     expect(top('remove bg')).toBe('remove-background');
     expect(top('combine pdf')).toBe('merge-pdf');
     expect(top('sha256')).toBe('hash-generator');
@@ -46,7 +53,8 @@ describe('tool search', () => {
   });
 
   it('puts name matches before word matches, and keeps registry order on a tie', () => {
-    expect(slugs('pdf').slice(0, 4).sort()).toEqual(['jpg-to-pdf', 'merge-pdf', 'pdf-to-jpg', 'split-pdf']);
+    // Seven tools have PDF in their name: the one starting with it first, then registry order, six shown.
+    expect(slugs('pdf')).toEqual(['pdf-to-jpg', 'merge-pdf', 'split-pdf', 'rotate-pdf', 'jpg-to-pdf', 'png-to-pdf']);
     expect(slugs('compress')).toEqual(['compress-image', 'compress-video']);
   });
 

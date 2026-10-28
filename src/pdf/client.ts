@@ -1,5 +1,5 @@
 import { PdfError } from './ops';
-import type { ImageFormat, ImageIn, PageSize, PdfOut, PdfRequest, PdfResponse, RasterOut, RasterPage, SplitMode } from './types';
+import type { ImageFormat, ImageIn, PageSize, PdfOut, PdfRequest, PdfResponse, RasterOut, RasterPage, Rotation, SplitMode } from './types';
 
 export interface PdfEngine {
   /** Load pdf-lib in the worker ahead of the first real job. Rejects with codec-load if it can't. */
@@ -7,6 +7,8 @@ export interface PdfEngine {
   count(id: string, file: File): Promise<number>;
   merge(files: File[]): Promise<PdfOut>;
   split(file: File, mode: SplitMode): Promise<PdfOut[]>;
+  /** Rotate PDF: every page turned clockwise by `by` degrees. */
+  rotate(file: File, by: Rotation): Promise<PdfOut>;
   /** PDF to JPG/PNG (the raster worker only): one image per page. */
   rasterize(file: File, format: ImageFormat, dpi: 150 | 300, onPage: (page: RasterPage) => void): Promise<RasterOut>;
   /** JPG to PDF (the PDF worker only): one page per image, in order. */
@@ -143,6 +145,14 @@ export function createPdfEngine(workerFactory: () => Worker = defaultWorkerFacto
       return enqueue(id, async () => {
         const bytes = await read(file);
         return { message: { kind: 'job', id, op: 'split', bytes, base, mode }, transfer: [bytes] };
+      });
+    },
+    rotate(file, by) {
+      const id = jobId('rotate');
+      const base = file.name.replace(/\.pdf$/i, '') || 'document';
+      return enqueue(id, async () => {
+        const bytes = await read(file);
+        return { message: { kind: 'job', id, op: 'rotate', bytes, base, by }, transfer: [bytes] };
       });
     },
     rasterize(file, format, dpi, onPage) {

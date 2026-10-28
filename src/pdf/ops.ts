@@ -1,5 +1,5 @@
 import { rangesLabel } from './ranges';
-import type { PdfFail, PdfOut, SplitMode } from './types';
+import type { PdfFail, PdfOut, Rotation, SplitMode } from './types';
 
 export class PdfError extends Error {
   constructor(
@@ -94,4 +94,19 @@ export async function split(bytes: ArrayBuffer, base: string, mode: SplitMode): 
   }
   const indices = mode.ranges.flatMap(([s, e]) => range(s, e));
   return [await build(L, `${base}-pages-${rangesLabel(mode.ranges)}.pdf`, [{ load, indices }])];
+}
+
+/**
+ * Turn every page clockwise by `by` degrees, on top of the rotation it already has. Only each page's /Rotate entry
+ * changes: content, images and links are written back as they were.
+ */
+export async function rotate(bytes: ArrayBuffer, base: string, by: Rotation): Promise<PdfOut> {
+  const L = await lib();
+  const doc = await open(L, bytes);
+  try {
+    for (const page of doc.getPages()) page.setRotation(L.degrees((((page.getRotation().angle + by) % 360) + 360) % 360));
+    return { name: `${base}-rotated.pdf`, bytes: await doc.save(), pages: doc.getPageCount() };
+  } catch {
+    throw new PdfError('corrupt');
+  }
 }
