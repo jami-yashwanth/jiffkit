@@ -696,5 +696,86 @@ for (const vp of VIEWPORTS) {
       await page.goto('/webp-to-jpg/');
       await shot(page, 'webp-to-jpg-empty', true);
     });
+
+    // --- the search tools: PNG/JPG, Resize, Rotate, PNG/Image to PDF ---
+
+    test('png-to-jpg: empty, loading, done, wrong type', async ({ page }) => {
+      await page.goto('/png-to-jpg/');
+      await shot(page, 'png-to-jpg-empty', true);
+      const release = await hold(page, /squoosh_png-[^/]*\.js$/);
+      await page.locator('[data-tool] input[type=file]').setInputFiles([
+        { name: 'Screenshot 2026-10-28 at 14.22.33 - quarterly dashboard export final.png', mimeType: 'image/png', buffer: readFileSync(fixture('alpha.png')) },
+        { name: 'grey.png', mimeType: 'image/png', buffer: readFileSync(fixture('grey.png')) },
+      ]);
+      await expect(page.getByText(/Getting the converter ready/)).toBeVisible();
+      await shot(page, 'png-to-jpg-loading');
+      release();
+      await expect(doneRows(page)).toHaveCount(2);
+      await shot(page, 'png-to-jpg-done');
+      await page.getByRole('button', { name: 'Convert more' }).click();
+      await choose(page, 'photo.jpg');
+      await expect(page.getByText('This is a JPG, not a PNG image.')).toBeVisible();
+      await shot(page, 'png-to-jpg-wrong-type');
+    });
+
+    test('jpg-to-png: empty, done', async ({ page }) => {
+      await page.goto('/jpg-to-png/');
+      await shot(page, 'jpg-to-png-empty', true);
+      await choose(page, 'photo.jpg');
+      await expect(doneRows(page)).toHaveCount(1);
+      await shot(page, 'jpg-to-png-done');
+    });
+
+    test('resize-image: empty, working, done, kept, too large', async ({ page }) => {
+      test.slow(); // decodes nothing at 63 MP, but sniffs it
+      await page.goto('/resize-image/');
+      await shot(page, 'resize-image-empty', true);
+      const release = await hold(page, /mozjpeg_dec-[^/]*\.js$/);
+      await choose(page, 'photo.jpg', 'alpha.png', 'lossy.webp');
+      await expect(page.locator('[data-rows] > li')).toHaveCount(3);
+      await shot(page, 'resize-image-working');
+      release();
+      await expect(doneRows(page)).toHaveCount(3);
+      await shot(page, 'resize-image-done');
+      await page.getByLabel('Width').fill('120');
+      await page.getByLabel('Width').press('Enter');
+      await expect(doneRows(page).nth(0)).toContainText('120 × 90 px');
+      await shot(page, 'resize-image-resized-again');
+      await page.getByRole('button', { name: 'Resize more' }).click();
+      await choose(page, 'huge-63mp.jpg');
+      await expect(page.getByText(/too large for your device/)).toBeVisible();
+      await shot(page, 'resize-image-too-large');
+    });
+
+    test('rotate-pdf: empty, loading, loaded, rotating, done, password', async ({ page }) => {
+      await installResultHold(page);
+      await page.goto('/rotate-pdf/');
+      await shot(page, 'rotate-pdf-empty', true);
+      const release = await hold(page, /\/_astro\/pdf-lib-[^/]*\.js$/);
+      await pdf(page, 'three-pages.pdf');
+      await expect(page.getByText(/Getting the PDF tools ready/)).toBeVisible();
+      await shot(page, 'rotate-pdf-loading');
+      release();
+      await expect(page.getByText('3 pages', { exact: true })).toBeVisible();
+      await shot(page, 'rotate-pdf-loaded');
+      await holdResults(page);
+      await btn(page, 'Rotate PDF').click();
+      await expect(page.getByText('Rotating…')).toBeVisible();
+      await shot(page, 'rotate-pdf-rotating');
+      await releaseResults(page);
+      await expect(page.getByText('three-pages-rotated.pdf', { exact: true })).toBeVisible();
+      await shot(page, 'rotate-pdf-done');
+      await btn(page, 'Start over').click();
+      await pdf(page, 'encrypted.pdf');
+      await expect(page.getByText('This PDF is password-protected. Remove the password and try again.')).toBeVisible();
+      await shot(page, 'rotate-pdf-password');
+    });
+
+    test('png-to-pdf and image-to-pdf: empty', async ({ page }) => {
+      await page.goto('/png-to-pdf/');
+      await shot(page, 'png-to-pdf-empty', true);
+      await page.goto('/image-to-pdf/');
+      await shot(page, 'image-to-pdf-empty', true);
+    });
   });
 }

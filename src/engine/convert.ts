@@ -1,7 +1,7 @@
 import { getImageTool, type InType, type OutFormat } from '../tools';
 import { CodecLoadError, load } from './codecs';
 import { DecodeError, decode, type Decoded, type Pixels } from './decode';
-import { applyOrientation, downscaleTo, flattenOnWhite } from './pixels';
+import { applyOrientation, downscaleTo, fitWithin, flattenOnWhite, resizeBox } from './pixels';
 import { sniff } from './sniff';
 import {
   MAX_MEGAPIXELS,
@@ -139,6 +139,15 @@ export async function convert(
 
     let pixels: Pixels = applyOrientation(decoded);
     if (target !== undefined) pixels = downscaleTo(pixels, target);
+    const box = options.resize && {
+      width: positive(options.resize.width) ? Math.round(options.resize.width) : undefined,
+      height: positive(options.resize.height) ? Math.round(options.resize.height) : undefined,
+    };
+    if (box) {
+      const [w, h] = fitWithin(pixels.width, pixels.height, box);
+      if (w < pixels.width || h < pixels.height) pixels = resizeBox(pixels, w, h);
+      else notes.push('not-enlarged');
+    }
     if (format === 'jpg' && pixels.hasAlpha) {
       pixels = flattenOnWhite(pixels);
       notes.push('transparency-filled');

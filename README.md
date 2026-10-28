@@ -4,8 +4,8 @@ Free tools that run entirely in the browser. Files are decoded, converted and re
 
 ## Tools
 
-- Image: HEIC to JPG, WebP to JPG, Compress image (location metadata is stripped; batches download as one ZIP).
-- PDF: Merge PDF, Split PDF, PDF to JPG, JPG to PDF.
+- Image: HEIC to JPG, WebP to JPG, PNG to JPG, JPG to PNG, Compress image, Resize image (location metadata is stripped; batches download as one ZIP).
+- PDF: Merge PDF, Split PDF, Rotate PDF, PDF to JPG, JPG to PDF, PNG to PDF, Image to PDF (the last three are one tool with three landing pages).
 - Developer and QR: JSON formatter, Base64 encode/decode, JWT decoder, QR code generator.
 - Round 3, on-device AI: Remove background (U²-Net small), Image to text (tesseract.js), Upscale image (Real-ESRGAN), Transcribe audio (Whisper base). Models download on first use.
 - Round 3, video (the browser's own WebCodecs, no model): Compress video, Video to GIF.

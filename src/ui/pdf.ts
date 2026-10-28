@@ -1,11 +1,11 @@
 import type { PdfEngine } from '../pdf/client';
 import { parseRanges } from '../pdf/ranges';
-import type { PdfFail, PdfOut } from '../pdf/types';
+import type { PdfFail, PdfOut, Rotation } from '../pdf/types';
 import { formatBytes, middleTruncate } from './format';
 import { moveRow, removeRow, rowTools } from './pdf-rows';
 import { COPY, createShell, failed, h, NAME_MAX, pages, reasonOf, succeeded, Unusable } from './pdf-shell';
 
-// Enhances the static markup from PdfTool.astro for Merge and Split. The engine (worker + pdf-lib) is imported on
+// Enhances the static markup from PdfTool.astro for Merge, Split and Rotate. The engine (worker + pdf-lib) is imported on
 // drop-zone hover, focus or the first file, which keeps the page inside the 15 KB budget.
 
 export { onError, onSuccess, type PdfErrorReason } from './pdf-shell';
@@ -19,7 +19,7 @@ export function mount(el: HTMLElement): void {
   const empty = (outs: PdfOut[]) => !outs.length || outs.some((o) => o.pages === 0);
   const pdfBlob = (o: PdfOut) => new Blob([o.bytes as BlobPart], { type: 'application/pdf' });
 
-  const { add, clear } = isMerge ? mountMerge() : mountSplit();
+  const { add, clear } = isMerge ? mountMerge() : mountSingle();
   shell.wire(add, clear);
 
   // ======================= Merge =======================
@@ -128,15 +128,18 @@ export function mount(el: HTMLElement): void {
     return { add, clear };
   }
 
-  // ======================= Split =======================
-  function mountSplit() {
+  // ======================= Split and Rotate: one PDF at a time =======================
+  function mountSingle() {
+    const isRotate = el.dataset.op === 'rotate';
     const nameEl = q('[data-name]');
     const metaEl = q('[data-meta]');
     const fileError = q('[data-file-error]');
     const options = [...el.querySelectorAll<HTMLElement>('[data-options]')];
     const modes = [...el.querySelectorAll<HTMLInputElement>('[data-mode]')];
-    const rangesInput = q<HTMLInputElement>('[data-ranges]');
-    const rangeError = q('[data-range-error]');
+    const turns = [...el.querySelectorAll<HTMLInputElement>('[data-by]')];
+    // Split only: Rotate has no ranges, so these stand in as detached nodes.
+    const rangesInput = el.querySelector<HTMLInputElement>('[data-ranges]') ?? h('input');
+    const rangeError = el.querySelector<HTMLElement>('[data-range-error]') ?? h('p');
     let current: { file: File; pages?: number } | undefined;
     let nextId = 0;
 
@@ -199,7 +202,8 @@ export function mount(el: HTMLElement): void {
     }
     function clear(): void {
       current = undefined;
-      modes[0]!.checked = true;
+      if (isRotate) turns[0]!.checked = true;
+      else modes[0]!.checked = true;
       rangesInput.value = '';
       rangesInput.disabled = true;
       rangeError.hidden = true;
@@ -209,6 +213,7 @@ export function mount(el: HTMLElement): void {
     async function run(): Promise<void> {
       const target = current;
       if (!target?.pages || runBtn.disabled) return;
+      if (isRotate) return runRotate(target.file);
       let mode: Parameters<PdfEngine['split']>[1] = { kind: 'every' };
       if (extracting()) {
         const ranges = parseRanges(rangesInput.value, target.pages);
@@ -239,6 +244,21 @@ export function mount(el: HTMLElement): void {
             showDone(pdfBlob(o), o.name, 'Download', o.name, '', `${o.name} ready, ${pages(o.pages)}`);
           }
           succeeded(outs.length);
+        },
+        () => void run(),
+      );
+    }
+    function runRotate(file: File): Promise<void> {
+      const by = Number(turns.find((t) => t.checked)?.value ?? 90) as Rotation;
+      return runJob(
+        'Rotating…',
+        async (gen) => {
+          const out = await job((e) => e.rotate(file, by));
+          if (gen !== shell.generation) return;
+          if (empty([out])) throw new Unusable();
+          const meta = `${pages(out.pages)} · ${formatBytes(out.bytes.byteLength)}`;
+          showDone(pdfBlob(out), out.name, 'Download', out.name, meta, `${out.name} ready, ${meta}`);
+          succeeded(1);
         },
         () => void run(),
       );

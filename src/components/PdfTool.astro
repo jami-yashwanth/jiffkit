@@ -6,18 +6,20 @@ import { getTool, type PdfTool } from '../tools';
 interface Props { tool: PdfTool }
 const { tool } = Astro.props;
 const merge = tool.op === 'merge';
-// All four ops are driven by an island: Merge and Split by src/ui/pdf.ts, PDF to JPG and JPG to PDF by src/ui/pdf-images.ts.
+// Every op is driven by an island: Merge, Split and Rotate by src/ui/pdf.ts, PDF to JPG and JPG to PDF by src/ui/pdf-images.ts.
+const rotate = tool.op === 'rotate';
 const toImages = tool.op === 'to-images';
 const fromImages = tool.op === 'from-images';
 const imageOp = toImages || fromImages;
 // An image dropped on PDF to JPG is sent to the tool that takes images.
 const tryTool = { href: '/jpg-to-pdf/', h1: getTool('jpg-to-pdf').h1 };
 // Spec §4 empty states.
-const title = { merge: 'Drop PDF files here', split: 'Drop a PDF here', 'to-images': 'Drop a PDF here', 'from-images': 'Drop images here' }[tool.op];
-const choose = { merge: 'Choose PDFs', split: 'Choose PDF', 'to-images': 'Choose PDF', 'from-images': 'Choose images' }[tool.op];
+const title = { merge: 'Drop PDF files here', split: 'Drop a PDF here', rotate: 'Drop a PDF here', 'to-images': 'Drop a PDF here', 'from-images': 'Drop images here' }[tool.op];
+const choose = { merge: 'Choose PDFs', split: 'Choose PDF', rotate: 'Choose PDF', 'to-images': 'Choose PDF', 'from-images': 'Choose images' }[tool.op];
 const privacy = {
   merge: 'Merged on your device. Your files are never uploaded.',
   split: 'Split on your device. Your files are never uploaded.',
+  rotate: 'Rotated on your device. Your files are never uploaded.',
   'to-images': 'Converted on your device. Your PDFs are never uploaded.',
   'from-images': 'Converted on your device. Your images are never uploaded.',
 }[tool.op];
@@ -86,6 +88,18 @@ const ENGINE_SIZE = toImages ? '0.5 MB' : '0.2 MB';
             </fieldset>
             <div class="actions" data-options>
               <button type="button" class="btn" data-run disabled>Convert</button>
+            </div>
+          </>
+        ) : rotate ? (
+          <>
+            <fieldset class="settings pdf-mode" data-options>
+              <legend>Turn every page</legend>
+              <label><input type="radio" name="by" value="90" checked data-by />Right, a quarter turn</label>
+              <label><input type="radio" name="by" value="270" data-by />Left, a quarter turn</label>
+              <label><input type="radio" name="by" value="180" data-by />Upside down</label>
+            </fieldset>
+            <div class="actions" data-options>
+              <button type="button" class="btn" data-run disabled>Rotate PDF</button>
             </div>
           </>
         ) : (

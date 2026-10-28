@@ -17,7 +17,7 @@ describe('tool registry', () => {
     expect(`${t.title} ${t.description} ${t.subhead}`).not.toMatch(/nothing is tracked|Private, No Tracking/i);
   });
 
-  it('has exactly the 17 unique slugs on the homepage, plus the 25 developer tools', () => {
+  it('has exactly the 23 unique slugs on the homepage, plus the 25 developer tools', () => {
     const slugs = TOOLS.map((t) => t.slug);
     expect(TOOLS.filter((t) => t.kind === 'dev').map((t) => t.slug)).toEqual(DEV_TOOLS.map((t) => t.slug));
     expect(DEV_TOOLS).toHaveLength(25);
@@ -26,6 +26,12 @@ describe('tool registry', () => {
       [
         'base64-encode-decode',
         'compress-image',
+        'resize-image',
+        'png-to-jpg',
+        'jpg-to-png',
+        'rotate-pdf',
+        'png-to-pdf',
+        'image-to-pdf',
         'heic-to-jpg',
         'json-formatter',
         'jwt-decoder',
@@ -44,7 +50,7 @@ describe('tool registry', () => {
         ...DEV_TOOLS.map((t) => t.slug),
       ].sort(),
     );
-    expect(HOME_TOOLS.map((t) => t.slug)).toHaveLength(17);
+    expect(HOME_TOOLS.map((t) => t.slug)).toHaveLength(23);
   });
 
   it('uses the spec H1s', () => {
@@ -61,6 +67,12 @@ describe('tool registry', () => {
     expect(h1('transcribe-audio')).toBe('Transcribe audio');
     expect(h1('pdf-to-jpg')).toBe('PDF to JPG');
     expect(h1('jpg-to-pdf')).toBe('JPG to PDF');
+    expect(h1('png-to-pdf')).toBe('PNG to PDF');
+    expect(h1('image-to-pdf')).toBe('Image to PDF');
+    expect(h1('rotate-pdf')).toBe('Rotate PDF');
+    expect(h1('resize-image')).toBe('Resize image');
+    expect(h1('png-to-jpg')).toBe('PNG to JPG');
+    expect(h1('jpg-to-png')).toBe('JPG to PNG');
     expect(h1('compress-video')).toBe('Compress video');
     expect(h1('video-to-gif')).toBe('Video to GIF');
   });
@@ -80,6 +92,9 @@ describe('tool registry', () => {
     };
     expect(op('pdf-to-jpg')).toBe('pdf:to-images');
     expect(op('jpg-to-pdf')).toBe('pdf:from-images');
+    expect(op('png-to-pdf')).toBe('pdf:from-images');
+    expect(op('image-to-pdf')).toBe('pdf:from-images');
+    expect(op('rotate-pdf')).toBe('pdf:rotate');
     expect(op('compress-video')).toBe('video:compress');
     expect(op('video-to-gif')).toBe('video:gif');
     const cat = (s: Parameters<typeof getTool>[0]) => getTool(s).category;
@@ -171,6 +186,18 @@ describe('tool registry', () => {
     expect(getImageTool('compress-image').defaults.quality).toBe(75);
     expect(getImageTool('webp-to-jpg').defaults.format).toBe('jpg');
     expect(getImageTool('heic-to-jpg').acceptAttr).toBe('.heic,.heif,image/heic,image/heif');
+    expect(getImageTool('png-to-jpg')).toMatchObject({ accepts: ['png'], outputs: ['jpg'], defaults: { format: 'jpg', quality: 85 } });
+    expect(getImageTool('jpg-to-png')).toMatchObject({ accepts: ['jpg'], outputs: ['png'] });
+    expect(getImageTool('resize-image')).toMatchObject({ accepts: ['jpg', 'png', 'webp'], outputs: 'same', defaults: { quality: 90 } });
+  });
+
+  it('the new pages are honest about what they cannot do', () => {
+    const faq = (s: Parameters<typeof getTool>[0]) => getTool(s).faq.map((f) => f.a).join(' ');
+    expect(faq('jpg-to-png')).toMatch(/larger/);
+    expect(faq('jpg-to-png')).toMatch(/cannot come back/);
+    expect(faq('png-to-jpg')).toMatch(/transparent areas become white/);
+    expect(faq('resize-image')).toMatch(/only makes images smaller/);
+    expect(faq('rotate-pdf')).toMatch(/every page turns the same way/);
   });
 
   it('maps input types to tools', () => {

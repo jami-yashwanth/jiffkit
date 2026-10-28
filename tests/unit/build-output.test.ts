@@ -43,6 +43,12 @@ const COPY = {
   ],
   'pdf-to-jpg': ['Drop a PDF here', 'Choose PDF', 'Converted on your device. Your PDFs are never uploaded.'],
   'jpg-to-pdf': ['Drop images here', 'Choose images', 'Converted on your device. Your images are never uploaded.'],
+  'png-to-pdf': ['Drop images here', 'Choose images', 'Converted on your device. Your images are never uploaded.'],
+  'image-to-pdf': ['Drop images here', 'Choose images', 'Converted on your device. Your images are never uploaded.'],
+  'rotate-pdf': ['Drop a PDF here', 'Choose PDF', 'Rotated on your device. Your files are never uploaded.', 'Turn every page', 'Rotate PDF'],
+  'png-to-jpg': ['Drop PNG images here', 'Choose images', 'Converted on your device. Your images are never uploaded.'],
+  'jpg-to-png': ['Drop JPG images here', 'Choose images', 'Converted on your device. Your images are never uploaded.'],
+  'resize-image': ['Drop images here', 'Resized on your device. Your images are never uploaded.', 'Fit within', 'data-width-input', 'data-height-input', 'Images are never made bigger.'],
   'compress-video': ['Drop a video here', 'Choose video', 'Converted on your device. Your videos are never uploaded.'],
   'video-to-gif': ['Drop a video here', 'Choose video', 'Converted on your device. Your videos are never uploaded.'],
   'json-formatter': ['placeholder="Paste JSON here"', '>Format<', '>Minify<', '>Copy<', 'Options', '2 spaces', '4 spaces', 'Tab'],
@@ -235,14 +241,14 @@ describe('site', () => {
       [...z[0].matchAll(/<a class="tag[^"]*" href="\/([^"]+)\/"/g)].map((m) => [z[1], m[1]]),
     );
 
-  it('homepage is a wall of five zones: the 17 tools in category order, and the way into the developer tools', () => {
+  it('homepage is a wall of five zones: the 23 tools in category order, and the way into the developer tools', () => {
     const h = html('');
     const zone: Record<Category, string> = { image: 'image', pdf: 'pdf', ai: 'ai', video: 'video', developer: 'developer', qr: 'developer' };
     const order: Category[] = ['image', 'pdf', 'ai', 'video', 'developer', 'qr'];
     const expected = order.flatMap((c) => HOME_TOOLS.filter((t) => t.category === c)).map((t) => [zone[t.category], t.slug]);
     expect(tags(h)).toEqual(expected);
     const zones = [...h.matchAll(/<h2 id="zone-[a-z]+"><span class="zone-mark"><svg[^>]*>.*?<\/svg><\/span>([^<]+) <small>(\d+)<\/small><\/h2>/g)].map((m) => [m[1], m[2]]);
-    expect(zones).toEqual([['Image', '3'], ['PDF', '4'], ['AI', '4'], ['Video', '2'], ['Developer', '29']]);
+    expect(zones).toEqual([['Image', '6'], ['PDF', '7'], ['AI', '4'], ['Video', '2'], ['Developer', '29']]);
     expect(h).toMatch(/<a class="zone-link" href="\/developer\/">All 29 developer tools<svg/);
     expect(h).toContain('<h1>Free tools for images, PDFs, video and code</h1>');
     expect([...h.matchAll(/<li><svg[^>]*>.*?<\/svg>([^<]+)<\/li>/g)].map((m) => m[1])).toEqual(['Nothing uploaded', 'No account', 'No watermarks']);
@@ -530,7 +536,7 @@ describe('site', () => {
     const xml = readFileSync('dist/sitemap-0.xml', 'utf8');
     for (const t of TOOLS) expect(xml).toContain(`<loc>${SITE}/${t.slug}/</loc>`);
     expect(xml).toContain(`<loc>${SITE}/developer/</loc>`);
-    expect(TOOLS).toHaveLength(42);
+    expect(TOOLS).toHaveLength(48);
   });
 
   it('has sitemap index and robots.txt', () => {
@@ -545,7 +551,7 @@ describe('site', () => {
     expect(worker, 'PDF worker chunk importing pdf-lib').toBeDefined();
     const bytes = [lib!, worker!].reduce((n, f) => n + gzipSync(readFileSync(`dist/_astro/${f}`)).length, 0);
     const shown = `${(bytes / 1e6).toFixed(1)} MB`;
-    for (const slug of ['merge-pdf', 'split-pdf', 'jpg-to-pdf']) expect(html(`${slug}/`)).toContain(`data-codec-size="${shown}"`);
+    for (const slug of ['merge-pdf', 'split-pdf', 'rotate-pdf', 'jpg-to-pdf', 'png-to-pdf', 'image-to-pdf']) expect(html(`${slug}/`)).toContain(`data-codec-size="${shown}"`);
   });
 
   it('PDF to JPG shows the measured gzip size of its worker and the two pdf.js modules', () => {

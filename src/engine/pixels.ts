@@ -67,6 +67,16 @@ export function downscaleTo(p: Pixels, megapixels: number): Pixels {
   return resizeBox(p, Math.max(1, Math.floor(sw * scale)), Math.max(1, Math.floor(sh * scale)));
 }
 
+/**
+ * The size of a `width` × `height` image made as large as fits inside `box` (a missing side is unbounded), keeping its
+ * proportions and never enlarging it. Each side is at least 1 px.
+ */
+export function fitWithin(width: number, height: number, box: { width?: number; height?: number }): [number, number] {
+  const scale = Math.min(1, box.width ? box.width / width : 1, box.height ? box.height / height : 1);
+  if (scale >= 1) return [width, height];
+  return [Math.max(1, Math.round(width * scale)), Math.max(1, Math.round(height * scale))];
+}
+
 /** Shrink to exactly `dw` × `dh` (each no larger than the source) with the same alpha-weighted box filter. */
 export function resizeBox(p: Pixels, dw: number, dh: number): Pixels {
   const { width: sw, height: sh, data: src } = p;

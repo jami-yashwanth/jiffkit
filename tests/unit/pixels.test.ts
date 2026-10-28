@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Pixels } from '../../src/engine/decode';
-import { applyOrientation, downscaleTo, flattenOnWhite } from '../../src/engine/pixels';
+import { applyOrientation, downscaleTo, fitWithin, flattenOnWhite } from '../../src/engine/pixels';
 
 /** Pixel (x, y) holds r = x, g = y so every position is identifiable. */
 function grid(width: number, height: number, orientation: number): Pixels {
@@ -111,5 +111,26 @@ describe('downscaleTo', () => {
     };
     const out = downscaleTo(p, 1 / 1e6);
     expect([...out.data]).toEqual([0, 0, 255, 128]);
+  });
+});
+
+describe('fitWithin', () => {
+  it('fits a width: 4032x3024 inside 1200 wide is 1200x900', () => {
+    expect(fitWithin(4032, 3024, { width: 1200 })).toEqual([1200, 900]);
+  });
+  it('fits a height: 4032x3024 inside 600 high is 800x600', () => {
+    expect(fitWithin(4032, 3024, { height: 600 })).toEqual([800, 600]);
+  });
+  it('fits a box by its tighter side, keeping the proportions', () => {
+    expect(fitWithin(3000, 1000, { width: 1500, height: 1500 })).toEqual([1500, 500]);
+    expect(fitWithin(1000, 3000, { width: 1500, height: 1500 })).toEqual([500, 1500]);
+  });
+  it('never enlarges: an image already inside the box keeps its size, as does an empty box', () => {
+    expect(fitWithin(800, 600, { width: 1200 })).toEqual([800, 600]);
+    expect(fitWithin(800, 600, { width: 800, height: 600 })).toEqual([800, 600]);
+    expect(fitWithin(800, 600, {})).toEqual([800, 600]);
+  });
+  it('keeps each side at least 1 px', () => {
+    expect(fitWithin(10_000, 10, { width: 100 })).toEqual([100, 1]);
   });
 });

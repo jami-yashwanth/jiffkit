@@ -77,6 +77,84 @@ describe('convert: HEIC to JPG', () => {
   });
 });
 
+describe('convert: PNG to JPG and JPG to PNG', () => {
+  it('png-to-jpg makes a JPG, fills transparency with white and drops the metadata', async () => {
+    const d = await done(job('alpha.png', 'png-to-jpg'));
+    expect(await magic(d.blob, 2)).toEqual([0xff, 0xd8]);
+    expect(d.name).toBe('alpha.jpg');
+    expect([d.width, d.height]).toEqual([200, 150]);
+    expect(d.notes).toEqual(expect.arrayContaining(['gps-removed', 'transparency-filled']));
+  });
+
+  it('png-to-jpg rejects a JPG with its detected type', async () => {
+    expect(await failed(job('photo.jpg', 'png-to-jpg'))).toMatchObject({ reason: 'wrong-type', detectedType: 'jpg' });
+  });
+
+  it('jpg-to-png makes a PNG of the same size with no GPS left', async () => {
+    const d = await done(job('photo.jpg', 'jpg-to-png'));
+    expect(await magic(d.blob)).toEqual([0x89, 0x50, 0x4e, 0x47]);
+    expect(d.name).toBe('photo.png');
+    expect([d.width, d.height]).toEqual([1600, 1200]);
+    expect(d.notes).toContain('gps-removed');
+    expect(await exifr.gps(await bytes(d.blob))).toBeUndefined();
+  }, 60_000);
+
+  it('jpg-to-png applies the EXIF orientation', async () => {
+    const d = await done(job('rotated-6.jpg', 'jpg-to-png'));
+    expect([d.width, d.height]).toEqual([300, 400]);
+  });
+
+  it('jpg-to-png rejects a PNG with its detected type', async () => {
+    expect(await failed(job('alpha.png', 'jpg-to-png'))).toMatchObject({ reason: 'wrong-type', detectedType: 'png' });
+  });
+});
+
+describe('convert: Resize image', () => {
+  it('fits a JPG to a width, keeping its format and proportions', async () => {
+    const d = await done(job('photo.jpg', 'resize-image', { resize: { width: 400 } }));
+    expect(await magic(d.blob, 2)).toEqual([0xff, 0xd8]);
+    expect(d.name).toBe('photo.jpg');
+    expect([d.width, d.height]).toEqual([400, 300]);
+    expect(d.notes).not.toContain('not-enlarged');
+  });
+
+  it('fits a PNG to a height and keeps it a PNG with its transparency', async () => {
+    const d = await done(job('alpha.png', 'resize-image', { resize: { height: 75 } }));
+    expect(await magic(d.blob)).toEqual([0x89, 0x50, 0x4e, 0x47]);
+    expect([d.width, d.height]).toEqual([100, 75]);
+    expect(d.notes).not.toContain('transparency-filled');
+  });
+
+  it('fits a WebP inside a box by its tighter side', async () => {
+    const d = await done(job('lossy.webp', 'resize-image', { resize: { width: 50, height: 50 } }));
+    expect(Math.max(d.width, d.height)).toBe(50);
+    expect(d.name).toMatch(/\.webp$/);
+  });
+
+  it('measures the box after the EXIF orientation: rotated-6.jpg (shown 300x400) to 200 wide is 200x267', async () => {
+    const d = await done(job('rotated-6.jpg', 'resize-image', { resize: { width: 200 } }));
+    expect([d.width, d.height]).toEqual([200, 267]);
+  });
+
+  it('never enlarges: an image already inside the box keeps its size and says so', async () => {
+    const d = await done(job('alpha.png', 'resize-image', { resize: { width: 4000 } }));
+    expect([d.width, d.height]).toEqual([200, 150]);
+    expect(d.notes).toContain('not-enlarged');
+  });
+
+  it('ignores a side that is not a positive number', async () => {
+    const d = await done(job('photo.jpg', 'resize-image', { resize: { width: -5, height: 600 } }));
+    expect([d.width, d.height]).toEqual([800, 600]);
+  });
+
+  it('rejects a HEIC with its detected type', async () => {
+    expect(await failed(job('iphone-12mp.heic', 'resize-image', { resize: { width: 100 } }))).toMatchObject({
+      reason: 'wrong-type',
+      detectedType: 'heic',
+    });
+  });
+});
+
 describe('convert: WebP', () => {
   it('rejects a PNG on webp-to-jpg with its detected type', async () => {
     expect(await failed(job('alpha.png', 'webp-to-jpg'))).toMatchObject({ reason: 'wrong-type', detectedType: 'png' });
