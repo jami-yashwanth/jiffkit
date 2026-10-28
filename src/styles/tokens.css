@@ -498,6 +498,14 @@ textarea.text-input.prose { font-family: inherit; font-size: 1rem; }
 .size-box label { display: inline-grid; grid-template-columns: 3.5rem auto auto; align-items: center; gap: var(--s2); font-weight: 500; }
 .size-box .text-input { width: 6.5rem; font-variant-numeric: tabular-nums; }
 .size-box .note { flex: 1 1 100%; margin: 0; }
+.size-box .error { flex: 1 1 100%; margin: 0; }
+/* Compress to a size: the KB page's box and its list of common sizes. */
+.target-sizes { margin-top: var(--s3); line-height: 1.8; }
+.target-kb { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); align-items: center; }
+.target-kb label { display: inline-flex; align-items: center; gap: var(--s2); font-weight: 600; }
+.target-kb .text-input { width: 6.5rem; font-variant-numeric: tabular-nums; }
+.target-kb .error { flex: 1 1 100%; margin: 0; }
+details.settings .size-box { margin-top: var(--s2); }
 [data-ai-result] { display: grid; gap: var(--s3); justify-items: start; }
 [data-ai-result] .field, [data-ai-result] .actions { width: 100%; margin: 0; }
 [data-ai-result] .note { margin: 0; }

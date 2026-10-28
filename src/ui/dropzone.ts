@@ -77,9 +77,38 @@ export function mount(el: HTMLElement): void {
     else if (el.dataset.quality) o.quality = Number(el.dataset.quality);
     const fmt = el.querySelector<HTMLInputElement>('[data-format-input]:checked')?.value ?? el.dataset.format;
     if (fmt && fmt !== 'same') o.format = fmt as OutFormat;
-    if (widthInput) o.resize = { width: side(widthInput), height: side(heightInput) };
+    // On a size page the fit-within box is optional: only a side that is set limits the pixels.
+    const box = { width: side(widthInput), height: side(heightInput) };
+    if (widthInput && (!sized() || box.width || box.height)) o.resize = box;
+    const t = sized();
+    if (t) o.target = t;
     return o;
   };
+
+  // Compress to a size: a fixed page carries its target on the root; the KB page reads its box, keeping the last valid
+  // value when the box holds something else.
+  const targetInput = el.querySelector<HTMLInputElement>('[data-target-input]');
+  const targetError = el.querySelector<HTMLElement>('[data-target-error]');
+  let lastKB = Number(targetInput?.value);
+  const minKB = el.dataset.targetMin ? Number(el.dataset.targetMin) : undefined;
+  function sized(): Job['options']['target'] {
+    const maxKB = targetInput ? lastKB : Number(el.dataset.targetMax);
+    if (!(maxKB > 0)) return undefined;
+    return minKB === undefined ? { maxKB } : { maxKB, minKB };
+  }
+  targetInput?.addEventListener('change', () => {
+    const n = Number(targetInput.value);
+    if (Number.isInteger(n) && n >= 5 && n <= 5000) {
+      targetError!.hidden = true;
+      if (n === lastKB) return;
+      lastKB = n;
+      resizeAgain();
+    } else {
+      targetInput.value = String(lastKB);
+      targetError!.textContent = 'Enter a size between 5 and 5000 KB.';
+      targetError!.hidden = false;
+    }
+  });
 
   // --- engine, loaded lazily ---
   let engine: Promise<EngineClient> | undefined;
@@ -338,8 +367,14 @@ export function mount(el: HTMLElement): void {
           ? 'Animated WebP: converted the first frame.'
           : d.notes.includes('not-enlarged')
             ? 'Already within that size, so it was kept.'
-            : '';
-      const size = row.options.resize
+            : d.notes.includes('under-minimum')
+              ? `This is ${d.outBytes.toLocaleString('en-US')} bytes, under the ${row.options.target?.minKB} KB minimum. Scan or photograph it larger and try again.`
+              : d.notes.includes('shrunk-to-fit')
+                ? `Made smaller to fit under ${row.options.target?.maxKB} KB.`
+                : '';
+      const size = d.quality !== undefined
+        ? `${formatBytes(d.outBytes)} · ${d.width} × ${d.height} px · quality ${d.quality}`
+        : row.options.resize
         ? `${d.width} × ${d.height} px · ${formatBytes(d.outBytes)}`
         : `${formatBytes(d.inBytes)} → ${formatBytes(d.outBytes)}`;
       body = [
@@ -398,6 +433,8 @@ export function mount(el: HTMLElement): void {
             retry.forEach(enqueue);
           }),
         ];
+      case 'cannot-fit':
+        return [`We couldn't get this under ${row.options.target?.maxKB} KB and keep it readable.`, null];
       case 'oom':
         return ['Ran out of memory', button('Retry', () => enqueue(row))];
     }

@@ -26,6 +26,8 @@ export const Q_MAX = 92;
 /** A long edge below this is not readable on a form. */
 export const MIN_EDGE = 64;
 export const MAX_ROUNDS = 6;
+/** Tries at growing back after the starting size, each one encode at quality 92. */
+export const GROW_ROUNDS = 4;
 
 /**
  * Portals differ on whether a KB is 1,000 or 1,024 bytes, so count whichever way is safer: a maximum of N KB is
@@ -61,7 +63,22 @@ export async function fitToSize(p: Pixels, t: TargetBytes, encode: Encode): Prom
   let pixels = downscaleTo(p, (t.maxBytes * 8) / 1e6);
   let shrunk = pixels !== p;
   for (let round = 0; round <= MAX_ROUNDS; round++) {
-    const found = await bestQuality(pixels, t.maxBytes, encode);
+    let found = await bestQuality(pixels, t.maxBytes, encode);
+    // The starting size is a guess, and smooth photos compress far better than it assumes: while quality 92 fits
+    // with room to spare, grow back toward the original, at quality 92 only, so detail is never traded for pixels.
+    if (round === 0 && 'bytes' in found && found.quality === Q_MAX) {
+      for (let grow = 0; grow < GROW_ROUNDS && pixels.width < p.width; grow++) {
+        const factor = Math.min(p.width / pixels.width, Math.sqrt(t.maxBytes / found.bytes.length) * 0.97);
+        const w = Math.min(p.width, Math.round(pixels.width * factor));
+        if (w <= pixels.width) break;
+        const next = w === p.width ? p : resizeBox(p, w, Math.max(1, Math.round((p.height * w) / p.width)));
+        const bytes = await encode(next, Q_MAX);
+        if (bytes.length > t.maxBytes) break;
+        pixels = next;
+        found = { bytes, quality: Q_MAX };
+      }
+      shrunk = pixels !== p;
+    }
     if ('bytes' in found) {
       let { bytes, quality } = found;
       let underMinimum = false;

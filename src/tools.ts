@@ -49,6 +49,8 @@ interface ToolBase {
   related: ToolSlug[];
   /** A landing page: this tool again, with its own copy for a search. It has a page, but no tag on the homepage wall. */
   landingOf?: ToolSlug;
+  /** A shorter name for its tag, when the H1 would wrap to three lines on a wall. */
+  tagName?: string;
 }
 
 export type ImageTool = ToolBase & {
@@ -434,6 +436,7 @@ const IMAGE_TOOLS: ImageTool[] = [
     description:
       'Resize a scanned signature to between 10 and 20 KB as a JPG, in your browser. Nothing is uploaded, and the size is checked at both ends. Free, no sign-up.',
     h1: 'Resize signature to 10–20 KB',
+    tagName: 'Signature 10\u2060–\u206020\u00a0KB', // word joiners: the range never breaks at its dash
     subhead: 'Get a signature JPG between 10 and 20 KB for an online form. It never leaves your device.',
     accepts: ['jpg', 'png', 'webp', 'heic'],
     acceptAttr: '.jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif',

@@ -82,6 +82,27 @@ describe('fitToSize', () => {
     expect(calls[0]!.w * calls[0]!.h).toBeLessThanOrEqual(400_000);
   });
 
+  it('grows back when the starting size left room: an image that fits whole keeps its size', async () => {
+    // k = 0.01: the whole 2000 × 1500 image is 27,600 bytes at quality 92, under 50,000; the start shrinks it anyway.
+    const { encode } = stub(0.01);
+    const fit = await fitToSize(image(2000, 1500), { maxBytes: 50_000 }, encode);
+    expect(fit).not.toBe('cannot-fit');
+    if (fit === 'cannot-fit') return;
+    expect([fit.pixels.width, fit.pixels.height]).toEqual([2000, 1500]);
+    expect(fit.shrunk).toBe(false);
+  });
+
+  it('grows back as far as fits, never past the original', async () => {
+    // k = 0.04: quality 92 fits up to about 1.36 MP under 50,000 bytes; the start goes to 0.4 MP.
+    const { encode, calls } = stub(0.04);
+    const fit = await fitToSize(image(2000, 1500), { maxBytes: 50_000 }, encode);
+    if (fit === 'cannot-fit') throw new Error('cannot-fit');
+    expect(fit.bytes.length).toBeLessThanOrEqual(50_000);
+    expect(fit.pixels.width * fit.pixels.height).toBeGreaterThan(1_000_000);
+    expect(fit.shrunk).toBe(true);
+    for (const c of calls) expect(c.w).toBeLessThanOrEqual(2000);
+  });
+
   it('retries quality 100 for a minimum, and never pads', async () => {
     // k = 0.05: quality 92 is 5,520 bytes and quality 100 is 6,000, both under a 10,240-byte minimum.
     const { encode, calls } = stub(0.05);
