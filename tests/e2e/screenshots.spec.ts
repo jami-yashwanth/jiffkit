@@ -771,6 +771,43 @@ for (const vp of VIEWPORTS) {
       await shot(page, 'rotate-pdf-password');
     });
 
+    // --- compress to a size ---
+
+    test('target size: empty pages, loading, done, shrunk, under minimum, wrong type', async ({ page }) => {
+      for (const slug of ['compress-image-to-kb', 'compress-image-to-20kb', 'compress-image-to-100kb', 'signature-resize-10-20kb']) {
+        await page.goto(`/${slug}/`);
+        await shot(page, `${slug}-empty`, true);
+      }
+      await page.goto('/compress-image-to-kb/');
+      const release = await hold(page, /mozjpeg_enc-[^/]*\.js$/);
+      await choose(page, 'photo.jpg', 'alpha.png', 'lossy.webp');
+      await expect(page.getByText(/Getting the converter ready/)).toBeVisible();
+      await shot(page, 'compress-image-to-kb-loading');
+      release();
+      await expect(doneRows(page)).toHaveCount(3);
+      await shot(page, 'compress-image-to-kb-done');
+      await page.getByRole('spinbutton', { name: /Target size/ }).fill('8');
+      await page.getByRole('spinbutton', { name: /Target size/ }).press('Enter');
+      await expect(doneRows(page).first().getByText('Made smaller to fit under 8 KB.')).toBeVisible();
+      await shot(page, 'compress-image-to-kb-shrunk');
+      await page.getByRole('spinbutton', { name: /Target size/ }).fill('0');
+      await page.getByRole('spinbutton', { name: /Target size/ }).press('Enter');
+      await expect(page.getByText('Enter a size between 5 and 5000 KB.')).toBeVisible();
+      await shot(page, 'compress-image-to-kb-invalid');
+      await page.goto('/signature-resize-10-20kb/');
+      await choose(page, 'grey.png');
+      await expect(doneRows(page).getByText(/under the 10 KB minimum/)).toBeVisible();
+      await shot(page, 'signature-resize-10-20kb-under-minimum');
+      await page.goto('/compress-image-to-20kb/');
+      await choose(page, 'photo.jpg');
+      await expect(doneRows(page)).toHaveCount(1);
+      await shot(page, 'compress-image-to-20kb-done');
+      await page.getByRole('button', { name: 'Compress more' }).click();
+      await page.locator('[data-tool] input[type=file]').setInputFiles(fixture('pdf/three-pages.pdf'));
+      await expect(page.getByText("This isn't a JPG, PNG, WebP or HEIC image.")).toBeVisible();
+      await shot(page, 'compress-image-to-20kb-wrong-type');
+    });
+
     test('png-to-pdf and image-to-pdf: empty', async ({ page }) => {
       await page.goto('/png-to-pdf/');
       await shot(page, 'png-to-pdf-empty', true);

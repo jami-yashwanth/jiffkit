@@ -9,6 +9,12 @@ const WORDS: Record<ToolSlug, string> = {
   'heic-to-jpg': 'iphone photo heif apple convert jpeg picture',
   'compress-image': 'reduce shrink smaller photo picture size jpeg png webp optimise optimize',
   'resize-image': 'scale dimensions width height pixels smaller photo picture jpeg png webp',
+  'compress-image-to-kb': 'kb kilobyte reduce shrink size limit form exam application upload photo picture jpeg resize',
+  'compress-image-to-20kb': '20kb 20 kb kilobyte reduce shrink size limit form exam application upload photo picture jpeg resize',
+  'compress-image-to-50kb': '50kb 50 kb kilobyte reduce shrink size limit form exam application upload photo picture jpeg resize',
+  'compress-image-to-100kb': '100kb 100 kb kilobyte reduce shrink size limit form exam application upload photo picture jpeg resize document scan',
+  'compress-image-to-200kb': '200kb 200 kb kilobyte reduce shrink size limit form exam application upload photo picture jpeg resize certificate',
+  'signature-resize-10-20kb': 'sign signature 10kb 20kb 10 20 kb form exam application upload scan',
   'webp-to-jpg': 'convert jpeg png picture photo',
   'png-to-jpg': 'convert jpeg picture photo screenshot',
   'jpg-to-png': 'convert jpeg picture photo lossless',
@@ -56,8 +62,11 @@ const WORDS: Record<ToolSlug, string> = {
   'subnet-calculator': 'cidr ip ipv4 network mask netmask range',
 };
 
-/** Every tool, as the page's search reads it (embedded in the page as JSON; no request). */
-export const SEARCH_INDEX: SearchEntry[] = TOOLS.map((t) => {
+/**
+ * Every tool, as the page's search reads it (embedded in the page as JSON; no request). Landing pages come last, so on
+ * a tie they rank after the tools ("compress" shows Compress video before the 20 KB page).
+ */
+export const SEARCH_INDEX: SearchEntry[] = [...TOOLS.filter((t) => !t.landingOf), ...TOOLS.filter((t) => t.landingOf)].map((t) => {
   const { zone, label } = placeOf(t.slug);
   // The first sentence of the subhead says what the tool does ("Combine PDF files into one document.").
   const blurb = t.subhead.match(/^[^.]*\./)?.[0] ?? t.subhead;

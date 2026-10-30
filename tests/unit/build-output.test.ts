@@ -250,7 +250,7 @@ describe('site', () => {
     const expected = order.flatMap((c) => HOME_TOOLS.filter((t) => t.category === c)).map((t) => [zone[t.category], t.slug]);
     expect(tags(h)).toEqual(expected);
     const zones = [...h.matchAll(/<h2 id="zone-[a-z]+"><span class="zone-mark"><svg[^>]*>.*?<\/svg><\/span>([^<]+) <small>(\d+)<\/small><\/h2>/g)].map((m) => [m[1], m[2]]);
-    expect(zones).toEqual([['Image', '6'], ['PDF', '7'], ['AI', '4'], ['Video', '2'], ['Developer', '29']]);
+    expect(zones).toEqual([['Image', '8'], ['PDF', '5'], ['AI', '4'], ['Video', '2'], ['Developer', '29']]);
     expect(h).toMatch(/<a class="zone-link" href="\/developer\/">All 29 developer tools<svg/);
     expect(h).toContain('<h1>Free tools for images, PDFs, video and code</h1>');
     expect([...h.matchAll(/<li><svg[^>]*>.*?<\/svg>([^<]+)<\/li>/g)].map((m) => m[1])).toEqual(['Nothing uploaded', 'No account', 'No watermarks']);
@@ -539,7 +539,20 @@ describe('site', () => {
     const xml = readFileSync('dist/sitemap-0.xml', 'utf8');
     for (const t of TOOLS) expect(xml).toContain(`<loc>${SITE}/${t.slug}/</loc>`);
     expect(xml).toContain(`<loc>${SITE}/developer/</loc>`);
-    expect(TOOLS).toHaveLength(48);
+    expect(TOOLS).toHaveLength(54);
+  });
+
+  it('landing pages have a page but no tag on the homepage wall; the KB page links its sizes', () => {
+    const home = html('');
+    for (const slug of ['compress-image-to-20kb', 'compress-image-to-50kb', 'compress-image-to-100kb', 'compress-image-to-200kb', 'png-to-pdf', 'image-to-pdf']) {
+      expect(home, slug).not.toContain(`href="/${slug}/"`);
+      expect(existsSync(`dist/${slug}/index.html`), slug).toBe(true);
+    }
+    for (const slug of ['compress-image-to-kb', 'signature-resize-10-20kb']) expect(home).toContain(`href="/${slug}/"`);
+    const kb = html('compress-image-to-kb/');
+    for (const slug of ['compress-image-to-20kb', 'compress-image-to-50kb', 'compress-image-to-100kb', 'compress-image-to-200kb', 'signature-resize-10-20kb']) {
+      expect(kb, slug).toContain(`href="/${slug}/"`);
+    }
   });
 
   it('has sitemap index and robots.txt', () => {

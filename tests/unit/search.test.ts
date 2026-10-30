@@ -31,6 +31,10 @@ describe('tool search', () => {
     expect(top('turn pdf pages')).toBe('rotate-pdf');
     expect(top('image to pdf')).toBe('image-to-pdf');
     expect(top('png to pdf')).toBe('png-to-pdf');
+    expect(top('compress image to 20kb')).toBe('compress-image-to-20kb');
+    expect(top('resize image to 50kb')).toBe('compress-image-to-50kb');
+    expect(top('signature 20kb')).toBe('signature-resize-10-20kb');
+    expect(top('image to kb')).toBe('compress-image-to-kb');
     expect(top('remove bg')).toBe('remove-background');
     expect(top('combine pdf')).toBe('merge-pdf');
     expect(top('sha256')).toBe('hash-generator');
@@ -55,7 +59,8 @@ describe('tool search', () => {
   it('puts name matches before word matches, and keeps registry order on a tie', () => {
     // Seven tools have PDF in their name: the one starting with it first, then registry order, six shown.
     expect(slugs('pdf')).toEqual(['pdf-to-jpg', 'merge-pdf', 'split-pdf', 'rotate-pdf', 'jpg-to-pdf', 'png-to-pdf']);
-    expect(slugs('compress')).toEqual(['compress-image', 'compress-video']);
+    // Landing pages rank after the tools on a tie, so the size pages never push Compress video out.
+    expect(slugs('compress').slice(0, 3)).toEqual(['compress-image', 'compress-image-to-kb', 'compress-video']);
   });
 
   it('a zone name finds that zone', () => {

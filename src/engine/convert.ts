@@ -3,6 +3,7 @@ import { CodecLoadError, load } from './codecs';
 import { DecodeError, decode, type Decoded, type Pixels } from './decode';
 import { applyOrientation, downscaleTo, fitWithin, flattenOnWhite, resizeBox } from './pixels';
 import { sniff } from './sniff';
+import { bytesFor, fitToSize } from './target';
 import {
   MAX_MEGAPIXELS,
   THUMB_EDGE,
@@ -100,14 +101,16 @@ export async function convert(
   }
   const inType = sniffed.type;
 
+  const positive = (n: number | undefined): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0;
   const requested = options.format;
-  const format: OutFormat =
-    tool.outputs === 'same'
+  const sized = options.target && positive(options.target.maxKB) ? options.target : undefined;
+  const format: OutFormat = sized
+    ? 'jpg' // upload forms want JPG, and only a lossy format can be pushed to a size
+    : tool.outputs === 'same'
       ? inType === 'heic' ? 'jpg' : inType
       : requested && tool.outputs.includes(requested)
         ? requested
         : (tool.defaults.format ?? tool.outputs[0]!);
-  const positive = (n: number | undefined): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0;
   const quality = Math.min(100, Math.max(1, Math.round(positive(options.quality) ? options.quality : tool.defaults.quality)));
   const target = positive(options.downscaleTo) ? options.downscaleTo : undefined;
 
@@ -146,7 +149,7 @@ export async function convert(
     if (box) {
       const [w, h] = fitWithin(pixels.width, pixels.height, box);
       if (w < pixels.width || h < pixels.height) pixels = resizeBox(pixels, w, h);
-      else notes.push('not-enlarged');
+      else if (!sized) notes.push('not-enlarged'); // a size job reports its own shrinking
     }
     if (format === 'jpg' && pixels.hasAlpha) {
       pixels = flattenOnWhite(pixels);
@@ -154,6 +157,27 @@ export async function convert(
     }
 
     progress('encoding');
+    if (sized) {
+      const budget = bytesFor(sized);
+      const fits = file.size <= budget.maxBytes; // already small enough: keep its pixels if a quality of 40+ allows
+      const fit = await fitToSize(pixels, budget, (p, q) => encode(p, 'jpg', q), { keepSize: fits });
+      if (fit === 'cannot-fit') return fail('cannot-fit');
+      if (fit.shrunk) notes.push('shrunk-to-fit');
+      if (fit.underMinimum) notes.push('under-minimum');
+      const blob = new Blob([fit.bytes as BlobPart], { type: MIME.jpg });
+      return {
+        id,
+        blob,
+        thumb: await thumbnail(fit.pixels, 'jpg'),
+        name: outputName(file.name, 'jpg'),
+        width: fit.pixels.width,
+        height: fit.pixels.height,
+        inBytes: file.size,
+        outBytes: blob.size,
+        notes,
+        quality: fit.quality,
+      };
+    }
     const out = await encode(pixels, format, quality);
     const thumb = await thumbnail(pixels, format);
 

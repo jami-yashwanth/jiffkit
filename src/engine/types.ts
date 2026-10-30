@@ -1,14 +1,21 @@
 import type { ImageSlug, InType, OutFormat } from '../tools';
 
-export type Note = 'gps-removed' | 'first-frame-only' | 'already-optimized' | 'transparency-filled' | 'not-enlarged';
-export type FailReason = 'wrong-type' | 'corrupt' | 'too-large' | 'oom' | 'codec-load';
+export type Note = 'gps-removed' | 'first-frame-only' | 'already-optimized' | 'transparency-filled' | 'not-enlarged' | 'shrunk-to-fit' | 'under-minimum';
+export type FailReason = 'wrong-type' | 'corrupt' | 'too-large' | 'oom' | 'codec-load' | 'cannot-fit';
 
 export interface Job {
   id: string;
   file: File;
   tool: ImageSlug;
   /** `resize`: fit inside this box in pixels, keeping proportions and never enlarging; a missing side is unbounded. */
-  options: { format?: OutFormat; quality?: number; downscaleTo?: number; resize?: { width?: number; height?: number } };
+  /** `target`: the JPG must be at most `maxKB` (and, if given, at least `minKB`): see src/engine/target.ts. */
+  options: {
+    format?: OutFormat;
+    quality?: number;
+    downscaleTo?: number;
+    resize?: { width?: number; height?: number };
+    target?: { maxKB: number; minKB?: number };
+  };
 }
 
 export interface Done {
@@ -22,6 +29,8 @@ export interface Done {
   inBytes: number;
   outBytes: number;
   notes: Note[];
+  /** The JPEG quality a target-size job settled on. */
+  quality?: number;
 }
 
 export interface Failed {

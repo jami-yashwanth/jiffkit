@@ -4,8 +4,20 @@ import { getTool, toolForType, type ImageSlug, type InType, type ImageTool } fro
 interface Props { tool: ImageTool }
 const { tool } = Astro.props;
 const isHeic = tool.slug === 'heic-to-jpg';
-const noun = isHeic ? 'photos' : 'images';
-const chooseLabel = isHeic ? 'Choose photos' : 'Choose images';
+const isSignature = tool.slug === 'signature-resize-10-20kb';
+const one = isHeic ? 'photo' : isSignature ? 'signature' : 'image';
+const noun = `${one}s`;
+const chooseLabel = isHeic ? 'Choose photos' : isSignature ? 'Choose signature' : 'Choose images';
+const target = tool.target;
+const verb = target ? 'Compressed' : tool.slug === 'resize-image' ? 'Resized' : 'Converted';
+// The size pages the KB page links to, and the one each fixed page sends you back to.
+const SIZES = [
+  ['compress-image-to-20kb', '20 KB'],
+  ['compress-image-to-50kb', '50 KB'],
+  ['compress-image-to-100kb', '100 KB'],
+  ['compress-image-to-200kb', '200 KB'],
+  ['signature-resize-10-20kb', 'Signature, 10–20 KB'],
+] as const;
 
 const TYPE_NAMES: Record<InType, string> = { heic: 'HEIC', jpg: 'JPG', png: 'PNG', webp: 'WebP' };
 const listOr = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} or ${xs.at(-1)}` : xs[0]);
@@ -25,12 +37,20 @@ const CODEC_SIZE: Record<ImageSlug, string> = {
   'heic-to-jpg': '0.8 MB',
   'compress-image': '0.5 MB',
   'resize-image': '0.5 MB',
+  // The JPG, PNG and WebP decoders and the JPG encoder; a HEIC loads the 0.8 MB HEIC codec as well.
+  'compress-image-to-kb': '0.3 MB',
+  'compress-image-to-20kb': '0.3 MB',
+  'compress-image-to-50kb': '0.3 MB',
+  'compress-image-to-100kb': '0.3 MB',
+  'compress-image-to-200kb': '0.3 MB',
+  'signature-resize-10-20kb': '0.3 MB',
   'webp-to-jpg': '0.3 MB',
   'png-to-jpg': '0.2 MB',
   'jpg-to-png': '0.2 MB',
 };
-// HEIC to JPG and PNG to JPG: one output, JPG, whose quality is the only setting, tucked under Options.
-const jpgOnly = Array.isArray(tool.outputs) && tool.outputs.length === 1 && tool.outputs[0] === 'jpg';
+// HEIC to JPG and PNG to JPG: one output, JPG, whose quality is the only setting, tucked under Options. On the size
+// pages the size decides the quality.
+const jpgOnly = !target && Array.isArray(tool.outputs) && tool.outputs.length === 1 && tool.outputs[0] === 'jpg';
 ---
 <div
   data-tool={tool.slug}
@@ -39,7 +59,9 @@ const jpgOnly = Array.isArray(tool.outputs) && tool.outputs.length === 1 && tool
   data-format={tool.defaults.format ?? 'same'}
   data-types={tool.accepts.join(' ')}
   data-input-name={inputName}
-  data-noun={isHeic ? 'photo' : 'image'}
+  data-noun={one}
+  data-target-max={target && !target.editable ? target.maxKB : undefined}
+  data-target-min={target?.minKB}
   data-elsewhere={JSON.stringify(elsewhere)}
   data-codec-size={CODEC_SIZE[tool.slug]}
 >
@@ -49,7 +71,7 @@ const jpgOnly = Array.isArray(tool.outputs) && tool.outputs.length === 1 && tool
       {chooseLabel}
       <input type="file" multiple accept={tool.acceptAttr} />
     </label>
-    <p class="privacy">{tool.slug === 'resize-image' ? 'Resized' : 'Converted'} on your device. Your {noun} are never uploaded.</p>
+    <p class="privacy">{verb} on your device. Your {noun} are never uploaded.</p>
   </div>
 
   {tool.slug === 'compress-image' && (
@@ -69,6 +91,12 @@ const jpgOnly = Array.isArray(tool.outputs) && tool.outputs.length === 1 && tool
       ))}
     </fieldset>
   )}
+  {target?.editable && (
+    <div class="settings target-kb" data-settings>
+      <label>Target size <input type="number" class="text-input" min="5" max="5000" step="1" inputmode="numeric" value={target.maxKB} aria-describedby="target-error" data-target-input /> KB</label>
+      <p class="error" id="target-error" role="alert" data-target-error hidden></p>
+    </div>
+  )}
   {tool.slug === 'resize-image' && (
     <fieldset class="settings size-box" data-settings>
       <legend>Fit within</legend>
@@ -76,6 +104,23 @@ const jpgOnly = Array.isArray(tool.outputs) && tool.outputs.length === 1 && tool
       <label>Height <input type="number" class="text-input" min="1" step="1" inputmode="numeric" placeholder="Any" data-height-input /> px</label>
       <p class="note">Leave one blank to keep the proportions. Images are never made bigger.</p>
     </fieldset>
+  )}
+  {target?.editable && (
+    <details class="settings">
+      <summary>Limit the width or height</summary>
+      <fieldset class="size-box">
+        <legend class="visually-hidden">Fit within</legend>
+        <label>Width <input type="number" class="text-input" min="1" step="1" inputmode="numeric" placeholder="Any" data-width-input /> px</label>
+        <label>Height <input type="number" class="text-input" min="1" step="1" inputmode="numeric" placeholder="Any" data-height-input /> px</label>
+        <p class="note">Some forms also set the most pixels. Images are never made bigger.</p>
+      </fieldset>
+    </details>
+  )}
+  {target?.editable && (
+    <p class="note target-sizes">Common sizes: {SIZES.map(([slug, label], i) => (<>{i > 0 && ' · '}<a class="link" href={`/${slug}/`}>{label}</a></>))}</p>
+  )}
+  {target && !target.editable && (
+    <p class="settings"><a class="link" href="/compress-image-to-kb/">Need a different size? →</a></p>
   )}
   {jpgOnly && (
     <details class="settings" data-settings>
@@ -96,7 +141,7 @@ const jpgOnly = Array.isArray(tool.outputs) && tool.outputs.length === 1 && tool
       </div>
       <div class="actions" data-actions hidden>
         <button type="button" class="btn" data-zip hidden>Download all (ZIP)</button>
-        <button type="button" class="btn btn-quiet" data-more>{tool.slug === 'resize-image' ? 'Resize more' : 'Convert more'}</button>
+        <button type="button" class="btn btn-quiet" data-more>{target ? 'Compress more' : tool.slug === 'resize-image' ? 'Resize more' : 'Convert more'}</button>
         <p class="gps" data-gps hidden>Location data removed</p>
       </div>
     </div>

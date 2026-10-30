@@ -283,6 +283,18 @@ test.describe('PDF image tools', () => {
     expectClean(requests, [Buffer.from('photo.jpg'), readFileSync('tests/fixtures/photo.jpg').subarray(0, 64)], info.project.use.baseURL);
   });
 
+  test('compress to 20 KB: one convert_success {compress-image-to-20kb, count: 1}, no image or name leaves', async ({ page }, info) => {
+    const { events, requests } = await watch(page);
+    await page.goto('/compress-image-to-20kb/');
+    await page.locator('[data-tool] input[type=file]').setInputFiles('tests/fixtures/photo.jpg');
+    await expect(page.locator('[data-rows] > li.row-done')).toHaveCount(1);
+    await expect.poll(() => events.length).toBe(1);
+    await settle(page);
+    expect(events.map((e) => [e.n, e.p])).toEqual([['convert_success', { tool: 'compress-image-to-20kb', count: 1 }]]);
+    expectOnlyAllowedProps(events);
+    expectClean(requests, [Buffer.from('photo.jpg'), readFileSync('tests/fixtures/photo.jpg').subarray(0, 64)], info.project.use.baseURL);
+  });
+
   test('an encrypted PDF in PDF to JPG: convert_error {pdf-to-jpg, encrypted}', async ({ page }, info) => {
     const { events, requests } = await watch(page);
     await page.goto('/pdf-to-jpg/');
@@ -429,7 +441,7 @@ test.describe('AI tools', () => {
 // Round 3: the AI and video pages. One convert_success {tool, count} per finished job, one convert_error {tool, reason}
 // per failure the user sees (Cancel included), and the same promise on the wire: the model host sees bare GETs.
 
-const REASONS = ['network', 'cancelled', 'unsupported', 'too-large', 'too-long', 'corrupt', 'wrong-type', 'device', 'encrypted'];
+const REASONS = ['network', 'cancelled', 'unsupported', 'too-large', 'too-long', 'corrupt', 'wrong-type', 'device', 'encrypted', 'cannot-fit'];
 
 /** Props are only tool/count/reason, and a reason is one of the known ones. */
 function expectKnownReasons(events: AnalyticsEvent[]) {

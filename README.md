@@ -4,7 +4,7 @@ Free tools that run entirely in the browser. Files are decoded, converted and re
 
 ## Tools
 
-- Image: HEIC to JPG, WebP to JPG, PNG to JPG, JPG to PNG, Compress image, Resize image (location metadata is stripped; batches download as one ZIP).
+- Image: HEIC to JPG, WebP to JPG, PNG to JPG, JPG to PNG, Compress image, Resize image, Compress image to KB (with landing pages for 20, 50, 100 and 200 KB) and Resize signature to 10–20 KB (location metadata is stripped; batches download as one ZIP).
 - PDF: Merge PDF, Split PDF, Rotate PDF, PDF to JPG, JPG to PDF, PNG to PDF, Image to PDF (the last three are one tool with three landing pages).
 - Developer and QR: JSON formatter, Base64 encode/decode, JWT decoder, QR code generator.
 - Round 3, on-device AI: Remove background (U²-Net small), Image to text (tesseract.js), Upscale image (Real-ESRGAN), Transcribe audio (Whisper base). Models download on first use.
@@ -40,7 +40,7 @@ CI (`.github/workflows/ci.yml`) runs the whole gate on every push: fixtures, uni
 
 ### Add a tool
 
-1. Add an entry to `TOOLS` in `src/tools.ts` (and its slug to `ToolSlug`). Reuse the existing fields: `accepts`, `outputs`, `defaults`, `faq`, `related`.
+1. Add an entry to `TOOLS` in `src/tools.ts` (and its slug to `ToolSlug`). Reuse the existing fields: `accepts`, `outputs`, `defaults`, `faq`, `related`. A page that is an existing tool with its own copy for a search gets `landingOf: '<that tool>'`: it keeps its page, sitemap and search entry but has no homepage tag. Adding a homepage tag means checking the wall's track counts in `src/styles/tokens.css`.
 2. Only if it reads or writes a format that is not already supported, add a codec in `src/engine/codecs.ts` and the matching decode/encode path in `src/engine/`, plus a sniff case in `sniff.ts` and a fixture in `scripts/make-fixtures.sh`.
 3. Add its codec to the licences list in `src/pages/licenses.astro` if it brings a new dependency.
 4. Add its icon to `ICON_NAME` and `ICONS` in `src/icons.ts`: a Lucide name from the pinned `lucide-static`, with that icon's `<svg>` children copied in.

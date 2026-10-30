@@ -6,4 +6,4 @@ import type { Tool } from '../tools';
 interface Props { tool: Tool }
 const { tool } = Astro.props;
 ---
-<a class="tag" href={`/${tool.slug}/`}><span class="tag-icon"><Icon slug={tool.slug} size={22} /></span><strong class="tag-name">{tool.h1}</strong></a>
+<a class="tag" href={`/${tool.slug}/`}><span class="tag-icon"><Icon slug={tool.slug} size={22} /></span><strong class="tag-name">{tool.tagName ?? tool.h1}</strong></a>
